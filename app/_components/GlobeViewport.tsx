@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import type * as CesiumTypes from "cesium";
 import "cesium/Build/Cesium/Widgets/widgets.css";
 
-import * as GlobeConstants from "./GlobeConstants";
+import { Globe as GlobeConsts } from "./ComponentConstants";
 import * as Utils from "./Utils";
 
 type GlobeViewportProps = {
@@ -128,8 +128,8 @@ export function GlobeViewport({
 
       // Create a custom provider that recolors tiles into the requested two solid colors.
       class SolidColorImageryProvider extends Cesium.UrlTemplateImageryProvider {
-        private water = Utils.hexToRgb(GlobeConstants.WATER_COLOR);
-        private land = Utils.hexToRgb(GlobeConstants.LAND_COLOR);
+        private water = Utils.hexToRgb(GlobeConsts.WATER_COLOR);
+        private land = Utils.hexToRgb(GlobeConsts.LAND_COLOR);
 
         requestImage(
           x: number,
@@ -249,7 +249,7 @@ export function GlobeViewport({
 
       viewer.scene.globe.enableLighting = true;
       viewer.scene.globe.depthTestAgainstTerrain = true;
-      viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString(GlobeConstants.WATER_COLOR);
+      viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString(GlobeConsts.WATER_COLOR);
       // Render crisply on high-DPI displays (avoid blurry labels when zoomed in).
       // Cap to avoid runaway GPU cost on very high-DPI monitors.
       viewer.resolutionScale = Math.min(3, window.devicePixelRatio || 1);
@@ -383,7 +383,7 @@ export function GlobeViewport({
           frustum.aspectRatio ?? canvasEl.clientWidth / Math.max(1, canvasEl.clientHeight);
         const fovx = 2 * Math.atan(Math.tan(fovy / 2) * aspect);
         const lim = Math.max(fovx, fovy);
-        const minCenter = radius + GlobeConstants.MIN_SURFACE_CLEARANCE_M;
+        const minCenter = radius + GlobeConsts.MIN_SURFACE_CLEARANCE_M;
         const coverDistance = radius / Math.sin(lim / 2);
         range = Math.max(minCenter, coverDistance);
       }
@@ -404,7 +404,7 @@ export function GlobeViewport({
       // Zoom constraints: keep a minimum clearance above the surface so we never clip
       // through the ellipsoid (which can show black).
       
-      viewer.scene.screenSpaceCameraController.minimumZoomDistance = GlobeConstants.MIN_SURFACE_CLEARANCE_M;
+      viewer.scene.screenSpaceCameraController.minimumZoomDistance = GlobeConsts.MIN_SURFACE_CLEARANCE_M;
       viewer.scene.screenSpaceCameraController.maximumZoomDistance = radius * 20.0;
 
       const controller = viewer.scene.screenSpaceCameraController;
@@ -441,7 +441,7 @@ export function GlobeViewport({
 
       const getMinRange = () => {
         const minSurface =
-          viewer?.scene.screenSpaceCameraController.minimumZoomDistance ?? GlobeConstants.MIN_SURFACE_CLEARANCE_M;
+          viewer?.scene.screenSpaceCameraController.minimumZoomDistance ?? GlobeConsts.MIN_SURFACE_CLEARANCE_M;
         return radius + minSurface;
       };
 
@@ -461,7 +461,7 @@ export function GlobeViewport({
         // // Exponential curve: u=1 => 1, u->0 => ~0
         // const scaled = Math.exp(-ZOOM_RATE_DECAY_FACTOR * (1 - u));
         // return minScale + clamp(scaled, 0, 1) * (1 - minScale);
-        return Math.max(GlobeConstants.ZOOM_MIN, closeFactor01() / GlobeConstants.ZOOM_DECAY_FACTOR);
+        return Math.max(GlobeConsts.ZOOM_MIN, closeFactor01() / GlobeConsts.ZOOM_DECAY_FACTOR);
       };
 
       const rotateSpeedMultiplier = () => {
@@ -471,13 +471,13 @@ export function GlobeViewport({
         // for u in (0,1), u^(1/4) stays larger for longer, so rotation doesn't slow down
         // until we're much closer to the min range.
         // const u = Math.pow(, 0.25);
-        return Math.max(GlobeConstants.ROTATE_MIN, closeFactor01());// return 1 + u * (ROTATE_MAX_SPEED_MULT - 1);
+        return Math.max(GlobeConsts.ROTATE_MIN, closeFactor01());// return 1 + u * (ROTATE_MAX_SPEED_MULT - 1);
       };
 
       const setRange = (next: number) => {
         const minSurface =
           viewer?.scene.screenSpaceCameraController.minimumZoomDistance ??
-          GlobeConstants.MIN_SURFACE_CLEARANCE_M;
+          GlobeConsts.MIN_SURFACE_CLEARANCE_M;
         const maxSurface = viewer?.scene.screenSpaceCameraController.maximumZoomDistance ?? radius * 20.0;
 
         // Our orbit `range` is distance from globe center. Convert the surface clearance.
@@ -552,7 +552,7 @@ export function GlobeViewport({
           // Drag up/down to zoom.
           const dy = next.y - prev.y;
           const z = zoomRateScale01();
-          const scale = Math.exp(dy * GlobeConstants.ZOOM_SENS * z);
+          const scale = Math.exp(dy * GlobeConsts.ZOOM_SENS * z);
           setRange(range * scale);
           applyOrbit();
           e.preventDefault();
@@ -619,7 +619,7 @@ export function GlobeViewport({
 
       const onWheel = (e: WheelEvent) => {
         const z = zoomRateScale01();
-        const scale = Math.exp(e.deltaY * GlobeConstants.ZOOM_SENS * z * 0.15);
+        const scale = Math.exp(e.deltaY * GlobeConsts.ZOOM_SENS * z * 0.15);
         setRange(range * scale);
         applyOrbit();
         e.preventDefault();

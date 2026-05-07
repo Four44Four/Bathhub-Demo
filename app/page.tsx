@@ -39,14 +39,12 @@ export default function Home() {
               text="Example"
               x={16}
               y={48}
-              zIndex={1}
               onClick={() => alert(1)}
             />
             <Button
               imageSrc="/bathhub_logo_no_bg.svg"
               x={16}
               y={104}
-              zIndex={1}
               onClick={() => alert(2)}
             />
             <Button
@@ -55,7 +53,6 @@ export default function Home() {
               imageTextOffset={5}
               x={16}
               y={160}
-              zIndex={1}
               onClick={() => alert(3)}
             />
             <Button

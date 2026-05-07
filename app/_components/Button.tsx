@@ -2,11 +2,7 @@
 
 import type { CSSProperties, MouseEventHandler, ReactNode } from "react";
 
-export const BUTTON_CORNER_RADIUS = 8;
-export const BUTTON_FILL_COLOR = "#0E0F11";
-export const BUTTON_LINE_COLOR = "#20232D";
-export const BUTTON_LINE_THICKNESS = 1;
-export const BUTTON_TEXT_COLOR = "#AFB4C6";
+import { Button as ButtonConsts } from "./ComponentConstants";
 
 export type ButtonProps = {
   cornerRadius?: number;
@@ -17,7 +13,7 @@ export type ButtonProps = {
   text?: string;
   x: number;
   y: number;
-  zIndex: number;
+  zIndex?: number;
   imageSrc?: string;
   /** When both text and `imageSrc` are set, places the image on the left (`true`) or right (`false`) of the text. Defaults to left. */
   imageLeftOfText?: boolean;
@@ -27,15 +23,15 @@ export type ButtonProps = {
 };
 
 export function Button({
-  cornerRadius = BUTTON_CORNER_RADIUS,
-  fillColor = BUTTON_FILL_COLOR,
-  outlineColor = BUTTON_LINE_COLOR,
-  outlineThickness = BUTTON_LINE_THICKNESS,
-  textColor = BUTTON_TEXT_COLOR,
+  cornerRadius = ButtonConsts.CORNER_RADIUS,
+  fillColor = ButtonConsts.FILL_COLOR,
+  outlineColor = ButtonConsts.LINE_COLOR,
+  outlineThickness = ButtonConsts.LINE_THICKNESS,
+  textColor = ButtonConsts.TEXT_COLOR,
   text,
   x,
   y,
-  zIndex,
+  zIndex = 0,
   imageSrc,
   imageLeftOfText = true,
   imageTextOffset = 0,

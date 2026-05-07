@@ -39,8 +39,10 @@
 # Required API keys (in env vars)
 
 # TODO
- - Make interface mobile replicate
  - Add dummy backend
  - Add buttons on home page trigger dummy backend
+ - Add creating new Bathroom entries to frontend and backend
+ - Add Find nearest bathroom button
+ - Make settings that affect which bathrooms Find nearest bathroom returns
 
 # Notes

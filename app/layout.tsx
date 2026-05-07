@@ -2,6 +2,10 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
+export const SIDE_BG_COLOR = "#1C1D22";
+export const SIDE_FG_COLOR = "#20232D";
+export const MIDDLE_BG_COLOR = "#0E0F11";
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -22,12 +26,47 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const sideBg = SIDE_BG_COLOR;
+  const sideFg = SIDE_FG_COLOR;
+  const middleBg = MIDDLE_BG_COLOR;
+  const gridSizePx = 28;
+
   return (
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body
+        className="flex items-center justify-center overflow-hidden"
+        style={{
+          backgroundColor: sideBg,
+          backgroundImage: `
+            linear-gradient(${sideFg} 1px, transparent 1px),
+            linear-gradient(90deg, ${sideFg} 1px, transparent 1px)
+          `,
+          backgroundSize: `${gridSizePx}px ${gridSizePx}px`,
+          height: "100dvh",
+          width: "100vw",
+        }}
+      >
+        <div
+          className="relative overflow-hidden shadow-2xl"
+          style={{
+            aspectRatio: "9 / 16",
+            // Always fit the full phone height inside the browser viewport (no scrolling).
+            // Use dynamic viewport units to avoid mobile browser URL bar causing scroll.
+            height: "min(100dvh, calc(100vw * 16 / 9))",
+            width: "min(100vw, calc(100dvh * 9 / 16))",
+            maxWidth: "100vw",
+            maxHeight: "100dvh",
+            backgroundColor: middleBg,
+            borderRadius: 14,
+            outline: `1px solid ${sideFg}`,
+          }}
+        >
+          <div className="w-full h-full">{children}</div>
+        </div>
+      </body>
     </html>
   );
 }

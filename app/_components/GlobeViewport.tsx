@@ -10,6 +10,8 @@ import * as Utils from "./Utils";
 type GlobeViewportProps = {
   initLat: number;
   initLong: number;
+  width: number | string;
+  height: number | string;
 };
 
 function pixelIsWater(r: number, g: number, b: number) {
@@ -83,7 +85,16 @@ async function recolorTileToTwoTone(
   return canvas;
 }
 
-export function GlobeViewport({ initLat, initLong }: GlobeViewportProps) {
+function dimensionCss(value: number | string): string {
+  return typeof value === "number" ? `${value}px` : value;
+}
+
+export function GlobeViewport({
+  initLat,
+  initLong,
+  width,
+  height,
+}: GlobeViewportProps) {
   const mountRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -320,6 +331,9 @@ export function GlobeViewport({ initLat, initLong }: GlobeViewportProps) {
       let phi = (initLat * Math.PI) / 180;
       let range = radius * 3.0;
 
+      /** Full-bleed layout: zoom so the sphere’s limb subtends the larger of the two frustum FOVs (“cover”), clipping on the shorter axis (portrait: left/right). */
+      const fillParent = typeof width === "string" && width === "100%";
+
       const clamp = (n: number, min: number, max: number) => Math.min(max, Math.max(min, n));
       const EPS = 1e-3;
 
@@ -350,6 +364,24 @@ export function GlobeViewport({ initLat, initLong }: GlobeViewportProps) {
         });
         viewer?.scene.requestRender();
       };
+
+      if (fillParent) {
+        viewer.resize();
+        viewer.forceResize?.();
+        const canvasEl = viewer.scene.canvas;
+        const frustum = viewer.camera.frustum as unknown as {
+          fovy?: number;
+          aspectRatio?: number;
+        };
+        const fovy = frustum.fovy ?? (60 * Math.PI) / 180;
+        const aspect =
+          frustum.aspectRatio ?? canvasEl.clientWidth / Math.max(1, canvasEl.clientHeight);
+        const fovx = 2 * Math.atan(Math.tan(fovy / 2) * aspect);
+        const lim = Math.max(fovx, fovy);
+        const minCenter = radius + GlobeConstants.MIN_SURFACE_CLEARANCE_M;
+        const coverDistance = radius / Math.sin(lim / 2);
+        range = Math.max(minCenter, coverDistance);
+      }
 
       applyOrbit();
 
@@ -683,8 +715,37 @@ export function GlobeViewport({ initLat, initLong }: GlobeViewportProps) {
       ro?.disconnect();
       viewer?.destroy();
     };
-  }, [initLat, initLong]);
+  }, [initLat, initLong, width]);
 
-  return <div ref={mountRef} className="w-full h-full" />;
+  const fillParent = typeof width === "string" && width === "100%";
+
+  return (
+    <div
+      ref={mountRef}
+      className={
+        fillParent
+          ? "h-full w-full min-h-0 min-w-0 flex-1"
+          : "h-full w-full"
+      }
+      style={
+        fillParent
+          ? {
+              width: "100%",
+              height:
+                typeof height === "string" && height === "100%"
+                  ? "100%"
+                  : dimensionCss(height),
+              minHeight:
+                typeof height === "string" && height === "100%"
+                  ? "100%"
+                  : dimensionCss(height),
+            }
+          : {
+              width: dimensionCss(width),
+              minHeight: dimensionCss(height),
+            }
+      }
+    />
+  );
 }
 

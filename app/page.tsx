@@ -3,15 +3,17 @@
 
 import { GlobeViewport } from "./_components/GlobeViewport";
 import { CesiumAttribution } from "./_components/CesiumAttribution";
-import Image from "next/image";
+// import Image from "next/image";
+
+/** When set to `"100%"`, the globe mount fills the virtual phone frame (see `layout.tsx`) and the initial camera distance is chosen so the globe “covers” the view (no letterboxing; excess clips on the shorter axis). */
+const GLOBE_VIEWPORT_WIDTH = "100%";
+const GLOBE_VIEWPORT_HEIGHT = "100%";
 
 export default function Home() {
   const mapInitLat = 0.0;
   const mapInitLong = 0.0;
 
-  return (
-    <main className="flex-1 flex flex-col">
-      <div className="p-6">
+/* <div className="p-6">
         <Image src="/bathhub_logo_no_bg.svg" alt="Bathhub Logo"
                width={48} height={48}
                style={{ display: "inline-block" }} />
@@ -19,13 +21,24 @@ export default function Home() {
         <p className="mt-2 text-sm opacity-80">
           Interactive globe centered on ({mapInitLat}, {mapInitLong})
         </p>
-      </div>
+      </div> */
 
-      <div className="flex-1 min-h-[520px] px-6 pb-6">
-        <div className="h-full w-full overflow-hidden rounded-xl border border-white/10">
-          <GlobeViewport initLat={mapInitLat} initLong={mapInitLong} />
+  return (
+    <main className="flex h-full min-h-0 flex-col">
+      <div className="relative flex min-h-0 flex-1 flex-col">
+        <div className="min-h-0 flex-1 overflow-hidden">
+          <GlobeViewport
+            initLat={mapInitLat}
+            initLong={mapInitLong}
+            width={GLOBE_VIEWPORT_WIDTH}
+            height={GLOBE_VIEWPORT_HEIGHT}
+          />
         </div>
-        <CesiumAttribution />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 px-4 pb-3">
+          <div className="pointer-events-auto">
+            <CesiumAttribution />
+          </div>
+        </div>
       </div>
     </main>
   );

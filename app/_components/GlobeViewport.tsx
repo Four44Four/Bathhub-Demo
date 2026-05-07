@@ -5,83 +5,12 @@ import type * as CesiumTypes from "cesium";
 import "cesium/Build/Cesium/Widgets/widgets.css";
 
 import * as GlobeConstants from "./GlobeConstants";
+import * as Utils from "./Utils";
 
 type GlobeViewportProps = {
   initLat: number;
   initLong: number;
 };
-
-
-function hexToRgb(hex: string) {
-  const normalized = hex.replace("#", "").trim();
-  const full = normalized.length === 3 ? normalized.split("").map((c) => c + c).join("") : normalized;
-  const num = parseInt(full, 16);
-  return {
-    r: (num >> 16) & 255,
-    g: (num >> 8) & 255,
-    b: num & 255,
-  };
-}
-
-function rgbToHsl(r255: number, g255: number, b255: number) {
-  const r = r255 / 255;
-  const g = g255 / 255;
-  const b = b255 / 255;
-  const max = Math.max(r, g, b);
-  const min = Math.min(r, g, b);
-  const delta = max - min;
-
-  let h = 0;
-  let s = 0;
-  const l = (max + min) / 2;
-
-  if (delta !== 0) {
-    s = delta / (1 - Math.abs(2 * l - 1));
-    switch (max) {
-      case r:
-        h = ((g - b) / delta) % 6;
-        break;
-      case g:
-        h = (b - r) / delta + 2;
-        break;
-      default:
-        h = (r - g) / delta + 4;
-        break;
-    }
-    h *= 60;
-    if (h < 0) h += 360;
-  }
-
-  return { h, s, l };
-}
-
-function hslToRgb(h: number, s: number, l: number) {
-  const c = (1 - Math.abs(2 * l - 1)) * s;
-  const hp = (h % 360) / 60;
-  const x = c * (1 - Math.abs((hp % 2) - 1));
-
-  let r1 = 0;
-  let g1 = 0;
-  let b1 = 0;
-
-  if (hp >= 0 && hp < 1) [r1, g1, b1] = [c, x, 0];
-  else if (hp >= 1 && hp < 2) [r1, g1, b1] = [x, c, 0];
-  else if (hp >= 2 && hp < 3) [r1, g1, b1] = [0, c, x];
-  else if (hp >= 3 && hp < 4) [r1, g1, b1] = [0, x, c];
-  else if (hp >= 4 && hp < 5) [r1, g1, b1] = [x, 0, c];
-  else [r1, g1, b1] = [c, 0, x];
-
-  const m = l - c / 2;
-  return {
-    r: Math.round((r1 + m) * 255),
-    g: Math.round((g1 + m) * 255),
-    b: Math.round((b1 + m) * 255),
-  };
-}
-
-function clamp01(n: number) {
-  return Math.min(1, Math.max(0, n));
-}
 
 function pixelIsWater(r: number, g: number, b: number) {
   // Heuristic: classify "blue-ish" pixels as water.
@@ -100,8 +29,8 @@ async function recolorTileToTwoTone(
   const width = image.width;
   const height = image.height;
 
-  const landHsl = rgbToHsl(land.r, land.g, land.b);
-  const waterHsl = rgbToHsl(water.r, water.g, water.b);
+  const landHsl = Utils.rgbToHsl(land.r, land.g, land.b);
+  const waterHsl = Utils.rgbToHsl(water.r, water.g, water.b);
 
   const canvas = document.createElement("canvas");
   canvas.width = width;
@@ -121,20 +50,20 @@ async function recolorTileToTwoTone(
 
     // Preserve map detail (roads/labels/features) by using the original pixel's lightness
     // while forcing the hue to match the requested land/water colors.
-    const srcHsl = rgbToHsl(r, g, b);
+    const srcHsl = Utils.rgbToHsl(r, g, b);
 
     if (isWater) {
-      const l = clamp01(0.25 + srcHsl.l * 0.35);
-      const s = clamp01(waterHsl.s * 0.9);
-      const out = hslToRgb(waterHsl.h, s, l);
+      const l = Utils.clamp01(0.25 + srcHsl.l * 0.35);
+      const s = Utils.clamp01(waterHsl.s * 0.9);
+      const out = Utils.hslToRgb(waterHsl.h, s, l);
       d[i + 0] = out.r;
       d[i + 1] = out.g;
       d[i + 2] = out.b;
     } else {
       // Boost contrast on land so streets + features are easier to see.
-      const l = clamp01(0.18 + srcHsl.l * 0.70);
-      const s = clamp01(Math.max(landHsl.s, srcHsl.s * 0.35));
-      const out = hslToRgb(landHsl.h, s, l);
+      const l = Utils.clamp01(0.18 + srcHsl.l * 0.70);
+      const s = Utils.clamp01(Math.max(landHsl.s, srcHsl.s * 0.35));
+      const out = Utils.hslToRgb(landHsl.h, s, l);
       d[i + 0] = out.r;
       d[i + 1] = out.g;
       d[i + 2] = out.b;
@@ -188,8 +117,8 @@ export function GlobeViewport({ initLat, initLong }: GlobeViewportProps) {
 
       // Create a custom provider that recolors tiles into the requested two solid colors.
       class SolidColorImageryProvider extends Cesium.UrlTemplateImageryProvider {
-        private water = hexToRgb(GlobeConstants.WATER_COLOR);
-        private land = hexToRgb(GlobeConstants.LAND_COLOR);
+        private water = Utils.hexToRgb(GlobeConstants.WATER_COLOR);
+        private land = Utils.hexToRgb(GlobeConstants.LAND_COLOR);
 
         async requestImage(
           x: number,

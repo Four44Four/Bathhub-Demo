@@ -2,6 +2,7 @@
 "use client";
 
 import { GlobeViewport } from "./_components/GlobeViewport";
+import { CesiumAttribution } from "./_components/CesiumAttribution";
 import Image from "next/image";
 
 export default function Home() {
@@ -24,6 +25,7 @@ export default function Home() {
         <div className="h-full w-full overflow-hidden rounded-xl border border-white/10">
           <GlobeViewport initLat={mapInitLat} initLong={mapInitLong} />
         </div>
+        <CesiumAttribution />
       </div>
     </main>
   );

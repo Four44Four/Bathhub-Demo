@@ -182,6 +182,60 @@ export function GlobeViewport({ initLat, initLong }: GlobeViewportProps) {
         // Start with no imagery; we add our recolored Google-tile layer next.
       });
 
+      // Hide Cesium credit text (requested). Note: this may violate attribution requirements.
+      try {
+        (
+          viewer as unknown as {
+            _cesiumWidget?: { _creditContainer?: HTMLElement };
+          }
+        )._cesiumWidget?._creditContainer?.style && (((viewer as unknown as { _cesiumWidget?: { _creditContainer?: HTMLElement } })._cesiumWidget!._creditContainer!.style.display = "none"));
+      } catch {
+        // TODO: send dev notification via API if Cesium internals change
+      }
+
+      // Make attribution/credits smaller + top-left (still visible for compliance).
+      try {
+        const creditEl = viewer.cesiumWidget.creditContainer as HTMLDivElement | undefined;
+        if (creditEl) {
+          creditEl.style.position = "absolute";
+          creditEl.style.left = "10px";
+          creditEl.style.top = "10px";
+          creditEl.style.right = "auto";
+          creditEl.style.bottom = "auto";
+          creditEl.style.margin = "0";
+          creditEl.style.padding = "1px 2px";
+          creditEl.style.borderRadius = "0";
+          // Equivalent of:
+          // .cesium-viewer .cesium-widget-credits { font-size: 10px; line-height: 10px; }
+          creditEl.style.fontSize = "10px";
+          creditEl.style.lineHeight = "10px";
+          creditEl.style.opacity = "0.75";
+          creditEl.style.maxWidth = "80%";
+          creditEl.style.zIndex = "10";
+          creditEl.style.background = "transparent";
+          creditEl.style.backdropFilter = "";
+          creditEl.style.userSelect = "none";
+          // Safari/iOS
+          (creditEl.style as unknown as { webkitUserSelect?: string; webkitTouchCallout?: string }).webkitUserSelect =
+            "none";
+          (creditEl.style as unknown as { webkitUserSelect?: string; webkitTouchCallout?: string }).webkitTouchCallout =
+            "none";
+
+          // Cesium's default CSS can enforce a bottom position; clear it.
+          creditEl.classList.add("bh-credit-override");
+
+          // Equivalent of:
+          // .cesium-viewer .cesium-widget-credits img { height: 12px; }
+          const imgs = creditEl.querySelectorAll("img");
+          imgs.forEach((img) => {
+            (img as HTMLImageElement).style.height = "12px";
+            (img as HTMLImageElement).style.width = "auto";
+          });
+        }
+      } catch {
+        // Ignore styling failures; credits will remain in default position.
+      }
+
       // Reduce GPU usage: render only when needed, and throttle periodic renders.
       // When enabled, Cesium will render on interaction/changes (we also call requestRender explicitly).
       viewer.scene.requestRenderMode = true;

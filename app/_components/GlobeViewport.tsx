@@ -131,42 +131,35 @@ export function GlobeViewport({
         private water = Utils.hexToRgb(GlobeConstants.WATER_COLOR);
         private land = Utils.hexToRgb(GlobeConstants.LAND_COLOR);
 
-        async requestImage(
+        requestImage(
           x: number,
           y: number,
           level: number,
           request?: CesiumTypes.Request,
-        ) {
-          const baseImage = (await super.requestImage(
-            x,
-            y,
-            level,
-            request,
-          )) as unknown as ImageBitmap | HTMLImageElement | undefined;
+        ): Promise<CesiumTypes.ImageryTypes> | undefined {
+          // Cesium's contract: `super.requestImage` returns `undefined`
+          // synchronously when the request was deferred by RequestScheduler.
+          // We must propagate that `undefined` (not wrap it in a resolved
+          // Promise) so Cesium will retry later instead of locking the tile
+          // forever. Returning a solid-color placeholder here was the cause
+          // of "dark purple chunks that never load" at zoomed-out views.
+          const basePromise = super.requestImage(x, y, level, request);
+          if (!basePromise) return undefined;
 
-          if (!baseImage) {
-            const placeholder = document.createElement("canvas");
-            placeholder.width = 1;
-            placeholder.height = 1;
-            const ctx = placeholder.getContext("2d");
-            if (ctx) {
-              ctx.fillStyle = GlobeConstants.WATER_COLOR;
-              ctx.fillRect(0, 0, 1, 1);
+          const water = this.water;
+          const land = this.land;
+
+          return basePromise.then(async (baseImage) => {
+            const img = baseImage as unknown as ImageBitmap | HTMLImageElement;
+            try {
+              const recolored = await recolorTileToTwoTone(img, water, land);
+              if (recolored) return recolored as CesiumTypes.ImageryTypes;
+            } catch {
+              // If pixel readback fails (CORS taint, OOM, etc), fall through to
+              // the un-recolored tile rather than to a purple placeholder.
             }
-            if (typeof createImageBitmap === "function") {
-              return await createImageBitmap(placeholder);
-            }
-            return placeholder;
-          }
-
-          try {
-            const recolored = await recolorTileToTwoTone(baseImage, this.water, this.land);
-            if (recolored) return recolored;
-          } catch {
-            // If Google tiles block pixel reading due to CORS, just show the original imagery.
-          }
-
-          return baseImage;
+            return baseImage;
+          });
         }
       }
 
@@ -265,15 +258,17 @@ export function GlobeViewport({
       viewer.scene.globe.preloadAncestors = true;
       viewer.scene.globe.preloadSiblings = true;
 
-      // Firefox-specific stability: some GPU/driver combos can appear to "drop" globe tiles
-      // during motion due to aggressive culling/eviction. These settings trade memory for
-      // fewer visible unload/reload pops.
+      // Keep a generously-sized tile cache so tiles aren't evicted between
+      // camera changes; the default (~100) is small enough that on a wide
+      // zoomed-out view, tiles can be evicted and then re-fetched, which
+      // shows up as briefly-purple chunks while reloading.
+      (viewer.scene.globe as unknown as { tileCacheSize?: number }).tileCacheSize = 1000;
+
+      // Firefox-specific extra: some GPU/driver combos cull aggressively at the horizon.
       const isFirefox =
         typeof navigator !== "undefined" && /firefox/i.test(navigator.userAgent) && !/seamonkey/i.test(navigator.userAgent);
       if (isFirefox) {
-        // Keep more tiles resident to avoid rapid eviction when the view frustum changes.
         (viewer.scene.globe as unknown as { tileCacheSize?: number }).tileCacheSize = 2000;
-        // Reduce "popping" at the horizon / edge cases.
         (viewer.scene.globe as unknown as { backFaceCulling?: boolean }).backFaceCulling = false;
       }
 
@@ -282,12 +277,16 @@ export function GlobeViewport({
       // Docs: https://operations.osmfoundation.org/policies/tiles/
       const url = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
 
+      // Base layer covers the full globe at all zoom levels. Cap is intentionally
+      // generous so the base never looks chunkier than the detail layer that fades in.
+      // Level 9 tiles are ~78km wide at the equator; combined with the detail-layer
+      // fade-in below, no large pixelated chunks should be visible at any zoom.
       const provider = new SolidColorImageryProvider({
         url,
         subdomains: ["a", "b", "c"],
         credit: "© OpenStreetMap contributors",
         minimumLevel: 0,
-        maximumLevel: 7, // multiple LOD steps via the tile pyramid
+        maximumLevel: 9,
         tileWidth: 256,
         tileHeight: 256,
       });
@@ -306,7 +305,11 @@ export function GlobeViewport({
       });
       const detailLayer = viewer.imageryLayers.addImageryProvider(detailProvider);
       detailLayer.alpha = 0.0;
-      detailLayer.show = true;
+      // Keep hidden until alpha rises above zero. Cesium still issues tile
+      // requests for `show=true` layers even at alpha=0, which steals network
+      // bandwidth from the visible base layer (and can trigger OSM rate-limits
+      // that show up as missing dark-purple chunks).
+      detailLayer.show = false;
 
       // Ultra-close "street view": max zoom OSM tiles for precise building/road/label placement.
       // Faded in only when the camera is very close to the surface.
@@ -319,7 +322,9 @@ export function GlobeViewport({
       });
       const streetLayer = viewer.imageryLayers.addImageryProvider(streetProvider);
       streetLayer.alpha = 0.0;
-      streetLayer.show = true;
+      // Same rationale as the detail layer: don't fetch street-zoom tiles
+      // (max level 20) while invisible at far distances.
+      streetLayer.show = false;
 
       // Center the camera on the requested init lat/long.
       const radius = ellipsoid.maximumRadius;
@@ -632,25 +637,46 @@ export function GlobeViewport({
       window.addEventListener("pointercancel", onPointerUpOrCancel);
       canvas.addEventListener("wheel", onWheel, { passive: false });
 
-      // Fade high-zoom details in only when close enough.
-      const detailFadeStart = 1_200_000; // ~1200km
-      const detailFullyVisible = 250_000; // ~250km
+      // Fade the high-zoom detail layer in well before the base layer's coarse
+      // tiles become visibly chunky. The base layer's max level (9) means tiles
+      // are ~78km wide at the equator; any altitude near or below that produces
+      // visible "chunks", so we want the detail layer fully opaque well above it.
+      const detailFadeStart = 8_000_000; // ~8000km — start crossfading early
+      const detailFullyVisible = 1_500_000; // ~1500km — fully on before base looks chunky
       const updateDetail = () => {
         if (!viewer) return;
         const h = viewer?.camera.positionCartographic.height ?? detailFadeStart;
         const t = (detailFadeStart - h) / (detailFadeStart - detailFullyVisible);
-        detailLayer.alpha = Math.min(1, Math.max(0, t));
+        const detailAlpha = Math.min(1, Math.max(0, t));
+        detailLayer.alpha = detailAlpha;
+        // Hide entirely (skip tile fetches) while fully transparent so the
+        // base layer gets the full network/CPU budget — otherwise zoomed-out
+        // views can show unloaded dark-purple chunks because all three layers
+        // are competing for OSM/CARTO request slots.
+        detailLayer.show = detailAlpha > 0;
 
         // "Street view" fade: only when super close so labels/buildings are readable and stable.
         const streetFadeStart = 35_000; // ~35km
         const streetFullyVisible = 2_500; // ~2.5km
         const ts = (streetFadeStart - h) / (streetFadeStart - streetFullyVisible);
-        streetLayer.alpha = Math.min(1, Math.max(0, ts));
+        const streetAlpha = Math.min(1, Math.max(0, ts));
+        streetLayer.alpha = streetAlpha;
+        streetLayer.show = streetAlpha > 0;
 
-        // Increase LOD when close so streets/labels look sharper.
-        // Lower values => more detail. Keep it modest until we're very close.
+        // Drive Cesium's tile-loading aggressiveness with altitude. Lower values
+        // load finer tiles earlier, eliminating the "chunky LOD" look at medium
+        // zooms without the cost of forcing max detail at far-out views.
         const superClose = 1_000; // ~1km
-        viewer.scene.globe.maximumScreenSpaceError = h < superClose ? 0.35 : h < streetFadeStart ? 0.75 : 2.0;
+        viewer.scene.globe.maximumScreenSpaceError =
+          h < superClose
+            ? 0.35
+            : h < streetFadeStart
+              ? 0.75
+              : h < detailFullyVisible
+                ? 1.25
+                : h < detailFadeStart
+                  ? 1.6
+                  : 2.0;
 
         // FXAA can soften thin text/lines; disable it when close for crisper labels.
         const fxaa = viewer.scene.postProcessStages.fxaa;

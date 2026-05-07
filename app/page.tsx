@@ -1,6 +1,7 @@
 
 "use client";
 
+import { Button } from "./_components/Button";
 import { GlobeViewport } from "./_components/GlobeViewport";
 import { CesiumAttribution } from "./_components/CesiumAttribution";
 // import Image from "next/image";
@@ -26,13 +27,48 @@ export default function Home() {
   return (
     <main className="flex h-full min-h-0 flex-col">
       <div className="relative flex min-h-0 flex-1 flex-col">
-        <div className="min-h-0 flex-1 overflow-hidden">
+        <div className="relative min-h-0 flex-1 overflow-hidden">
           <GlobeViewport
             initLat={mapInitLat}
             initLong={mapInitLong}
             width={GLOBE_VIEWPORT_WIDTH}
             height={GLOBE_VIEWPORT_HEIGHT}
           />
+          <div className="pointer-events-none absolute inset-0 z-20">
+            <Button
+              text="Example"
+              x={16}
+              y={48}
+              zIndex={1}
+              onClick={() => alert(1)}
+            />
+            <Button
+              imageSrc="/bathhub_logo_no_bg.svg"
+              x={16}
+              y={104}
+              zIndex={1}
+              onClick={() => alert(2)}
+            />
+            <Button
+              text="Bathhub"
+              imageSrc="/bathhub_logo_no_bg.svg"
+              imageTextOffset={5}
+              x={16}
+              y={160}
+              zIndex={1}
+              onClick={() => alert(3)}
+            />
+            <Button
+              text="Bathhub"
+              imageSrc="/bathhub_logo_no_bg.svg"
+              imageLeftOfText={false}
+              imageTextOffset={20}
+              x={16}
+              y={216}
+              zIndex={1}
+              onClick={() => alert(4)}
+            />
+          </div>
         </div>
         <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 px-4 pb-3">
           <div className="pointer-events-auto">

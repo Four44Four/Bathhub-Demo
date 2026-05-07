@@ -1,36 +1,50 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Finds Bathrooms Near You
 
-## Getting Started
+# Frontend
+## Home page
+    - Has map centered on your location
+    - Map has bathrooms on it
+    - Buttons to quickly find nearest bathroom
+    - Button to add a new bathroom
+        - Prompts for location selection on map
+        - On selection completion:
+           - Run #Backend##Add new bathroom
+## Bathroom page
+    - Opened when a bathroom is opened
+    - Can see and post: 
+        - Pictures of the bathroom
+        - Ratings of the bathroom
+        - Comments about the bathroom
+        - Extra info about the bathroom
+## Settings page
+    - Set urgent bathroom preferences:
+        - Minimum bathroom quality
+        - Maximum bathroom distance
+        - AI summaries of bathrooms near you
+        - More...
+### Visual settings:
+    - Dark/light mode
+    - High contrast mode
+    - Custom color themes
+    - Bathroom icons
 
-First, run the development server:
+# Backend
+## Add new bathroom
+## Add new bathroom rating
+## Add new bathroom review
+## Add new bathroom pic
+## Add new bathroom misc info
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+# Required API keys (in env vars)
+ - Map Tile API key:
+    - `GOOGLE_MAP_TILE_API_KEY`
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+# TODO
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+# Notes
+## Globe constants
+ - MIN_SURFACE_CLEARANCE_M
+ - ZOOM_SENS
+ - ROTATE_MIN
+ - ZOOM_MIN
+ - ZOOM_DECAY_FACTOR

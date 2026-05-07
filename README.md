@@ -39,8 +39,6 @@
 # Required API keys (in env vars)
 
 # TODO
- - Make map viewport expand to entire virtual phone screen
- - Add dummy buttons
  - Add dummy backend
  - Add buttons on home page trigger dummy backend
  - Add creating new Bathroom entries to frontend and backend

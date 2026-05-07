@@ -38,11 +38,8 @@
 # Required API keys (in env vars)
 
 # TODO
+ - Make interface mobile replicate
+ - Add dummy backend
+ - Add buttons on home page trigger dummy backend
 
 # Notes
-## Globe constants
- - MIN_SURFACE_CLEARANCE_M
- - ZOOM_SENS
- - ROTATE_MIN
- - ZOOM_MIN
- - ZOOM_DECAY_FACTOR

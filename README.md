@@ -36,8 +36,6 @@
 ## Add new bathroom misc info
 
 # Required API keys (in env vars)
- - Map Tile API key:
-    - `GOOGLE_MAP_TILE_API_KEY`
 
 # TODO
 

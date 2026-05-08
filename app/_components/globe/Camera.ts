@@ -820,8 +820,13 @@ export function installOrbitCameraControls({
     cancelRotateAnim();
 
     const z = zoomRateScale01();
-    const scale = Math.exp(e.deltaY * GlobeConsts.ZOOM_SENS * z * 0.15);
-    wheelZoomTargetRange = clampRangeValue(wheelZoomTargetRange * scale);
+    // 5x faster mouse-wheel zoom.
+    const scale = Math.exp(e.deltaY * GlobeConsts.ZOOM_SENS * z * (0.15 * 3));
+    // Base the next target on the *current* camera range.
+    // If we compound off the previous target while a smooth-zoom RAF is still catching up,
+    // a small burst of wheel events (common on Windows mice / high-res wheels) can push the
+    // target far past the user's intent, and the RAF loop will keep zooming ("stuck" over-zoom).
+    wheelZoomTargetRange = clampRangeValue(range * scale);
     wheelZoomLastClient = { x: e.clientX, y: e.clientY };
     pulseZoomIndicator(e.clientX, e.clientY);
     wheelZoomLastPulseT = performance.now();

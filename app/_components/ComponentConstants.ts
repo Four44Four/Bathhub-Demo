@@ -29,9 +29,15 @@ export const Button = {
     TEXT_COLOR: "#AFB4C6",
 } as const;
 
-// Public asset path for the clicked-location indicator.
-// Default points at `./public/bathhub_logo_no_bg.svg`.
-export const CLICKED_INDICATOR_IMAGE = "/bathhub_logo_no_bg.svg";
+export const ClickedIndicator = {
+    // Screen-space sizing (in CSS pixels). This stays constant regardless of zoom.
+    SIZE: 50,
+    // Public asset path for the clicked-location indicator.
+    // Default points at `./public/bathhub_logo_no_bg.svg`.
+    IMAGE: "/bathhub_logo_no_bg.svg",
+    COLOR: "#FFF",
+    OPACITY: 1.0,
+} as const;
 
 export const Globe = {    
     // Target initial zoom level after geolocation is granted/processed:

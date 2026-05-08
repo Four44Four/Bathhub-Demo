@@ -1,11 +1,6 @@
 import type * as CesiumTypes from "cesium";
-import { CLICKED_INDICATOR_IMAGE } from "../ComponentConstants";
 
-// Screen-space sizing (in CSS pixels). This stays constant regardless of zoom.
-export const CLICKED_INDICATOR_SIZE = 50;
-
-export const CLICKED_INDICATOR_COLOR = "#FFF";
-export const CLICKED_INDICATOR_OPACITY = 1.0;
+import { ClickedIndicator as ClickedIndicatorConsts } from "../ComponentConstants";
 
 type ClickedIndicatorApi = {
   setLatLonDegrees: (lat: number, lon: number) => void;
@@ -33,11 +28,11 @@ export function installClickedIndicator(
     show: false,
     position,
     billboard: {
-      image: CLICKED_INDICATOR_IMAGE,
-      width: CLICKED_INDICATOR_SIZE,
-      height: CLICKED_INDICATOR_SIZE,
-      color: Cesium.Color.fromCssColorString(CLICKED_INDICATOR_COLOR).withAlpha(
-        CLICKED_INDICATOR_OPACITY,
+      image: ClickedIndicatorConsts.IMAGE,
+      width: ClickedIndicatorConsts.SIZE,
+      height: ClickedIndicatorConsts.SIZE,
+      color: Cesium.Color.fromCssColorString(ClickedIndicatorConsts.COLOR).withAlpha(
+        ClickedIndicatorConsts.OPACITY,
       ),
       horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
       verticalOrigin: Cesium.VerticalOrigin.CENTER,

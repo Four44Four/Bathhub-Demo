@@ -321,120 +321,193 @@ export function installOrbitCameraControls({
 
   type PinchZoomSession = {
     ids: [number, number];
-    lockedMid: { x: number; y: number };
-    lastDist: number;
     lastUpdateT: number;
   };
   let pinchZoomSession: PinchZoomSession | null = null;
-
-  const beginPinchZoomSession = (ids: [number, number]): boolean => {
-    const a = pointers.get(ids[0]);
-    const b = pointers.get(ids[1]);
-    if (!a || !b) return false;
-
-    const midX = (a.x + b.x) / 2;
-    const midY = (a.y + b.y) / 2;
-    const dist = Math.max(8, Math.hypot(a.x - b.x, a.y - b.y));
-
-    // Lock the zoom target location for the entire pinch session.
-    clearZoomAim();
-    beginZoomAim(midX, midY);
-    if (!zoomAim) return false;
-
-    pinchZoomSession = {
-      ids,
-      lockedMid: { x: midX, y: midY },
-      lastDist: dist,
-      lastUpdateT: Math.max(a.t, b.t),
-    };
-
-    return true;
-  };
 
   const endPinchZoomSession = () => {
     pinchZoomSession = null;
   };
 
-  const updatePinchZoomSession = () => {
-    if (!pinchZoomSession || !zoomAim) return;
-    const a = pointers.get(pinchZoomSession.ids[0]);
-    const b = pointers.get(pinchZoomSession.ids[1]);
-    if (!a || !b) return;
+  // Cesium-native pinch events provide both touch points in the same callback.
+  // This avoids the common "one finger updates late then snaps" behavior you can get
+  // when deriving pinch deltas from independent pointermove streams.
+  const cesiumGestureHandler = new Cesium.ScreenSpaceEventHandler(canvas);
+  const canvasToClient = (p: { x: number; y: number }) => {
+    const rect = canvas.getBoundingClientRect();
+    return { x: rect.left + p.x, y: rect.top + p.y };
+  };
 
-    const tNow = Math.max(a.t, b.t);
-    const dtMs = Math.max(0, tNow - pinchZoomSession.lastUpdateT);
-    pinchZoomSession.lastUpdateT = tNow;
+  // Simplified pinch state (modeled after common Cesium examples):
+  // - PINCH_START enables pinch mode
+  // - PINCH_MOVE computes a single distance delta and zooms
+  // - PINCH_END disables pinch mode
+  let isPinching = false;
+  let pinchLastDist: number | null = null;
 
-    // Zoom: scale directly from pinch distance delta, slowed by `closeFactor01()`.
-    const distNow = Math.max(8, Math.hypot(a.x - b.x, a.y - b.y));
-    const dDist = distNow - pinchZoomSession.lastDist;
-    pinchZoomSession.lastDist = distNow;
+  const readCesiumPinchDelta = (ev: unknown): { dDist: number; distNow?: number } | null => {
+    const e = ev as {
+      distance?: {
+        startDistance?: number;
+        currentDistance?: number;
+        startPosition?: { x: number; y: number };
+        endPosition?: { x: number; y: number };
+      };
+    };
 
-    // Swap pinch in/out: decreasing distance zooms OUT, increasing distance zooms IN.
-    // Make pinch 9x as sensitive as wheel-equivalent input.
-    const PINCH_SENS = 9.0;
-    const z = Math.max(GlobeConsts.ZOOM_MIN, closeFactor01());
-    const scale = Math.exp(-dDist * GlobeConsts.ZOOM_SENS * z * 0.15 * PINCH_SENS);
-    if (scale < 1) pulseZoomIndicator(pinchZoomSession.lockedMid.x, pinchZoomSession.lockedMid.y);
-    zoomBy(z);
-
-    // Rotate concurrently based on the fingers' screen-space velocities.
-    // Apply the same logic independently to X and Y, and rotate on the corresponding axes.
-    const V_EPS = 0.02;
-    const vxA = a.vx;
-    const vxB = b.vx;
-    const vyA = a.vy;
-    const vyB = b.vy;
-
-    const ax = Math.abs(vxA);
-    const bx = Math.abs(vxB);
-    const ay = Math.abs(vyA);
-    const by = Math.abs(vyB);
-
-    // Pointer events are not synchronized: often only one finger emits `pointermove`
-    // at a time. When reversing direction, the "other" finger's last-read velocity
-    // can temporarily have the opposite sign, which would incorrectly block rotation.
-    // Treat a finger as contributing only if its velocity is non-trivial AND recent.
-    const RECENT_MS = 60;
-    const aRecent = tNow - a.t <= RECENT_MS;
-    const bRecent = tNow - b.t <= RECENT_MS;
-
-    const aXActive = ax > V_EPS && aRecent;
-    const bXActive = bx > V_EPS && bRecent;
-    const aYActive = ay > V_EPS && aRecent;
-    const bYActive = by > V_EPS && bRecent;
-
-    const oppositeX =
-      aXActive && bXActive && Math.sign(vxA) !== 0 && Math.sign(vxB) !== 0 && Math.sign(vxA) !== Math.sign(vxB);
-    const oppositeY =
-      aYActive && bYActive && Math.sign(vyA) !== 0 && Math.sign(vyB) !== 0 && Math.sign(vyA) !== Math.sign(vyB);
-
-    if (dtMs > 0) {
-      let vxUse = 0;
-      if (!oppositeX) {
-        if (aXActive && bXActive) vxUse = ax >= bx ? vxA : vxB;
-        else if (aXActive) vxUse = vxA;
-        else if (bXActive) vxUse = vxB;
-      }
-
-      let vyUse = 0;
-      if (!oppositeY) {
-        if (aYActive && bYActive) vyUse = ay >= by ? vyA : vyB;
-        else if (aYActive) vyUse = vyA;
-        else if (bYActive) vyUse = vyB;
-      }
-
-      if (vxUse !== 0 || vyUse !== 0) {
-        const dx = vxUse * dtMs;
-        const dy = vyUse * dtMs;
-        applyDragRotate(dx, dy, zoomAim);
-      }
+    // Preferred: direct delta, as in the user's snippet.
+    if (typeof e.distance?.currentDistance === "number" && typeof e.distance?.startDistance === "number") {
+      return { dDist: e.distance.currentDistance - e.distance.startDistance, distNow: e.distance.currentDistance };
     }
 
-    // Apply immediately so pan/rotate stays responsive during the pinch.
-    applyZoomAimIfActive();
-    applyOrbit();
+    // Cesium ScreenSpaceEventHandler encodes distance deltas in the y component of MotionEvent positions.
+    const endY = e.distance?.endPosition?.y;
+    const startY = e.distance?.startPosition?.y;
+    if (typeof endY === "number" && typeof startY === "number") {
+      return { dDist: endY - startY, distNow: endY };
+    }
+
+    // Fallback: only a single distance value is available; caller will use lastDist.
+    if (typeof e.distance?.currentDistance === "number") return { dDist: 0, distNow: e.distance.currentDistance };
+    if (typeof e.distance?.endPosition?.y === "number") return { dDist: 0, distNow: e.distance.endPosition.y };
+    return null;
   };
+
+  cesiumGestureHandler.setInputAction(
+    (e: { position1: { x: number; y: number }; position2: { x: number; y: number } }) => {
+      isPinching = true;
+      const mid = { x: (e.position1.x + e.position2.x) / 2, y: (e.position1.y + e.position2.y) / 2 };
+      const midClient = canvasToClient(mid);
+      // Cesium's internal pinch distance is scaled by 0.25 in many builds.
+      const dist = 0.25 * Math.max(0, Math.hypot(e.position1.x - e.position2.x, e.position1.y - e.position2.y));
+      pinchLastDist = dist;
+
+      clearZoomAim();
+      beginZoomAim(midClient.x, midClient.y);
+      if (!zoomAim) return;
+
+      // Lock to the current two pointer IDs so we can reuse the existing velocity-based
+      // pinch-drag rotation logic (max-magnitude finger, epsilon, recent-ness).
+      const idsNow = Array.from(pointers.keys()).sort((x, y) => x - y);
+      const ids = (idsNow.length >= 2 ? ([idsNow[0], idsNow[1]] as [number, number]) : ([-1, -1] as [number, number]));
+      const a = pointers.get(ids[0]);
+      const b = pointers.get(ids[1]);
+
+      pinchZoomSession = {
+        ids,
+        lastUpdateT: Math.max(a?.t ?? 0, b?.t ?? 0),
+      };
+      mode = "pinchZoom";
+    },
+    Cesium.ScreenSpaceEventType.PINCH_START,
+  );
+
+  cesiumGestureHandler.setInputAction(
+    ((e: unknown) => {
+      if (!isPinching || !zoomAim) return;
+
+      const delta = readCesiumPinchDelta(e);
+      if (!delta) return;
+
+      let dDist = delta.dDist;
+      if (dDist === 0 && typeof delta.distNow === "number") {
+        const prev = pinchLastDist ?? delta.distNow;
+        pinchLastDist = delta.distNow;
+        dDist = delta.distNow - prev;
+      } else if (typeof delta.distNow === "number") {
+        pinchLastDist = delta.distNow;
+      }
+
+      // Swap pinch in/out: decreasing distance zooms OUT, increasing distance zooms IN.
+      // Make pinch 9x as sensitive as wheel-equivalent input.
+      const PINCH_SENS = 9.0;
+      const z = Math.max(GlobeConsts.ZOOM_MIN, closeFactor01());
+      const scale = Math.exp(-dDist * GlobeConsts.ZOOM_SENS * z * 0.15 * PINCH_SENS);
+      if (scale < 1) pulseZoomIndicator(zoomAim.clientX, zoomAim.clientY);
+      zoomBy(scale);
+
+      // Reintroduce pinch-drag rotation (both axes) using the original velocity logic:
+      // - horizontal rotate when both fingers move same-x sign OR only one finger is active
+      // - vertical "panning" behavior matches prior dy handling
+      if (pinchZoomSession) {
+        const a = pointers.get(pinchZoomSession.ids[0]);
+        const b = pointers.get(pinchZoomSession.ids[1]);
+        if (a && b) {
+          const tNow = Math.max(a.t, b.t);
+          const dtMs = Math.max(0, tNow - pinchZoomSession.lastUpdateT);
+          pinchZoomSession.lastUpdateT = tNow;
+
+          const V_EPS = 0.02;
+          const vxA = a.vx;
+          const vxB = b.vx;
+          const vyA = a.vy;
+          const vyB = b.vy;
+
+          const absVxA = Math.abs(vxA);
+          const absVxB = Math.abs(vxB);
+          const absVyA = Math.abs(vyA);
+          const absVyB = Math.abs(vyB);
+
+          const RECENT_MS = 60;
+          const aRecent = tNow - a.t <= RECENT_MS;
+          const bRecent = tNow - b.t <= RECENT_MS;
+
+          const aXActive = absVxA > V_EPS && aRecent;
+          const bXActive = absVxB > V_EPS && bRecent;
+          const aYActive = absVyA > V_EPS && aRecent;
+          const bYActive = absVyB > V_EPS && bRecent;
+
+          const oppositeX =
+            aXActive &&
+            bXActive &&
+            Math.sign(vxA) !== 0 &&
+            Math.sign(vxB) !== 0 &&
+            Math.sign(vxA) !== Math.sign(vxB);
+          const oppositeY =
+            aYActive &&
+            bYActive &&
+            Math.sign(vyA) !== 0 &&
+            Math.sign(vyB) !== 0 &&
+            Math.sign(vyA) !== Math.sign(vyB);
+
+          if (dtMs > 0) {
+            let vxUse = 0;
+            if (!oppositeX) {
+              // Use maximum magnitude when both contribute; otherwise accept the active finger.
+              if (aXActive && bXActive) vxUse = absVxA >= absVxB ? vxA : vxB;
+              else if (aXActive) vxUse = vxA;
+              else if (bXActive) vxUse = vxB;
+            }
+
+            let vyUse = 0;
+            if (!oppositeY) {
+              if (aYActive && bYActive) vyUse = absVyA >= absVyB ? vyA : vyB;
+              else if (aYActive) vyUse = vyA;
+              else if (bYActive) vyUse = vyB;
+            }
+
+            if (vxUse !== 0 || vyUse !== 0) {
+              const dx = vxUse * dtMs;
+              const dy = vyUse * dtMs;
+              applyDragRotate(dx, dy, zoomAim);
+              applyZoomAimIfActive();
+              applyOrbit();
+            }
+          }
+        }
+      }
+    }) as unknown as CesiumTypes.ScreenSpaceEventHandler.TwoPointMotionEventCallback,
+    Cesium.ScreenSpaceEventType.PINCH_MOVE,
+  );
+
+  cesiumGestureHandler.setInputAction(() => {
+    isPinching = false;
+    pinchLastDist = null;
+    endPinchZoomSession();
+    clearZoomAim();
+    if (pointers.size === 1) mode = "rotate";
+    else if (pointers.size === 0) mode = "none";
+  }, Cesium.ScreenSpaceEventType.PINCH_END);
 
   // Click/tap heuristics.
   const CLICK_MAX_MS = 450;
@@ -513,16 +586,15 @@ export function installOrbitCameraControls({
         // Same as mouse: allow rotate concurrently with active zoom.
       }
       if (pointers.size === 2) {
-        const ids = Array.from(pointers.keys()).sort((x, y) => x - y) as [number, number];
         if (wheelZoomRaf != null) {
           cancelAnimationFrame(wheelZoomRaf);
           wheelZoomRaf = null;
           wheelZoomTargetRange = range;
           wheelZoomLastClient = null;
         }
-        if (beginPinchZoomSession(ids)) {
-          mode = "pinchZoom";
-        }
+        // Let Cesium's pinch recognizer drive pinch start/move/end so we always receive
+        // both touch points together (more reliable than independent pointermove streams).
+        mode = "pinchZoom";
       }
     }
 
@@ -581,8 +653,8 @@ export function installOrbitCameraControls({
       return;
     }
 
-    if (mode === "pinchZoom" && pointers.size >= 2) {
-      updatePinchZoomSession();
+    if (mode === "pinchZoom") {
+      // Pinch is processed in a RAF loop so both pointers are sampled together.
       e.preventDefault();
     }
   };
@@ -724,6 +796,11 @@ export function installOrbitCameraControls({
       window.removeEventListener("pointerup", onPointerUpOrCancel);
       window.removeEventListener("pointercancel", onPointerUpOrCancel);
       canvas.removeEventListener("wheel", onWheel);
+      try {
+        cesiumGestureHandler.destroy();
+      } catch {
+        // ignore
+      }
       clearZoomAim();
       endPinchZoomSession();
       pointers.clear();

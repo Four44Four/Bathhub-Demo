@@ -1,3 +1,5 @@
+"use client";
+
 export function hexToRgb(hex: string) {
     const normalized = hex.replace("#", "").trim();
     const full = normalized.length === 3 ? normalized.split("").map((c) => c + c).join("") : normalized;

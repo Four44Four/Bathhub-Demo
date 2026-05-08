@@ -1,9 +1,11 @@
 
 "use client";
 
+import { useRef, useState } from "react";
 import { Button, TextWeight } from "./_components/Button";
 import { GlobeViewport } from "./_components/globe/GlobeViewport";
 import { CesiumAttribution } from "./_components/CesiumAttribution";
+import { ZoomIndicator } from "./_components/ZoomIndicator";
 // import Image from "next/image";
 
 import * as ServerDebug from "./server/Debug";
@@ -15,6 +17,13 @@ const GLOBE_VIEWPORT_HEIGHT = "100%";
 export default function Home() {
   const mapInitLat = 0.0;
   const mapInitLong = 0.0;
+
+  const globeRootRef = useRef<HTMLDivElement | null>(null);
+  const [zoomIndicator, setZoomIndicator] = useState<{ x: number; y: number; pulse: number }>({
+    x: 0,
+    y: 0,
+    pulse: 0,
+  });
 
 /* <div className="p-6">
         <Image src="/bathhub_logo_no_bg.svg" alt="Bathhub Logo"
@@ -29,12 +38,22 @@ export default function Home() {
   return (
     <main className="flex h-full min-h-0 flex-col">
       <div className="relative flex min-h-0 flex-1 flex-col">
-        <div className="relative min-h-0 flex-1 overflow-hidden">
+        <div ref={globeRootRef} className="relative min-h-0 flex-1 overflow-hidden">
           <GlobeViewport
             initLat={mapInitLat}
             initLong={mapInitLong}
             width={GLOBE_VIEWPORT_WIDTH}
             height={GLOBE_VIEWPORT_HEIGHT}
+            zoomIndicatorRootRef={globeRootRef}
+            onZoomIndicatorPulse={(x, y) => {
+              setZoomIndicator((z) => ({ x, y, pulse: z.pulse + 1 }));
+            }}
+          />
+          <ZoomIndicator
+            x={zoomIndicator.x}
+            y={zoomIndicator.y}
+            pulse={zoomIndicator.pulse}
+            hidden={zoomIndicator.pulse === 0}
           />
           <div className="pointer-events-none absolute inset-0 z-20">
             <Button

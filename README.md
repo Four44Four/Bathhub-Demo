@@ -39,11 +39,15 @@
 # Required API keys (in env vars)
 
 # TODO
- - Ask for access to device's realtime location
+ - Ask for access to device's realtime 
+    - Start globe centered on client's realtime location on loading the page
  - Integrate a real API for finding walking distance to clicked location from your current location
     - Use OpenRouteService
+ - Add Find path to clicked location button
+ - On clicking globe and clicking the Find path to clicked location button:
     - Print in server console what the API call for the nearest bathroom walking info returns
- - On clicking globe, draw a path from current location to clicked location
+ - On the button press: 
+    - Draw a path from current location to clicked location
  - Add Find nearest bathroom button
  - Make clicking on globe spawn a 2D bathroom image that always faces the camera
  - Add dummy backend

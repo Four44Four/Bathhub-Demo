@@ -40,7 +40,7 @@ export const Globe = {
     ZOOM_SENS: 0.01,
     ROTATE_MIN: 0.00005,
     ZOOM_MIN: 0.00005,
-    ZOOM_DECAY_FACTOR: 0.5,
+    ZOOM_DECAY_FACTOR: 1.0,
 
     // Minimum clearance above the globe surface (meters). Smaller => you can zoom closer.
     MIN_SURFACE_CLEARANCE_M: 250,

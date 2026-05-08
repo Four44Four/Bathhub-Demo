@@ -645,8 +645,9 @@ export function installOrbitCameraControls({
       const z = zoomRateScale01();
       const scale = Math.exp(dy * GlobeConsts.ZOOM_SENS * z);
       if (scale < 1) {
-        ensureZoomAimForClientXY(next.x, next.y);
-        pulseZoomIndicator(next.x, next.y);
+        // Lock the zoom target for the entire right-drag session (like wheel/pinch).
+        // Do not re-lock to the moving cursor position.
+        if (zoomAim) pulseZoomIndicator(zoomAim.clientX, zoomAim.clientY);
       }
       zoomBy(scale);
       e.preventDefault();
@@ -727,7 +728,7 @@ export function installOrbitCameraControls({
     }
 
     if (pointers.size === 0) {
-      if (mode === "pinchZoom") clearZoomAim();
+      if (mode === "pinchZoom" || mode === "zoomDrag") clearZoomAim();
       mode = "none";
       endPinchZoomSession();
     } else if (pointers.size === 1 && e.pointerType !== "mouse") {

@@ -419,7 +419,7 @@ export function installOrbitCameraControls({
 
       // Swap pinch in/out: decreasing distance zooms OUT, increasing distance zooms IN.
       // Make pinch 9x as sensitive as wheel-equivalent input.
-      const PINCH_SENS = 9.0;
+      const PINCH_SENS = 18.0;
       const z = Math.max(GlobeConsts.ZOOM_MIN, closeFactor01());
       const scale = Math.exp(-dDist * GlobeConsts.ZOOM_SENS * z * 0.15 * PINCH_SENS);
       if (scale < 1) pulseZoomIndicator(zoomAim.clientX, zoomAim.clientY);
@@ -633,6 +633,14 @@ export function installOrbitCameraControls({
 
     if (e.pointerType === "mouse") {
       if (e.button === 2) {
+        // If a smooth wheel-zoom is in-flight, it will keep lerping `range` toward its
+        // previous target and "snap back" against right-drag zoom. Right-drag must win.
+        if (wheelZoomRaf != null) {
+          cancelAnimationFrame(wheelZoomRaf);
+          wheelZoomRaf = null;
+          wheelZoomLastClient = null;
+        }
+        wheelZoomTargetRange = range;
         mode = "zoomDrag";
         clearZoomAim();
         beginZoomAim(e.clientX, e.clientY);
@@ -704,13 +712,17 @@ export function installOrbitCameraControls({
     if (mode === "zoomDrag") {
       const dy = next.y - prev.y;
       const z = zoomRateScale01();
-      const scale = Math.exp(dy * GlobeConsts.ZOOM_SENS * z);
+      // Right-drag zoom should be less sensitive than wheel/pinch.
+      const RIGHT_DRAG_SENS = 0.5; // 2x slower
+      const scale = Math.exp(dy * GlobeConsts.ZOOM_SENS * z * RIGHT_DRAG_SENS);
       if (scale < 1) {
         // Lock the zoom target for the entire right-drag session (like wheel/pinch).
         // Do not re-lock to the moving cursor position.
         if (zoomAim) pulseZoomIndicator(zoomAim.clientX, zoomAim.clientY);
       }
       zoomBy(scale);
+      // Keep the smooth-zoom target in sync so nothing snaps back on release.
+      wheelZoomTargetRange = range;
       e.preventDefault();
       return;
     }
@@ -821,7 +833,7 @@ export function installOrbitCameraControls({
 
     const z = zoomRateScale01();
     // 5x faster mouse-wheel zoom.
-    const scale = Math.exp(e.deltaY * GlobeConsts.ZOOM_SENS * z * (0.15 * 3));
+    const scale = Math.exp(e.deltaY * GlobeConsts.ZOOM_SENS * z * (0.15 * 5));
     // Base the next target on the *current* camera range.
     // If we compound off the previous target while a smooth-zoom RAF is still catching up,
     // a small burst of wheel events (common on Windows mice / high-res wheels) can push the

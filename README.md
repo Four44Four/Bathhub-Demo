@@ -42,8 +42,9 @@
  - Make clicking on the globe spawn a red box there
     - Make the previous red box disappear when it is clicked again
  - Ask for access to device's realtime location
- - Integrate a real API for finding walking distance to that nearest bathroom from your current location
- - Display on the left side/gutter what the API call for the nearest bathroom walking info returns
+ - Integrate a real API for finding walking distance to clicked location from your current location
+    - Use OpenRouteService
+    - Print in server console what the API call for the nearest bathroom walking info returns
  - On clicking globe, draw a path from current location to clicked location
  - Add Find nearest bathroom button
  - Make clicking on globe spawn a 2D bathroom image that always faces the camera

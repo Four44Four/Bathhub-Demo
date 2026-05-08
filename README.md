@@ -39,8 +39,6 @@
 # Required API keys (in env vars)
 
 # TODO
- - Ask for access to device's realtime 
-    - Start globe centered on client's realtime location on loading the page
  - Integrate a real API for finding walking distance to clicked location from your current location
     - Use OpenRouteService
  - Add Find path to clicked location button

@@ -20,6 +20,12 @@ export type InstallOrbitCameraOptions = {
 export type InstalledOrbitCameraControls = {
   /** Call on cleanup to remove all input listeners and cancel animations. */
   destroy: () => void;
+  /**
+   * Smoothly rotate the orbit camera so the surface point at (latDeg, longDeg)
+   * is centered. Does NOT change zoom (range). Any user input (drag/wheel/pinch)
+   * cancels the animation immediately so it never fights the user.
+   */
+  animateTo: (latDeg: number, longDeg: number, durationMs?: number) => void;
 };
 
 export function installOrbitCameraControls({
@@ -519,6 +525,59 @@ export function installOrbitCameraControls({
   let wheelZoomLastT = 0;
   let wheelZoomLastPulseT = 0;
 
+  // Programmatic orbit-rotation animation (used by `animateTo`). Rotates `theta`/`phi`
+  // toward a target without touching `range`. Always cancellable by user input.
+  let rotateAnimRaf: number | null = null;
+  const cancelRotateAnim = () => {
+    if (rotateAnimRaf != null) {
+      cancelAnimationFrame(rotateAnimRaf);
+      rotateAnimRaf = null;
+    }
+  };
+
+  const animateTo = (latDeg: number, longDeg: number, durationMs = 1500) => {
+    cancelRotateAnim();
+    // A pending zoom-aim would re-target the camera mid-animation; clear it.
+    clearZoomAim();
+
+    const targetTheta = (longDeg * Math.PI) / 180;
+    const targetPhi = clamp(
+      (latDeg * Math.PI) / 180,
+      -Math.PI / 2 + EPS,
+      Math.PI / 2 - EPS,
+    );
+    const startTheta = theta;
+    const startPhi = phi;
+    // Take the shortest way around the sphere (e.g. -179° → +179° rotates 2°, not 358°).
+    const dTheta = wrapAngleRad(targetTheta - startTheta);
+    const dPhi = targetPhi - startPhi;
+
+    if (Math.abs(dTheta) < 1e-6 && Math.abs(dPhi) < 1e-6) return;
+
+    const startT =
+      typeof performance !== "undefined" ? performance.now() : Date.now();
+    const dur = Math.max(1, durationMs);
+
+    const tick = (now: number) => {
+      const u = clamp((now - startT) / dur, 0, 1);
+      // smoothstep ease-in/out
+      const e = u * u * (3 - 2 * u);
+      theta = startTheta + dTheta * e;
+      phi = clamp(
+        startPhi + dPhi * e,
+        -Math.PI / 2 + EPS,
+        Math.PI / 2 - EPS,
+      );
+      applyOrbit();
+      if (u < 1) {
+        rotateAnimRaf = requestAnimationFrame(tick);
+      } else {
+        rotateAnimRaf = null;
+      }
+    };
+    rotateAnimRaf = requestAnimationFrame(tick);
+  };
+
   const startWheelZoomLoop = () => {
     if (wheelZoomRaf != null) return;
     wheelZoomLastT = performance.now();
@@ -561,6 +620,9 @@ export function installOrbitCameraControls({
   };
 
   const onPointerDown = (e: PointerEvent) => {
+    // Any user touch/click cancels a programmatic rotation animation.
+    cancelRotateAnim();
+
     try {
       canvas.setPointerCapture(e.pointerId);
     } catch {
@@ -755,6 +817,9 @@ export function installOrbitCameraControls({
   };
 
   const onWheel = (e: WheelEvent) => {
+    // Any user wheel input cancels a programmatic rotation animation.
+    cancelRotateAnim();
+
     const z = zoomRateScale01();
     const scale = Math.exp(e.deltaY * GlobeConsts.ZOOM_SENS * z * 0.15);
     wheelZoomTargetRange = clampRangeValue(wheelZoomTargetRange * scale);
@@ -782,7 +847,9 @@ export function installOrbitCameraControls({
   applyOrbit();
 
   return {
+    animateTo,
     destroy: () => {
+      cancelRotateAnim();
       if (wheelZoomRaf != null) {
         cancelAnimationFrame(wheelZoomRaf);
         wheelZoomRaf = null;

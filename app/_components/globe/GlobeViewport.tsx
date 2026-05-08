@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useRef, type RefObject } from "react";
+import {
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  type Ref,
+  type RefObject,
+} from "react";
 import type * as CesiumTypes from "cesium";
 import "cesium/Build/Cesium/Widgets/widgets.css";
 
@@ -8,7 +14,17 @@ import { Globe as GlobeConsts } from "../ComponentConstants";
 import * as Utils from "../Utils";
 import * as ServerDebug from "../../server/Debug";
 import { installClickedIndicator } from "./ClickedIndicator";
-import { installOrbitCameraControls } from "./Camera";
+import { installOrbitCameraControls, type InstalledOrbitCameraControls } from "./Camera";
+
+/**
+ * Imperative handle exposed via the `ref` prop so callers can drive the camera
+ * without forcing a re-init of the underlying Cesium viewer. Currently used by
+ * `Home()` to smoothly rotate to the user's geolocation when permission is
+ * granted *after* first render.
+ */
+export type GlobeViewportHandle = {
+  animateTo: (lat: number, long: number, durationMs?: number) => void;
+};
 
 type GlobeViewportProps = {
   initLat: number;
@@ -24,6 +40,11 @@ type GlobeViewportProps = {
    * Called when a zoom-in gesture occurs; coordinates are CSS pixels relative to `zoomIndicatorRootRef` (or the internal container).
    */
   onZoomIndicatorPulse?: (x: number, y: number) => void;
+  /**
+   * React 19 ref-as-prop. Receives a `GlobeViewportHandle` once the Cesium
+   * viewer has finished initializing.
+   */
+  ref?: Ref<GlobeViewportHandle | null>;
 };
 
 function pixelIsWater(r: number, g: number, b: number) {
@@ -108,9 +129,30 @@ export function GlobeViewport({
   height,
   zoomIndicatorRootRef,
   onZoomIndicatorPulse,
+  ref,
 }: GlobeViewportProps) {
   const mountRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  // The orbit camera controls are created inside an async init() below; until
+  // they exist, queue the most recent `animateTo` request and replay it once
+  // the viewer is ready.
+  const cameraControlsRef = useRef<InstalledOrbitCameraControls | null>(null);
+  const pendingAnimateToRef = useRef<{ lat: number; long: number; durationMs?: number } | null>(null);
+
+  useImperativeHandle<GlobeViewportHandle | null, GlobeViewportHandle>(
+    ref,
+    () => ({
+      animateTo: (lat, long, durationMs) => {
+        const controls = cameraControlsRef.current;
+        if (controls) {
+          controls.animateTo(lat, long, durationMs);
+        } else {
+          pendingAnimateToRef.current = { lat, long, durationMs };
+        }
+      },
+    }),
+    [],
+  );
 
   useEffect(() => {
     const mount = mountRef.current;
@@ -374,6 +416,16 @@ export function GlobeViewport({
         },
       });
 
+      // Publish the controls for the imperative `animateTo` handle. If the
+      // parent already requested an animation while we were initializing
+      // (e.g. geolocation resolved faster than Cesium loaded), replay it now.
+      cameraControlsRef.current = cameraControls;
+      const pending = pendingAnimateToRef.current;
+      if (pending) {
+        pendingAnimateToRef.current = null;
+        cameraControls.animateTo(pending.lat, pending.long, pending.durationMs);
+      }
+
       // Fade the high-zoom detail layer in well before the base layer's coarse
       // tiles become visibly chunky. The base layer's max level (9) means tiles
       // are ~78km wide at the equator; any altitude near or below that produces
@@ -472,6 +524,9 @@ export function GlobeViewport({
       cleanup?.clickedIndicator.destroy();
       ro?.disconnect();
       viewer?.destroy();
+      // Drop the imperative-handle target so a late `animateTo` can't drive a
+      // destroyed viewer. Future calls will re-queue into pendingAnimateToRef.
+      cameraControlsRef.current = null;
     };
   }, [initLat, initLong, width]);
 

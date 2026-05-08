@@ -34,6 +34,8 @@ export const Button = {
 export const CLICKED_INDICATOR_IMAGE = "/bathhub_logo_no_bg.svg";
 
 export const Globe = {
+    ANIMATE_ON_INIT: true,
+
     WATER_COLOR: "#41457E",
     LAND_COLOR: "#323255",
 

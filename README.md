@@ -39,16 +39,22 @@
 # Required API keys (in env vars)
 
 # TODO
+ - Move clicking and future debug messages to a dedicated debug section on the gutter in a monowidth, non-intrusive font
+    - Make it only work in dev mode
+ - Make clicking on the globe spawn a red box there
+    - Make the previous red box disappear when it is clicked again
+ - Ask for access to device's realtime location
+ - Integrate a real API for finding walking distance to that nearest bathroom from your current location
+ - Display on the left side/gutter what the API call for the nearest bathroom walking info returns
+ - On clicking globe, draw a path from current location to clicked location
  - Add dummy backend
  - Add buttons on home page trigger dummy backend
  - Add creating new Bathroom entries to frontend and backend
  - Add Find nearest bathroom button
  - Make settings that affect which bathrooms Find nearest bathroom returns
- - Ask for access to device's realtime location
  - Render nearest bathroom as 3d red box on the map
- - Integrate a real API for finding walking distance to that nearest bathroom from your current location
- - Display on the left side/gutter what the API call for the nearest bathroom walking info returns
- - Update this information at regular intervals
+    - Render path to it
+ - Update path at regular intervals
     - Move the map center whenever it updates
 
 # Notes

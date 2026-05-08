@@ -9,7 +9,7 @@ export const TextWeight = {
   BOLD: SharedConsts.FONT_BOLD_CLASS, 
   LIGHT: SharedConsts.FONT_LIGHT_CLASS
 } as const;
-export type TextWeight = typeof TextWeight[keyof typeof TextWeight];
+export type TextWeight = (typeof TextWeight)[keyof typeof TextWeight];
 
 export type ButtonProps = {
   cornerRadius?: number;

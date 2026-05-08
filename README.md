@@ -45,10 +45,14 @@
  - Integrate a real API for finding walking distance to that nearest bathroom from your current location
  - Display on the left side/gutter what the API call for the nearest bathroom walking info returns
  - On clicking globe, draw a path from current location to clicked location
+ - Add Find nearest bathroom button
+ - Make clicking on globe spawn a 2D bathroom image that always faces the camera
+    - Bathroom will be stored in memory for now
+    - Bathroom should disappear when zoomed out too far
+       - Store the exact distance in a constant
  - Add dummy backend
  - Add buttons on home page trigger dummy backend
  - Add creating new Bathroom entries to frontend and backend
- - Add Find nearest bathroom button
  - Make settings that affect which bathrooms Find nearest bathroom returns
  - Render nearest bathroom as 3d red box on the map
     - Render path to it

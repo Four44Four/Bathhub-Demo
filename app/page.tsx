@@ -1,7 +1,7 @@
 
 "use client";
 
-import { Button } from "./_components/Button";
+import { Button, TextWeight } from "./_components/Button";
 import { GlobeViewport } from "./_components/GlobeViewport";
 import { CesiumAttribution } from "./_components/CesiumAttribution";
 // import Image from "next/image";
@@ -49,6 +49,7 @@ export default function Home() {
             />
             <Button
               text="Bathhub"
+              textWeight={TextWeight.BOLD}
               imageSrc="/bathhub_logo_no_bg.svg"
               imageTextOffset={5}
               x={16}
@@ -57,6 +58,7 @@ export default function Home() {
             />
             <Button
               text="Bathhub"
+              textWeight={TextWeight.LIGHT}
               imageSrc="/bathhub_logo_no_bg.svg"
               imageLeftOfText={false}
               imageTextOffset={20}

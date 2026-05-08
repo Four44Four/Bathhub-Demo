@@ -39,8 +39,6 @@
 # Required API keys (in env vars)
 
 # TODO
- - Move clicking and future debug messages to a dedicated debug section on the gutter in a monowidth, non-intrusive font
-    - Make it only work in dev mode
  - Make clicking on the globe spawn a red box there
     - Make the previous red box disappear when it is clicked again
  - Ask for access to device's realtime location

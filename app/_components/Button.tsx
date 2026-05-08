@@ -2,7 +2,14 @@
 
 import type { CSSProperties, MouseEventHandler, ReactNode } from "react";
 
-import { Button as ButtonConsts } from "./ComponentConstants";
+import { Button as ButtonConsts, Shared as SharedConsts } from "./ComponentConstants";
+
+export const TextWeight = {
+  REGULAR: SharedConsts.FONT_REGULAR_CLASS, 
+  BOLD: SharedConsts.FONT_BOLD_CLASS, 
+  LIGHT: SharedConsts.FONT_LIGHT_CLASS
+} as const;
+export type TextWeight = typeof TextWeight[keyof typeof TextWeight];
 
 export type ButtonProps = {
   cornerRadius?: number;
@@ -11,6 +18,7 @@ export type ButtonProps = {
   outlineThickness?: number;
   textColor?: string;
   text?: string;
+  textWeight?: TextWeight;
   x: number;
   y: number;
   zIndex?: number;
@@ -28,6 +36,7 @@ export function Button({
   outlineColor = ButtonConsts.LINE_COLOR,
   outlineThickness = ButtonConsts.LINE_THICKNESS,
   textColor = ButtonConsts.TEXT_COLOR,
+  textWeight = TextWeight.REGULAR,
   text,
   x,
   y,
@@ -59,6 +68,7 @@ export function Button({
 
   const textEl = hasText ? (
     <span
+      className={textWeight}
       style={{
         color: textColor,
         fontSize: 14,

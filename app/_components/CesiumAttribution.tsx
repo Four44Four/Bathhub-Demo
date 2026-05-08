@@ -1,10 +1,12 @@
 "use client";
 
-import React from "react";
+import { Shared as SharedConsts } from "./ComponentConstants";
 
 export function CesiumAttribution() {
   return (
-    <div className="mt-3 text-[11px] leading-[1.2] opacity-80">
+    <div className={
+      SharedConsts.FONT_REGULAR_CLASS + " mt-3 text-[11px] leading-[1.2] opacity-80"
+    }>
       <span>
         Powered by{" "}
         <a

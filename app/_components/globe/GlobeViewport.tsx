@@ -4,9 +4,10 @@ import { useEffect, useRef } from "react";
 import type * as CesiumTypes from "cesium";
 import "cesium/Build/Cesium/Widgets/widgets.css";
 
-import { Globe as GlobeConsts } from "./ComponentConstants";
-import * as Utils from "./Utils";
-import * as ServerDebug from "../server/Debug";
+import { Globe as GlobeConsts } from "../ComponentConstants";
+import * as Utils from "../Utils";
+import * as ServerDebug from "../../server/Debug";
+import { installClickedIndicator } from "./ClickedIndicator";
 
 type GlobeViewportProps = {
   initLat: number;
@@ -295,6 +296,17 @@ export function GlobeViewport({
       viewer.imageryLayers.removeAll();
       viewer.imageryLayers.addImageryProvider(provider);
 
+      const clickedIndicator = installClickedIndicator(Cesium, viewer);
+
+      // Ensure Cesium never handles double-click / double-tap camera actions.
+      // We keep our own pointer-based interaction, but remove the default input actions
+      // that can "zoom/teleport" on rapid double clicks.
+      try {
+        viewer.screenSpaceEventHandler.removeInputAction(Cesium.ScreenSpaceEventType.LEFT_DOUBLE_CLICK);
+      } catch {
+        // If Cesium internals change, the canvas dblclick preventDefault still applies.
+      }
+
       // High-zoom detail overlay (streets/buildings + names) that only fades in when close.
       // This is still 2D raster imagery (no 3D tiles/models).
       const detailProvider = new SolidColorImageryProvider({
@@ -434,6 +446,9 @@ export function GlobeViewport({
       let mode: "none" | "rotate" | "zoomDrag" | "pinchZoom" = "none";
       let lastPinchDist = 0;
 
+      // Click/tap heuristics.
+      const CLICK_MAX_MS = 450;
+      const CLICK_MAX_MOVE_PX = 6;
 
       // const ZOOM_RATE_DECAY_FACTOR = 3.0;
       // const ROTATE_MAX_SPEED_MULT = 5.0;
@@ -488,6 +503,10 @@ export function GlobeViewport({
       };
 
       const onContextMenu = (e: Event) => e.preventDefault();
+      const onDoubleClick = (e: MouseEvent) => {
+        // Prevent browser/Cesium default double-click behaviors (zoom/teleport).
+        e.preventDefault();
+      };
       const onPointerDown = (e: PointerEvent) => {
         // Pointer capture is the most reliable way to ensure we get the corresponding
         // pointerup even if the cursor/finger leaves the canvas. Some browsers can throw.
@@ -593,7 +612,11 @@ export function GlobeViewport({
           const isMouseLeftClick = e.pointerType === "mouse" && (down.button ?? e.button) === 0;
           const isTouchTap = e.pointerType !== "mouse";
           const isClickCandidate =
-            (isMouseLeftClick || isTouchTap) && dt < 450 && dist < 6 && mode !== "pinchZoom" && mode !== "zoomDrag";
+            (isMouseLeftClick || isTouchTap) &&
+            dt < CLICK_MAX_MS &&
+            dist < CLICK_MAX_MOVE_PX &&
+            mode !== "pinchZoom" &&
+            mode !== "zoomDrag";
 
           if (isClickCandidate) {
             const rect = canvas.getBoundingClientRect();
@@ -603,10 +626,12 @@ export function GlobeViewport({
               const carto = Cesium.Cartographic.fromCartesian(picked);
               const lat = Cesium.Math.toDegrees(carto.latitude);
               const lon = Cesium.Math.toDegrees(carto.longitude);
-              
+
               const logString = `Lat: ${lat.toFixed(6)}, Lon: ${lon.toFixed(6)}`;
               ServerDebug.log(logString);
               console.log(logString);
+
+              clickedIndicator.setLatLonDegrees(lat, lon);
             }
           }
         }
@@ -630,6 +655,7 @@ export function GlobeViewport({
       };
 
       canvas.addEventListener("contextmenu", onContextMenu);
+      canvas.addEventListener("dblclick", onDoubleClick);
       canvas.addEventListener("pointerdown", onPointerDown);
       canvas.addEventListener("pointermove", onPointerMove);
       canvas.addEventListener("pointerup", onPointerUpOrCancel);
@@ -703,8 +729,10 @@ export function GlobeViewport({
         ro,
         onCameraChanged: updateDetail,
         camera: viewer.camera,
+        clickedIndicator,
         removeInputListeners: () => {
           canvas.removeEventListener("contextmenu", onContextMenu);
+          canvas.removeEventListener("dblclick", onDoubleClick);
           canvas.removeEventListener("pointerdown", onPointerDown);
           canvas.removeEventListener("pointermove", onPointerMove);
           canvas.removeEventListener("pointerup", onPointerUpOrCancel);
@@ -723,6 +751,7 @@ export function GlobeViewport({
           ro: ResizeObserver;
           onCameraChanged: () => void;
           camera: CesiumTypes.Camera;
+          clickedIndicator: { destroy: () => void };
           removeInputListeners: () => void;
         }
       | null = null;
@@ -742,6 +771,7 @@ export function GlobeViewport({
       cancelled = true;
       cleanup?.camera.changed.removeEventListener(cleanup.onCameraChanged);
       cleanup?.removeInputListeners();
+      cleanup?.clickedIndicator.destroy();
       ro?.disconnect();
       viewer?.destroy();
     };

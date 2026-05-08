@@ -29,6 +29,10 @@ export namespace Button {
     export const TEXT_COLOR = "#AFB4C6";
 }
 
+// Public asset path for the clicked-location indicator.
+// Default points at `./public/bathhub_logo_no_bg.svg`.
+export const CLICKED_INDICATOR_IMAGE = "/bathhub_logo_no_bg.svg";
+
 export namespace Globe {
     export const WATER_COLOR = "#41457E";
     export const LAND_COLOR = "#323255";

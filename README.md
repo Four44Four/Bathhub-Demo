@@ -39,8 +39,7 @@
 # Required API keys (in env vars)
 
 # TODO
- - Make clicking on the globe spawn a red box there
-    - Make the previous red box disappear when it is clicked again
+ - Fix clicking when zoomed in at maximum zoom not resulting in exact lat/long coordinates
  - Ask for access to device's realtime location
  - Integrate a real API for finding walking distance to clicked location from your current location
     - Use OpenRouteService
@@ -48,9 +47,6 @@
  - On clicking globe, draw a path from current location to clicked location
  - Add Find nearest bathroom button
  - Make clicking on globe spawn a 2D bathroom image that always faces the camera
-    - Bathroom will be stored in memory for now
-    - Bathroom should disappear when zoomed out too far
-       - Store the exact distance in a constant
  - Add dummy backend
  - Add buttons on home page trigger dummy backend
  - Add creating new Bathroom entries to frontend and backend

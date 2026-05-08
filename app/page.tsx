@@ -2,7 +2,7 @@
 "use client";
 
 import { Button, TextWeight } from "./_components/Button";
-import { GlobeViewport } from "./_components/GlobeViewport";
+import { GlobeViewport } from "./_components/globe/GlobeViewport";
 import { CesiumAttribution } from "./_components/CesiumAttribution";
 // import Image from "next/image";
 

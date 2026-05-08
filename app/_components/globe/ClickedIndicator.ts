@@ -53,7 +53,6 @@ export function installClickedIndicator(
     const heightM = 10;
     const latRad = Cesium.Math.toRadians(latDeg);
     const lonRad = Cesium.Math.toRadians(lonDeg);
-
     Cesium.Cartesian3.fromRadians(lonRad, latRad, heightM, ellipsoid, positionValue);
     position.setValue(positionValue);
   };

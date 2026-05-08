@@ -190,11 +190,12 @@ export function GlobeViewport({
 
       // Hide Cesium credit text (requested). Note: this may violate attribution requirements.
       try {
-        (
-          viewer as unknown as {
-            _cesiumWidget?: { _creditContainer?: HTMLElement };
-          }
-        )._cesiumWidget?._creditContainer?.style && (((viewer as unknown as { _cesiumWidget?: { _creditContainer?: HTMLElement } })._cesiumWidget!._creditContainer!.style.display = "none"));
+        const creditContainer = (
+          viewer as unknown as { _cesiumWidget?: { _creditContainer?: HTMLElement } }
+        )._cesiumWidget?._creditContainer;
+        if (creditContainer?.style) {
+          creditContainer.style.display = "none";
+        }
       } catch {
         // TODO: send dev notification via API if Cesium internals change
       }
@@ -621,13 +622,57 @@ export function GlobeViewport({
           if (isClickCandidate) {
             const rect = canvas.getBoundingClientRect();
             const pos = new Cesium.Cartesian2(e.clientX - rect.left, e.clientY - rect.top);
-            const picked = viewer.camera.pickEllipsoid(pos, ellipsoid);
-            if (picked) {
-              const carto = Cesium.Cartographic.fromCartesian(picked);
+            // Compute accurate lat/lon (degrees). Prefer depth-buffer pick at high zoom,
+            // then fall back to globe ray-intersection, then ellipsoid.
+            let carto: CesiumTypes.Cartographic | undefined;
+            try {
+              if (viewer.scene.pickPositionSupported) {
+                const world = viewer.scene.pickPosition(pos);
+                if (Cesium.defined(world)) {
+                  // IMPORTANT: our globe uses a custom spherical ellipsoid, so we must
+                  // convert with that same ellipsoid (not the default WGS84) or lat/lon
+                  // will drift, especially noticeable at extreme zoom.
+                  carto = Cesium.Cartographic.fromCartesian(
+                    world as CesiumTypes.Cartesian3,
+                    ellipsoid,
+                  );
+                }
+              }
+            } catch {
+              // ignore, fall back below
+            }
+
+            if (!carto) {
+              try {
+                const ray = viewer.camera.getPickRay(pos);
+                if (ray) {
+                  const gp = viewer.scene.globe.pick(ray, viewer.scene);
+                  if (Cesium.defined(gp)) {
+                    carto = Cesium.Cartographic.fromCartesian(
+                      gp as CesiumTypes.Cartesian3,
+                      ellipsoid,
+                    );
+                  }
+                }
+              } catch {
+                // ignore, fall back below
+              }
+            }
+
+            if (!carto) {
+              const world = viewer.camera.pickEllipsoid(pos, ellipsoid);
+              if (world) {
+                carto = Cesium.Cartographic.fromCartesian(world, ellipsoid);
+              }
+            }
+
+            if (carto) {
               const lat = Cesium.Math.toDegrees(carto.latitude);
               const lon = Cesium.Math.toDegrees(carto.longitude);
 
-              const logString = `Lat: ${lat.toFixed(6)}, Lon: ${lon.toFixed(6)}`;
+              if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
+
+              const logString = `Lat: ${lat}, Lon: ${lon}`;
               ServerDebug.log(logString);
               console.log(logString);
 

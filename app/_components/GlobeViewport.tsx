@@ -6,6 +6,7 @@ import "cesium/Build/Cesium/Widgets/widgets.css";
 
 import { Globe as GlobeConsts } from "./ComponentConstants";
 import * as Utils from "./Utils";
+import * as ServerDebug from "../server/Debug";
 
 type GlobeViewportProps = {
   initLat: number;
@@ -602,7 +603,10 @@ export function GlobeViewport({
               const carto = Cesium.Cartographic.fromCartesian(picked);
               const lat = Cesium.Math.toDegrees(carto.latitude);
               const lon = Cesium.Math.toDegrees(carto.longitude);
-              alert(`Lat: ${lat.toFixed(6)}, Lon: ${lon.toFixed(6)}`);
+              
+              const logString = `Lat: ${lat.toFixed(6)}, Lon: ${lon.toFixed(6)}`;
+              ServerDebug.log(logString);
+              console.log(logString);
             }
           }
         }

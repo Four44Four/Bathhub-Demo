@@ -6,6 +6,8 @@ import { GlobeViewport } from "./_components/GlobeViewport";
 import { CesiumAttribution } from "./_components/CesiumAttribution";
 // import Image from "next/image";
 
+import * as ServerDebug from "./server/Debug";
+
 /** When set to `"100%"`, the globe mount fills the virtual phone frame (see `layout.tsx`) and the initial camera distance is chosen so the globe “covers” the view (no letterboxing; excess clips on the shorter axis). */
 const GLOBE_VIEWPORT_WIDTH = "100%";
 const GLOBE_VIEWPORT_HEIGHT = "100%";
@@ -39,13 +41,19 @@ export default function Home() {
               text="Example"
               x={16}
               y={48}
-              onClick={() => alert(1)}
+              onClick={() => {
+                ServerDebug.log("1");
+                console.log(1);
+              }}
             />
             <Button
               imageSrc="/bathhub_logo_no_bg.svg"
               x={16}
               y={104}
-              onClick={() => alert(2)}
+              onClick={() => {
+                ServerDebug.log("2");
+                console.log(2);
+              }}
             />
             <Button
               text="Bathhub"
@@ -54,7 +62,10 @@ export default function Home() {
               imageTextOffset={5}
               x={16}
               y={160}
-              onClick={() => alert(3)}
+              onClick={() => {
+                ServerDebug.log("3");
+                console.log(3);
+              }}
             />
             <Button
               text="Bathhub"
@@ -65,7 +76,10 @@ export default function Home() {
               x={16}
               y={216}
               zIndex={1}
-              onClick={() => alert(4)}
+              onClick={() => {
+                ServerDebug.log("4");
+                console.log(4);
+              }}
             />
           </div>
         </div>

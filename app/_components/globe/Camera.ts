@@ -2,6 +2,7 @@ import type * as CesiumTypes from "cesium";
 import type { RefObject } from "react";
 
 import { Globe as GlobeConsts } from "../ComponentConstants";
+import * as Utils from "../Utils";
 
 export type InstallOrbitCameraOptions = {
   Cesium: typeof import("cesium");
@@ -49,8 +50,6 @@ export function installOrbitCameraControls({
   onZoomIndicatorPulse,
   onClickLatLonDegrees,
 }: InstallOrbitCameraOptions): InstalledOrbitCameraControls {
-  const clamp = (n: number, min: number, max: number) => Math.min(max, Math.max(min, n));
-  const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
   const EPS = 1e-3;
 
   const canvas = viewer.scene.canvas;
@@ -88,20 +87,6 @@ export function installOrbitCameraControls({
       orientation: { direction, up },
     });
     viewer.scene.requestRender();
-  };
-
-  const wrapAngleRad = (a: number) => {
-    // Normalize to [-pi, pi)
-    const twoPi = Math.PI * 2;
-    let x = ((a + Math.PI) % twoPi + twoPi) % twoPi;
-    x -= Math.PI;
-    return x;
-  };
-
-  const lerpAngleRad = (a: number, b: number, t: number) => {
-    // Lerp the shortest way around the circle.
-    const da = wrapAngleRad(b - a);
-    return a + da * t;
   };
 
   // Zoom constraints: keep a minimum clearance above the surface so we never clip
@@ -157,7 +142,7 @@ export function installOrbitCameraControls({
     // 1.0 at initial distance, 0.0 at (or below) min range.
     const minRange = getMinRange();
     const denom = Math.max(1, initialRange - minRange);
-    return clamp((range - minRange) / denom, 0, 1);
+    return Utils.clamp((range - minRange) / denom, 0, 1);
   };
 
   const zoomRateScale01 = () => {
@@ -174,7 +159,7 @@ export function installOrbitCameraControls({
     const maxSurface = viewer.scene.screenSpaceCameraController.maximumZoomDistance ?? radius * 20.0;
     const minRange = radius + minSurface;
     const maxRange = maxSurface;
-    range = clamp(next, minRange, maxRange);
+    range = Utils.clamp(next, minRange, maxRange);
   };
 
   const clampRangeValue = (next: number) => {
@@ -183,7 +168,7 @@ export function installOrbitCameraControls({
     const maxSurface = viewer.scene.screenSpaceCameraController.maximumZoomDistance ?? radius * 20.0;
     const minRange = radius + minSurface;
     const maxRange = maxSurface;
-    return clamp(next, minRange, maxRange);
+    return Utils.clamp(next, minRange, maxRange);
   };
 
   const rangeAtInstall = range;
@@ -256,7 +241,7 @@ export function installOrbitCameraControls({
       startPhi: phi,
       startRange: range,
       targetTheta: Math.atan2(dir.y, dir.x),
-      targetPhi: Math.asin(clamp(dir.z, -1, 1)),
+      targetPhi: Math.asin(Utils.clamp(dir.z, -1, 1)),
       clientX,
       clientY,
       panOffsetTheta: 0,
@@ -283,7 +268,7 @@ export function installOrbitCameraControls({
       startPhi: phi,
       startRange: range,
       targetTheta: Math.atan2(dir.y, dir.x),
-      targetPhi: Math.asin(clamp(dir.z, -1, 1)),
+      targetPhi: Math.asin(Utils.clamp(dir.z, -1, 1)),
       clientX,
       clientY,
       panOffsetTheta: 0,
@@ -295,11 +280,11 @@ export function installOrbitCameraControls({
     if (!zoomAim) return;
     const minRange = getMinRange();
     const denom = Math.max(1e-6, zoomAim.startRange - minRange);
-    const f = clamp((zoomAim.startRange - range) / denom, 0, 1);
+    const f = Utils.clamp((zoomAim.startRange - range) / denom, 0, 1);
     const fs = f * f * (3 - 2 * f);
-    theta = lerpAngleRad(zoomAim.startTheta, zoomAim.targetTheta, fs) + zoomAim.panOffsetTheta;
-    phi = clamp(
-      lerp(zoomAim.startPhi, zoomAim.targetPhi, fs) + zoomAim.panOffsetPhi,
+    theta = Utils.lerpAngleRad(zoomAim.startTheta, zoomAim.targetTheta, fs) + zoomAim.panOffsetTheta;
+    phi = Utils.clamp(
+      Utils.lerp(zoomAim.startPhi, zoomAim.targetPhi, fs) + zoomAim.panOffsetPhi,
       -Math.PI / 2 + EPS,
       Math.PI / 2 - EPS,
     );
@@ -554,7 +539,7 @@ export function installOrbitCameraControls({
     clearZoomAim();
 
     const targetTheta = (longDeg * Math.PI) / 180;
-    const targetPhi = clamp(
+    const targetPhi = Utils.clamp(
       (latDeg * Math.PI) / 180,
       -Math.PI / 2 + EPS,
       Math.PI / 2 - EPS,
@@ -562,7 +547,7 @@ export function installOrbitCameraControls({
     const startTheta = theta;
     const startPhi = phi;
     // Take the shortest way around the sphere (e.g. -179° → +179° rotates 2°, not 358°).
-    const dTheta = wrapAngleRad(targetTheta - startTheta);
+    const dTheta = Utils.wrapAngleRad(targetTheta - startTheta);
     const dPhi = targetPhi - startPhi;
 
     if (Math.abs(dTheta) < 1e-6 && Math.abs(dPhi) < 1e-6) return;
@@ -572,11 +557,11 @@ export function installOrbitCameraControls({
     const dur = Math.max(1, durationMs);
 
     const tick = (now: number) => {
-      const u = clamp((now - startT) / dur, 0, 1);
+      const u = Utils.clamp((now - startT) / dur, 0, 1);
       // smoothstep ease-in/out
       const e = u * u * (3 - 2 * u);
       theta = startTheta + dTheta * e;
-      phi = clamp(
+      phi = Utils.clamp(
         startPhi + dPhi * e,
         -Math.PI / 2 + EPS,
         Math.PI / 2 - EPS,
@@ -609,7 +594,7 @@ export function installOrbitCameraControls({
 
       const alpha = 1 - Math.exp(-dt * wheelZoomLerpRate);
       const prevRange = range;
-      const nextRange = lerp(range, wheelZoomTargetRange, alpha);
+      const nextRange = Utils.lerp(range, wheelZoomTargetRange, alpha);
       setRange(nextRange);
 
       const zoomingIn = wheelZoomTargetRange < prevRange - 1e-6;
@@ -685,8 +670,8 @@ export function installOrbitCameraControls({
     const dxRaw = e.clientX - prev.x;
     const dyRaw = e.clientY - prev.y;
     const dtForVel = Math.max(4, dt);
-    const vx = clamp(dxRaw / dtForVel, -3, 3);
-    const vy = clamp(dyRaw / dtForVel, -3, 3);
+    const vx = Utils.clamp(dxRaw / dtForVel, -3, 3);
+    const vy = Utils.clamp(dyRaw / dtForVel, -3, 3);
     const next: PointerState = {
       x: e.clientX,
       y: e.clientY,
@@ -708,8 +693,8 @@ export function installOrbitCameraControls({
       } else {
         const temp = { panOffsetTheta: 0, panOffsetPhi: 0 };
         applyDragRotate(dx, dy, temp);
-        theta = wrapAngleRad(theta + temp.panOffsetTheta);
-        phi = clamp(phi + temp.panOffsetPhi, -Math.PI / 2 + EPS, Math.PI / 2 - EPS);
+        theta = Utils.wrapAngleRad(theta + temp.panOffsetTheta);
+        phi = Utils.clamp(phi + temp.panOffsetPhi, -Math.PI / 2 + EPS, Math.PI / 2 - EPS);
         applyOrbit();
       }
       e.preventDefault();

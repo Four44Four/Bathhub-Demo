@@ -70,3 +70,25 @@ export function hslToRgb(h: number, s: number, l: number) {
 export function clamp01(n: number) {
     return Math.min(1, Math.max(0, n));
 }
+
+export function clamp(n: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, n));
+}
+
+export function lerp(a: number, b: number, t: number) {
+  return a + (b - a) * t;
+}
+
+export function wrapAngleRad(a: number) {
+  // Normalize to [-pi, pi)
+  const twoPi = Math.PI * 2;
+  let x = ((a + Math.PI) % twoPi + twoPi) % twoPi;
+  x -= Math.PI;
+  return x;
+};
+
+export function lerpAngleRad(a: number, b: number, t: number) {
+  // Lerp the shortest way around the circle.
+  const da = wrapAngleRad(b - a);
+  return a + da * t;
+};

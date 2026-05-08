@@ -62,11 +62,19 @@ export default function Home() {
       if (GlobeConsts.ANIMATE_ON_INIT) {
         // ANIMATE_ON_INIT is true: animate the existing globe to the
         // user's location instead of jumping to it.
-        globeRef.current?.animateTo(lat, long);
+        globeRef.current?.animateTo(lat, long, GlobeConsts.ANIMATE_ON_INIT_DURA);
+        globeRef.current?.animateZoomToInitTarget(GlobeConsts.ANIMATE_ON_INIT_DURA);
       } else {
         // Initialize the JSX at the calculated lat/long: setting state
         // re-renders Home() and re-mounts the globe at the user's location.
         setGlobeInit({ lat, long });
+        // The viewer is about to be torn down + re-initialized. If we snap *now*
+        // it will apply to the old viewer and then immediately get destroyed.
+        // Defer so the call targets the newly-mounted GlobeViewport, which will
+        // queue/replay the snap after Cesium finishes loading.
+        requestAnimationFrame(() => {
+          globeRef.current?.snapZoomToInitTarget();
+        });
       }
     };
 

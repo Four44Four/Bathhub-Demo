@@ -33,8 +33,12 @@ export const Button = {
 // Default points at `./public/bathhub_logo_no_bg.svg`.
 export const CLICKED_INDICATOR_IMAGE = "/bathhub_logo_no_bg.svg";
 
-export const Globe = {
+export const Globe = {    
+    // Target initial zoom level after geolocation is granted/processed:
+    // distance from the globe surface (meters).
+    CAMERA_INIT_SURFACE_OFFSET: 1500,
     ANIMATE_ON_INIT: true,
+    ANIMATE_ON_INIT_DURA: 1500,
 
     WATER_COLOR: "#41457E",
     LAND_COLOR: "#323255",

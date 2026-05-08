@@ -24,6 +24,8 @@ import { installOrbitCameraControls, type InstalledOrbitCameraControls } from ".
  */
 export type GlobeViewportHandle = {
   animateTo: (lat: number, long: number, durationMs?: number) => void;
+  animateZoomToInitTarget: (durationMs?: number) => void;
+  snapZoomToInitTarget: () => void;
 };
 
 type GlobeViewportProps = {
@@ -138,6 +140,7 @@ export function GlobeViewport({
   // the viewer is ready.
   const cameraControlsRef = useRef<InstalledOrbitCameraControls | null>(null);
   const pendingAnimateToRef = useRef<{ lat: number; long: number; durationMs?: number } | null>(null);
+  const pendingZoomToInitRef = useRef<{ durationMs?: number; snap?: boolean } | null>(null);
 
   useImperativeHandle<GlobeViewportHandle | null, GlobeViewportHandle>(
     ref,
@@ -148,6 +151,22 @@ export function GlobeViewport({
           controls.animateTo(lat, long, durationMs);
         } else {
           pendingAnimateToRef.current = { lat, long, durationMs };
+        }
+      },
+      animateZoomToInitTarget: (durationMs) => {
+        const controls = cameraControlsRef.current;
+        if (controls) {
+          controls.animateZoomToInitTarget(durationMs);
+        } else {
+          pendingZoomToInitRef.current = { durationMs, snap: false };
+        }
+      },
+      snapZoomToInitTarget: () => {
+        const controls = cameraControlsRef.current;
+        if (controls) {
+          controls.snapZoomToInitTarget();
+        } else {
+          pendingZoomToInitRef.current = { snap: true };
         }
       },
     }),
@@ -424,6 +443,12 @@ export function GlobeViewport({
       if (pending) {
         pendingAnimateToRef.current = null;
         cameraControls.animateTo(pending.lat, pending.long, pending.durationMs);
+      }
+      const pendingZoom = pendingZoomToInitRef.current;
+      if (pendingZoom) {
+        pendingZoomToInitRef.current = null;
+        if (pendingZoom.snap) cameraControls.snapZoomToInitTarget();
+        else cameraControls.animateZoomToInitTarget(pendingZoom.durationMs);
       }
 
       // Fade the high-zoom detail layer in well before the base layer's coarse

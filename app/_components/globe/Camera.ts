@@ -26,6 +26,14 @@ export type InstalledOrbitCameraControls = {
    * cancels the animation immediately so it never fights the user.
    */
   animateTo: (latDeg: number, longDeg: number, durationMs?: number) => void;
+  /**
+   * Smoothly zoom the camera so it ends `Globe.CAMERA_INIT_SURFACE_OFFSET` meters
+   * above the globe surface. Intended to be triggered when geolocation is
+   * granted/processed, while the starting camera range stays at its default.
+   */
+  animateZoomToInitTarget: (durationMs?: number) => void;
+  /** Immediately snap zoom to the init target zoom range. */
+  snapZoomToInitTarget: () => void;
 };
 
 export function installOrbitCameraControls({
@@ -524,6 +532,11 @@ export function installOrbitCameraControls({
   let wheelZoomRaf: number | null = null;
   let wheelZoomLastT = 0;
   let wheelZoomLastPulseT = 0;
+  let wheelZoomLerpRate = 18; // higher = faster convergence
+
+  // Target zoom state (range from globe center) that we snap/animate to once
+  // geolocation is granted/processed.
+  const initTargetRange = clampRangeValue(radius + GlobeConsts.CAMERA_INIT_SURFACE_OFFSET);
 
   // Programmatic orbit-rotation animation (used by `animateTo`). Rotates `theta`/`phi`
   // toward a target without touching `range`. Always cancellable by user input.
@@ -590,10 +603,11 @@ export function installOrbitCameraControls({
       if (remaining < 0.01) {
         if (zoomAim && Math.abs(range - zoomAim.startRange) < 0.5) clearZoomAim();
         wheelZoomRaf = null;
+        wheelZoomLerpRate = 18;
         return;
       }
 
-      const alpha = 1 - Math.exp(-dt * 18);
+      const alpha = 1 - Math.exp(-dt * wheelZoomLerpRate);
       const prevRange = range;
       const nextRange = lerp(range, wheelZoomTargetRange, alpha);
       setRange(nextRange);
@@ -848,6 +862,32 @@ export function installOrbitCameraControls({
 
   return {
     animateTo,
+    animateZoomToInitTarget: (durationMs?: number) => {
+      // Reuse the existing smooth wheel-zoom target codepath.
+      // If a duration is supplied, tune the exponential rate so we reach ~99% by that time.
+      if (typeof durationMs === "number" && Number.isFinite(durationMs) && durationMs > 0) {
+        const durS = Math.max(0.001, durationMs / 1000);
+        // remaining(T) = exp(-rate*T). Solve for remaining=0.01 at T=durS.
+        wheelZoomLerpRate = 4.605170186 / durS;
+      } else {
+        wheelZoomLerpRate = 18;
+      }
+      clearZoomAim();
+      wheelZoomLastClient = null;
+      wheelZoomTargetRange = initTargetRange;
+      startWheelZoomLoop();
+    },
+    snapZoomToInitTarget: () => {
+      if (wheelZoomRaf != null) {
+        cancelAnimationFrame(wheelZoomRaf);
+        wheelZoomRaf = null;
+        wheelZoomLastClient = null;
+      }
+      clearZoomAim();
+      setRange(initTargetRange);
+      wheelZoomTargetRange = initTargetRange;
+      applyOrbit();
+    },
     destroy: () => {
       cancelRotateAnim();
       if (wheelZoomRaf != null) {

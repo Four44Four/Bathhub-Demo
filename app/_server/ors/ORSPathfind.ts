@@ -4,7 +4,7 @@ import Openrouteservice from "openrouteservice-js";
 
 import type { OrsDirectionsGeoJsonResponse } from "@/types/ors-directions-geojson";
 
-import { type PathParams, type Point } from "../Utils";
+import { type PathParams, type Point } from "../../_shared/Utils";
 
 /** Request timeout for remote OpenRouteService API calls (ms). */
 const ORS_TIMEOUT_MS = 5000;
@@ -83,7 +83,7 @@ async function fetchDirectionsPathGeoJson(
 /**
  * Convenience wrapper: route from one lat/lng to another, GeoJSON response.
  */
-export async function fetchRoutePathGeoJson(
+export function fetchRoutePathGeoJson(
   params: PathParams,
 ): Promise<OrsDirectionsGeoJsonResponse> {
   const {

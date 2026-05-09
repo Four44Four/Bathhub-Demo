@@ -1,6 +1,7 @@
 "use server";
 
-import { type Point, type PathParams } from "./Utils";
+import { OrsDirectionsGeoJsonResponse } from "@/types/ors-directions-geojson";
+import { type Point, type PathParams, type Errorable } from "../_shared/Utils";
 import * as OrsPathfind from "./ors/ORSPathfind";
 
 export type PathData = {
@@ -11,11 +12,21 @@ export type PathData = {
 
 export async function getPathBetweenPoints(
     params: PathParams
-): Promise<PathData> {
-    const geoJsonRes = await OrsPathfind.fetchRoutePathGeoJson(params);
-    return {
-        points: OrsPathfind.getPointsGeoJson(geoJsonRes),
-        predictedTimeSeconds: OrsPathfind.getPredictedTimeGeoJson(geoJsonRes),
-        predictedDistMeters: OrsPathfind.getPredictedDistanceGeoJson(geoJsonRes)
-    };
+): Promise<Errorable<PathData>> {
+    let geoJsonRes: OrsDirectionsGeoJsonResponse;
+    try {
+        geoJsonRes = await OrsPathfind.fetchRoutePathGeoJson(params);
+        return {
+            val: {
+                points: OrsPathfind.getPointsGeoJson(geoJsonRes),
+                predictedTimeSeconds: OrsPathfind.getPredictedTimeGeoJson(geoJsonRes),
+                predictedDistMeters: OrsPathfind.getPredictedDistanceGeoJson(geoJsonRes)
+            }
+        };
+    } catch (error: any) {
+        return {
+          val: null,
+          errorMsg: `Error occurred while calculating route: ${error.response?.data ?? error.message}`
+        }
+    }
 }

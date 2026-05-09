@@ -14,7 +14,7 @@ import { Globe as GlobeConsts } from "./_components/ComponentConstants";
 
 import * as ServerDebug from "./_server/Debug";
 import * as ServerPathfind from "./_server/Pathfind";
-import { type Point } from "./_server/Utils";
+import * as SharedUtils from "./_shared/Utils";
 
 /** When set to `"100%"`, the globe mount fills the virtual phone frame (see `layout.tsx`) and the initial camera distance is chosen so the globe “covers” the view (no letterboxing; excess clips on the shorter axis). */
 const GLOBE_VIEWPORT_WIDTH = "100%";
@@ -39,8 +39,8 @@ let mapInitLong = 0.0;
  * Surface point under the viewport center
  *    or last known map init if Cesium is not ready. 
  * */
-function getStartPos(globe: GlobeViewportHandle | null): Point {
-  let retPos= globe?.getViewportCenterLatLon() ?? {
+function getStartPos(globe: GlobeViewportHandle | null): SharedUtils.Point {
+  let retPos = globe?.getViewportCenterLatLon() ?? {
     latitude: mapInitLat,
     longitude: mapInitLong,
   };
@@ -185,8 +185,8 @@ export default function Home() {
                   alert("No point picked !!");
                   return;
                 }
-                
-                const pathData: ServerPathfind.PathData 
+
+                const pathDataErrorable: SharedUtils.Errorable<ServerPathfind.PathData> 
                   = await ServerPathfind.getPathBetweenPoints({
                       profile: "foot-walking",
                       startLatitude: startPos.latitude,
@@ -195,9 +195,15 @@ export default function Home() {
                       endLongitude: endPos.longitude,
                     });
 
-                const pathDataStr = JSON.stringify(pathData);
-                ServerDebug.log(pathDataStr);
-                console.log(pathDataStr);
+                if (pathDataErrorable.errorMsg) {
+                  // TODO: replace with error popup handler
+                  alert(pathDataErrorable.errorMsg);
+                } 
+                else {
+                  const pathDataStr = JSON.stringify(pathDataErrorable.val);
+                  ServerDebug.log(pathDataStr);
+                  console.log(pathDataStr);  
+                }
               }}
             />
           </div>

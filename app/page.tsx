@@ -1,8 +1,8 @@
 
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { Button, TextWeight } from "./_components/Button";
+import { useEffect, useRef, useState, RefObject } from "react";
+import { Button } from "./_components/Button";
 import {
   GlobeViewport,
   type GlobeViewportHandle,
@@ -54,6 +54,35 @@ function getStartPos(globe: GlobeViewportHandle | null): SharedUtils.Point {
     });
 
   return retPos;
+}
+
+async function onTestPathfindClick(globeRef: RefObject<GlobeViewportHandle | null>) {
+  const startPos = getStartPos(globeRef.current);
+  const endPos = globeRef.current?.getClickedIndicatorLatLon();
+  if (endPos == null) {
+    // TODO: replace with error popup handler
+    alert("No point picked !!");
+    return;
+  }
+
+  const pathDataErrorable: SharedUtils.Errorable<ServerPathfind.PathData> 
+    = await ServerPathfind.getPathBetweenPoints({
+        profile: "foot-walking",
+        startLatitude: startPos.latitude,
+        startLongitude: startPos.longitude,
+        endLatitude: endPos.latitude,
+        endLongitude: endPos.longitude,
+      });
+
+  if (pathDataErrorable.errorMsg) {
+    // TODO: replace with error popup handler
+    alert(pathDataErrorable.errorMsg);
+  } 
+  else {
+    const pathDataStr = JSON.stringify(pathDataErrorable.val);
+    ServerDebug.log(pathDataStr);
+    console.log(pathDataStr);  
+  }
 }
 
 export default function Home() {
@@ -177,34 +206,7 @@ export default function Home() {
               text="Test pathfind"
               x={16}
               y={48}
-              onClick={async () => {
-                const startPos = getStartPos(globeRef.current);
-                const endPos = globeRef.current?.getClickedIndicatorLatLon();
-                if (endPos == null) {
-                  // TODO: replace with error popup handler
-                  alert("No point picked !!");
-                  return;
-                }
-
-                const pathDataErrorable: SharedUtils.Errorable<ServerPathfind.PathData> 
-                  = await ServerPathfind.getPathBetweenPoints({
-                      profile: "foot-walking",
-                      startLatitude: startPos.latitude,
-                      startLongitude: startPos.longitude,
-                      endLatitude: endPos.latitude,
-                      endLongitude: endPos.longitude,
-                    });
-
-                if (pathDataErrorable.errorMsg) {
-                  // TODO: replace with error popup handler
-                  alert(pathDataErrorable.errorMsg);
-                } 
-                else {
-                  const pathDataStr = JSON.stringify(pathDataErrorable.val);
-                  ServerDebug.log(pathDataStr);
-                  console.log(pathDataStr);  
-                }
-              }}
+              onClick={() => onTestPathfindClick(globeRef)}
             />
           </div>
         </div>

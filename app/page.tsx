@@ -148,47 +148,12 @@ export default function Home() {
           />
           <div className="pointer-events-none absolute inset-0 z-20">
             <Button
-              text="Example"
+              text="Test pathfind"
               x={16}
               y={48}
               onClick={() => {
-                ServerDebug.log("1");
-                console.log(1);
-              }}
-            />
-            <Button
-              imageSrc="/bathhub_logo_no_bg.svg"
-              x={16}
-              y={104}
-              onClick={() => {
-                ServerDebug.log("2");
-                console.log(2);
-              }}
-            />
-            <Button
-              text="Bathhub"
-              textWeight={TextWeight.BOLD}
-              imageSrc="/bathhub_logo_no_bg.svg"
-              imageTextOffset={5}
-              x={16}
-              y={160}
-              onClick={() => {
-                ServerDebug.log("3");
-                console.log(3);
-              }}
-            />
-            <Button
-              text="Bathhub"
-              textWeight={TextWeight.LIGHT}
-              imageSrc="/bathhub_logo_no_bg.svg"
-              imageLeftOfText={false}
-              imageTextOffset={20}
-              x={16}
-              y={216}
-              zIndex={1}
-              onClick={() => {
-                ServerDebug.log("4");
-                console.log(4);
+                ServerDebug.log("TODO: REPLACE THIS");
+                console.log("TODO: REPLACE THIS");
               }}
             />
           </div>

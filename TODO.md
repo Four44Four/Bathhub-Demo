@@ -6,6 +6,9 @@
     - Print in server console what the API call for the nearest bathroom walking info returns
  - On the button press: 
     - Draw a path from current location to clicked
+ - Create a swipe-up menu from the bottom of the screen that displays 2 buttons:
+    - Find nearest bathroom (Front facing toilet with a target symbol in the middle)
+    - Register new bathroom (Front facing toilet with a plus in the middle)
  - Recenter button on bottom left
  - Write Sprint 1 reflection
 

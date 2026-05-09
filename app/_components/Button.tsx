@@ -32,8 +32,8 @@ export type ButtonProps = {
 
 export function Button({
   cornerRadius = ButtonConsts.CORNER_RADIUS,
-  fillColor = ButtonConsts.FILL_COLOR,
-  outlineColor = ButtonConsts.LINE_COLOR,
+  fillColor = ButtonConsts.DEFAULT_FILL_COLOR,
+  outlineColor = ButtonConsts.DEFAULT_LINE_COLOR,
   outlineThickness = ButtonConsts.LINE_THICKNESS,
   textColor = ButtonConsts.TEXT_COLOR,
   textWeight = TextWeight.REGULAR,

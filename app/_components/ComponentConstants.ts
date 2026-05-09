@@ -23,8 +23,8 @@ export const Shared = {
 
 export const Button = {
     CORNER_RADIUS: 8,
-    FILL_COLOR: "#0E0F11",
-    LINE_COLOR: "#20232D",
+    DEFAULT_FILL_COLOR: "#0E0F11",
+    DEFAULT_LINE_COLOR: "#20232D",
     LINE_THICKNESS: 1,
     TEXT_COLOR: "#AFB4C6",
 } as const;

@@ -10,6 +10,8 @@
     - Find nearest bathroom (Front facing toilet with a target symbol in the middle)
     - Register new bathroom (Front facing toilet with a plus in the middle)
  - Recenter button on bottom left
+ - Create error popup handler
+    - Make attempting to find path to clicked location when there is no clicked location call the error popup handler
  - Write Sprint 1 reflection
 
 # Sprint 2 (basic backend)

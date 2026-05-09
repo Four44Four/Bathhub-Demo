@@ -12,7 +12,9 @@ import { ZoomIndicator } from "./_components/ZoomIndicator";
 import { Globe as GlobeConsts } from "./_components/ComponentConstants";
 // import Image from "next/image";
 
-import * as ServerDebug from "./server/Debug";
+import * as ServerDebug from "./_server/Debug";
+import * as ServerPathfind from "./_server/Pathfind";
+import { type Point } from "./_server/Utils";
 
 /** When set to `"100%"`, the globe mount fills the virtual phone frame (see `layout.tsx`) and the initial camera distance is chosen so the globe “covers” the view (no letterboxing; excess clips on the shorter axis). */
 const GLOBE_VIEWPORT_WIDTH = "100%";
@@ -29,6 +31,30 @@ const GLOBE_VIEWPORT_HEIGHT = "100%";
  */
 let mapInitLat = 0.0;
 let mapInitLong = 0.0;
+
+/** 
+ * Current client location
+ * OR
+ * (if client disabled geolocation)
+ * Surface point under the viewport center
+ *    or last known map init if Cesium is not ready. 
+ * */
+function getStartPos(globe: GlobeViewportHandle | null): Point {
+  let retPos= globe?.getViewportCenterLatLon() ?? {
+    latitude: mapInitLat,
+    longitude: mapInitLong,
+  };
+
+  navigator.geolocation.getCurrentPosition(
+    (posIn) => {
+      retPos = { 
+        latitude: posIn.coords.latitude, 
+        longitude: posIn.coords.longitude 
+      };
+    });
+
+  return retPos;
+}
 
 export default function Home() {
   const globeRootRef = useRef<HTMLDivElement | null>(null);
@@ -151,9 +177,27 @@ export default function Home() {
               text="Test pathfind"
               x={16}
               y={48}
-              onClick={() => {
-                ServerDebug.log("TODO: REPLACE THIS");
-                console.log("TODO: REPLACE THIS");
+              onClick={async () => {
+                const startPos = getStartPos(globeRef.current);
+                const endPos = globeRef.current?.getClickedIndicatorLatLon();
+                if (endPos == null) {
+                  // TODO: replace with error popup handler
+                  alert("No point picked !!");
+                  return;
+                }
+                
+                const pathData: ServerPathfind.PathData 
+                  = await ServerPathfind.getPathBetweenPoints({
+                      profile: "foot-walking",
+                      startLatitude: startPos.latitude,
+                      startLongitude: startPos.longitude,
+                      endLatitude: endPos.latitude,
+                      endLongitude: endPos.longitude,
+                    });
+
+                const pathDataStr = JSON.stringify(pathData);
+                ServerDebug.log(pathDataStr);
+                console.log(pathDataStr);
               }}
             />
           </div>

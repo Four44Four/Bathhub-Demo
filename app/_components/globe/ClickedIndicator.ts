@@ -4,6 +4,8 @@ import { ClickedIndicator as ClickedIndicatorConsts } from "../ComponentConstant
 
 type ClickedIndicatorApi = {
   setLatLonDegrees: (lat: number, lon: number) => void;
+  /** Current marker position in degrees, or `null` if cleared / never set. */
+  getLatLonDegrees: () => { lat: number; lon: number } | null;
   clear: () => void;
   destroy: () => void;
 };
@@ -60,6 +62,10 @@ export function installClickedIndicator(
       recompute();
       entity.show = true;
       request();
+    },
+    getLatLonDegrees: () => {
+      if (!hasPoint) return null;
+      return { lat: latDeg, lon: lonDeg };
     },
     clear: () => {
       hasPoint = false;

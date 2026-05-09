@@ -12,7 +12,8 @@ import "cesium/Build/Cesium/Widgets/widgets.css";
 
 import { Globe as GlobeConsts } from "../ComponentConstants";
 import * as Utils from "../Utils";
-import * as ServerDebug from "../../server/Debug";
+import * as ServerDebug from "../../_server/Debug";
+import { type Point } from "../../_server/Utils";
 import { installClickedIndicator } from "./ClickedIndicator";
 import { installOrbitCameraControls, type InstalledOrbitCameraControls } from "./Camera";
 
@@ -26,6 +27,10 @@ export type GlobeViewportHandle = {
   animateTo: (lat: number, long: number, durationMs?: number) => void;
   animateZoomToInitTarget: (durationMs?: number) => void;
   snapZoomToInitTarget: () => void;
+  /** Lat/long where the map surface lies under the viewport center (camera look target). */
+  getViewportCenterLatLon: () => Point | null;
+  /** Lat/long of the tap/click marker on the globe, if the user has clicked. */
+  getClickedIndicatorLatLon: () => Point | null;
 };
 
 type GlobeViewportProps = {
@@ -141,6 +146,11 @@ export function GlobeViewport({
   const cameraControlsRef = useRef<InstalledOrbitCameraControls | null>(null);
   const pendingAnimateToRef = useRef<{ lat: number; long: number; durationMs?: number } | null>(null);
   const pendingZoomToInitRef = useRef<{ durationMs?: number; snap?: boolean } | null>(null);
+  const viewerRef = useRef<CesiumTypes.Viewer | null>(null);
+  const cesiumNsRef = useRef<typeof import("cesium") | null>(null);
+  const clickedIndicatorApiRef = useRef<
+    ReturnType<typeof installClickedIndicator> | null
+  >(null);
 
   useImperativeHandle<GlobeViewportHandle | null, GlobeViewportHandle>(
     ref,
@@ -169,6 +179,32 @@ export function GlobeViewport({
           pendingZoomToInitRef.current = { snap: true };
         }
       },
+      getViewportCenterLatLon: () => {
+        const viewer = viewerRef.current;
+        const Cesium = cesiumNsRef.current;
+        if (!viewer || !Cesium) return null;
+        const canvas = viewer.scene.canvas;
+        const cw = canvas.clientWidth;
+        const ch = canvas.clientHeight;
+        if (cw < 1 || ch < 1) return null;
+        const center = new Cesium.Cartesian2(cw / 2, ch / 2);
+        const ray = viewer.camera.getPickRay(center);
+        if (!Cesium.defined(ray)) return null;
+        const hit = viewer.scene.globe.pick(ray, viewer.scene);
+        if (!Cesium.defined(hit)) return null;
+        const carto = Cesium.Cartographic.fromCartesian(hit);
+        return {
+          latitude: Cesium.Math.toDegrees(carto.latitude),
+          longitude: Cesium.Math.toDegrees(carto.longitude),
+        };
+      },
+      getClickedIndicatorLatLon: () => {
+        const api = clickedIndicatorApiRef.current;
+        if (!api) return null;
+        const p = api.getLatLonDegrees();
+        if (!p) return null;
+        return { latitude: p.lat, longitude: p.lon };
+      },
     }),
     [],
   );
@@ -190,6 +226,7 @@ export function GlobeViewport({
 
     const init = async () => {
       const Cesium = await import("cesium");
+      cesiumNsRef.current = Cesium;
 
       if (cancelled) return;
 
@@ -261,6 +298,7 @@ export function GlobeViewport({
         shadows: false,
         // Start with no imagery; we add our recolored Google-tile layer next.
       });
+      viewerRef.current = viewer;
 
       // Hide Cesium credit text (requested). Note: this may violate attribution requirements.
       try {
@@ -372,6 +410,7 @@ export function GlobeViewport({
       viewer.imageryLayers.addImageryProvider(provider);
 
       const clickedIndicator = installClickedIndicator(Cesium, viewer);
+      clickedIndicatorApiRef.current = clickedIndicator;
 
       // Ensure Cesium never handles double-click / double-tap camera actions.
       // We keep our own pointer-based interaction, but remove the default input actions
@@ -549,6 +588,9 @@ export function GlobeViewport({
       cleanup?.clickedIndicator.destroy();
       ro?.disconnect();
       viewer?.destroy();
+      viewerRef.current = null;
+      cesiumNsRef.current = null;
+      clickedIndicatorApiRef.current = null;
       // Drop the imperative-handle target so a late `animateTo` can't drive a
       // destroyed viewer. Future calls will re-queue into pendingAnimateToRef.
       cameraControlsRef.current = null;

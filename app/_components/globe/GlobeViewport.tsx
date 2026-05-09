@@ -13,7 +13,7 @@ import "cesium/Build/Cesium/Widgets/widgets.css";
 import { Globe as GlobeConsts } from "../ComponentConstants";
 import * as Utils from "../Utils";
 import * as ServerDebug from "../../_server/Debug";
-import { type Point } from "../../_server/Utils";
+import { type Point } from "../../_shared/Utils";
 import { installClickedIndicator } from "./ClickedIndicator";
 import { installOrbitCameraControls, type InstalledOrbitCameraControls } from "./Camera";
 

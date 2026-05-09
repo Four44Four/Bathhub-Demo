@@ -1,33 +1,35 @@
 # Finds Bathrooms Near You
- - Powered by Cesium Ion
+ - Powered by Cesium Ion, Open Routing Service, and Open Street Map
 
-# Frontend
+# Frontend Features
 ## Home page
-    - Has map centered on your location
-    - Map has bathrooms on it
-    - Buttons to quickly find nearest bathroom
-    - Button to add a new bathroom
-        - Prompts for location selection on map
-        - On selection completion:
-           - Run #Backend##Add new bathroom
+ - Map with detailed, 3D globe rendering of the world
+    - If the app has permission to access your location:
+       - Will start above your location
+    - Else:
+       - Will start far above latitude and longitude => 0.0, 0.0
+ - Can quickly show path to the nearest bathroom
+    - Nearest bathroom settings can be configured in the Settings
+ - Can add different bathrooms to the map via tapping, swiping up the menu, and tapping the "Add new Bathroom" button
+ - Can read about the data from nearby, registered bathrooms
 ## Bathroom page
-    - Opened when a bathroom is opened
-    - Can see and post: 
-        - Pictures of the bathroom
-        - Ratings of the bathroom
-        - Comments about the bathroom
-        - Extra info about the bathroom
+ - Shows upon opening any registered bathroom from the map
+ - Can see and post: 
+    - Pictures of the bathroom
+    - Ratings of the bathroom
+    - Comments about the bathroom
+    - Extra info about the bathroom
 ## Settings page
-    - Set urgent bathroom preferences:
-        - Minimum bathroom quality
-        - Maximum bathroom distance
-        - AI summaries of bathrooms near you
-        - More...
+ - Set nearby bathroom preferences:
+    - Minimum bathroom quality
+    - Maximum bathroom distance
+    - AI summaries of bathrooms near you
+    - More...
 ### Visual settings:
-    - Dark/light mode
-    - High contrast mode
-    - Custom color themes
-    - Bathroom icons
+ - Dark/light mode
+ - High contrast mode
+ - Custom color themes
+ - Bathroom icons
 
 # Backend
 ## Add new bathroom
@@ -37,3 +39,4 @@
 ## Add new bathroom misc info
 
 # Required API keys (in env vars)
+ - OPEN_ROUTE_SERVICE_API_KEY

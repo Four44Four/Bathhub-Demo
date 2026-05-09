@@ -5,19 +5,20 @@
  - On clicking globe and clicking the Find path to clicked location button:
     - Print in server console what the API call for the nearest bathroom walking info returns
  - On the button press: 
-    - Draw a path from current location to clicked location
- - Replace Find path to clocked location button with Find nearest bathroom button
+    - Draw a path from current location to clicked
+ - Recenter button on bottom left
  - Write Sprint 1 reflection
 
 # Sprint 2 (basic backend)
  - Add dummy backend
  - Add buttons on home page trigger dummy backend
  - Add creating new Bathroom entries to frontend and backend
- - Make settings that affect which bathrooms Find nearest bathroom returns
+ - Replace Find path to clocked location button with Find nearest bathroom button
  - Render nearest bathroom as 3d red box on the map
     - Render path to it
  - Update path at regular intervals
     - Move the map center whenever it 
+ - Make settings that affect which bathrooms Find nearest bathroom returns
  - Write Sprint 2 reflection
 
 # Sprint 3 (offline caching)

@@ -1,6 +1,7 @@
 import type * as CesiumTypes from "cesium";
 
 import { ClickedIndicator as ClickedIndicatorConsts } from "../ComponentConstants";
+import { installGlobeImage } from "./GlobeImage";
 
 type ClickedIndicatorApi = {
   setLatLonDegrees: (lat: number, lon: number) => void;
@@ -19,39 +20,24 @@ export function installClickedIndicator(
   let lonDeg = 0;
 
   const scene = viewer.scene;
-  const ellipsoid = scene.globe.ellipsoid;
 
-  const positionValue = new Cesium.Cartesian3(0, 0, 0);
+  // Fixed world-space lift to avoid any surface intersection artifacts.
+  const heightM = 10;
 
-  const position = new Cesium.ConstantPositionProperty(positionValue);
-
-  const entity = viewer.entities.add({
+  const globeImage = installGlobeImage(Cesium, viewer, {
     name: "ClickedIndicator",
-    show: false,
-    position,
-    billboard: {
-      image: ClickedIndicatorConsts.IMAGE,
-      width: ClickedIndicatorConsts.SIZE,
-      height: ClickedIndicatorConsts.SIZE,
-      color: Cesium.Color.fromCssColorString(ClickedIndicatorConsts.COLOR).withAlpha(
-        ClickedIndicatorConsts.OPACITY,
-      ),
-      horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
-      verticalOrigin: Cesium.VerticalOrigin.CENTER,
-      disableDepthTestDistance: Number.POSITIVE_INFINITY,
-    },
+    color: ClickedIndicatorConsts.COLOR,
+    opacity: ClickedIndicatorConsts.OPACITY,
+    image: ClickedIndicatorConsts.IMAGE,
+    size: ClickedIndicatorConsts.SIZE,
+    heightAboveEllipsoidM: heightM,
   });
 
   const request = () => scene.requestRender();
 
   const recompute = () => {
     if (!hasPoint) return;
-    // Fixed world-space lift to avoid any surface intersection artifacts.
-    const heightM = 10;
-    const latRad = Cesium.Math.toRadians(latDeg);
-    const lonRad = Cesium.Math.toRadians(lonDeg);
-    Cesium.Cartesian3.fromRadians(lonRad, latRad, heightM, ellipsoid, positionValue);
-    position.setValue(positionValue);
+    globeImage.setLatLonDegrees(latDeg, lonDeg);
   };
 
   return {
@@ -60,7 +46,7 @@ export function installClickedIndicator(
       latDeg = lat;
       lonDeg = lon;
       recompute();
-      entity.show = true;
+      globeImage.setVisible(true);
       request();
     },
     getLatLonDegrees: () => {
@@ -69,13 +55,12 @@ export function installClickedIndicator(
     },
     clear: () => {
       hasPoint = false;
-      entity.show = false;
+      globeImage.setVisible(false);
       request();
     },
     destroy: () => {
-      viewer.entities.remove(entity);
+      globeImage.destroy();
       request();
     },
   };
 }
-

@@ -1,5 +1,4 @@
 # Sprint 1 (frontend/UI)
- - Rename ./app/_components to ./app/_client
  - Write regression tests for UI and pathfinding logic so far
  - Create a swipe-up menu from the bottom of the screen that displays following buttons:
     - Find nearest bathroom (Front facing toilet with a target symbol in the middle)

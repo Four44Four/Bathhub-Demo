@@ -2,14 +2,14 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState, RefObject } from "react";
-import { Button } from "./_components/Button";
+import { Button } from "./_client/Button";
 import {
   GlobeViewport,
   type GlobeViewportHandle,
-} from "./_components/globe/GlobeViewport";
-import { CesiumAttribution } from "./_components/CesiumAttribution";
-import { ZoomIndicator } from "./_components/ZoomIndicator";
-import { Globe as GlobeConsts } from "./_components/ComponentConstants";
+} from "./_client/globe/GlobeViewport";
+import { CesiumAttribution } from "./_client/CesiumAttribution";
+import { ZoomIndicator } from "./_client/ZoomIndicator";
+import { Globe as GlobeConsts } from "./_client/ComponentConstants";
 // import Image from "next/image";
 
 import * as ServerDebug from "./_server/Debug";

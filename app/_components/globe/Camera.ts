@@ -712,9 +712,7 @@ export function installOrbitCameraControls({
     if (mode === "zoomDrag") {
       const dy = next.y - prev.y;
       const z = zoomRateScale01();
-      // Right-drag zoom should be less sensitive than wheel/pinch.
-      const RIGHT_DRAG_SENS = 0.5; // 2x slower
-      const scale = Math.exp(dy * GlobeConsts.ZOOM_SENS * z * RIGHT_DRAG_SENS);
+      const scale = Math.exp(dy * GlobeConsts.ZOOM_SENS * z * 0.5);
       if (scale < 1) {
         // Lock the zoom target for the entire right-drag session (like wheel/pinch).
         // Do not re-lock to the moving cursor position.
@@ -832,8 +830,7 @@ export function installOrbitCameraControls({
     cancelRotateAnim();
 
     const z = zoomRateScale01();
-    // 5x faster mouse-wheel zoom.
-    const scale = Math.exp(e.deltaY * GlobeConsts.ZOOM_SENS * z * (0.15 * 5));
+    const scale = Math.exp(e.deltaY * GlobeConsts.ZOOM_SENS * z * 0.55);
     // Base the next target on the *current* camera range.
     // If we compound off the previous target while a smooth-zoom RAF is still catching up,
     // a small burst of wheel events (common on Windows mice / high-res wheels) can push the

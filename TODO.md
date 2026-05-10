@@ -1,14 +1,12 @@
 # Sprint 1 (frontend/UI)
- - Integrate a real API for finding walking distance to clicked location from your current location
-    - Use OpenRouteService
- - Add Find path to clicked location button
- - On clicking globe and clicking the Find path to clicked location button:
-    - Print in server console what the API call for the nearest bathroom walking info returns
+ - Show current location with a pointer icon
+ - Debug why no geolocation perms (using globe viewport center pos) and using Test pathfind button results in ORS API error
  - On the button press: 
     - Draw a path from current location to clicked
- - Create a swipe-up menu from the bottom of the screen that displays 2 buttons:
+ - Create a swipe-up menu from the bottom of the screen that displays following buttons:
     - Find nearest bathroom (Front facing toilet with a target symbol in the middle)
     - Register new bathroom (Front facing toilet with a plus in the middle)
+    - Toggle display current start location indicator
  - Recenter button on bottom left
  - Create error popup handler
     - Make attempting to find path to clicked location when there is no clicked location call the error popup handler

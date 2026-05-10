@@ -21,16 +21,12 @@ export function installClickedIndicator(
 
   const scene = viewer.scene;
 
-  // Fixed world-space lift to avoid any surface intersection artifacts.
-  const heightM = 10;
-
   const globeImage = installGlobeImage(Cesium, viewer, {
     name: "ClickedIndicator",
     color: ClickedIndicatorConsts.COLOR,
     opacity: ClickedIndicatorConsts.OPACITY,
     image: ClickedIndicatorConsts.IMAGE,
     size: ClickedIndicatorConsts.SIZE,
-    heightAboveEllipsoidM: heightM,
   });
 
   const request = () => scene.requestRender();

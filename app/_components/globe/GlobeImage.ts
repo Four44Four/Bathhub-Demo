@@ -19,6 +19,8 @@ export type GlobeImageInitOptions = {
 export type GlobeImageHandle = {
   setLatLonDegrees: (lat: number, lon: number) => void;
   setVisible: (visible: boolean) => void;
+  /** Updates billboard tint and alpha (RGB from CSS color, multiplied with the texture). */
+  setBillboardTint: (colorCss: string, opacity: number) => void;
   destroy: () => void;
 };
 
@@ -33,7 +35,8 @@ export function installGlobeImage(
     opacity,
     image,
     size,
-    heightAboveEllipsoidM = 0,
+    // Fixed world-space lift to avoid any surface intersection artifacts.
+    heightAboveEllipsoidM = 10,
     horizontalOrigin: horizontalOriginOpt,
     verticalOrigin: verticalOriginOpt,
   } = options;
@@ -44,6 +47,10 @@ export function installGlobeImage(
   const positionValue = new Cesium.Cartesian3(0, 0, 0);
   const position = new Cesium.ConstantPositionProperty(positionValue);
 
+  const billboardColor = new Cesium.ConstantProperty(
+    Cesium.Color.fromCssColorString(color).withAlpha(opacity),
+  );
+
   const entity = viewer.entities.add({
     name,
     show: false,
@@ -52,7 +59,7 @@ export function installGlobeImage(
       image,
       width: size,
       height: size,
-      color: Cesium.Color.fromCssColorString(color).withAlpha(opacity),
+      color: billboardColor,
       horizontalOrigin: horizontalOriginOpt ?? Cesium.HorizontalOrigin.CENTER,
       verticalOrigin: verticalOriginOpt ?? Cesium.VerticalOrigin.CENTER,
       disableDepthTestDistance: Number.POSITIVE_INFINITY,
@@ -79,6 +86,10 @@ export function installGlobeImage(
     setLatLonDegrees,
     setVisible: (visible) => {
       entity.show = visible;
+      requestRender();
+    },
+    setBillboardTint: (colorCss: string, opacity: number) => {
+      billboardColor.setValue(Cesium.Color.fromCssColorString(colorCss).withAlpha(opacity));
       requestRender();
     },
     destroy: () => {

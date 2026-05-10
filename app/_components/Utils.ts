@@ -1,6 +1,6 @@
 "use client";
 
-export function hexToRgb(hex: string) {
+export function hexToRgb(hex: string): { r: number; g: number; b: number } {
     const normalized = hex.replace("#", "").trim();
     const full = normalized.length === 3 ? normalized.split("").map((c) => c + c).join("") : normalized;
     const num = parseInt(full, 16);
@@ -11,7 +11,7 @@ export function hexToRgb(hex: string) {
     };
 }
   
-export function rgbToHsl(r255: number, g255: number, b255: number) {
+export function rgbToHsl(r255: number, g255: number, b255: number): { h: number; s: number; l: number } {
     const r = r255 / 255;
     const g = g255 / 255;
     const b = b255 / 255;
@@ -65,6 +65,22 @@ export function hslToRgb(h: number, s: number, l: number) {
       g: Math.round((g1 + m) * 255),
       b: Math.round((b1 + m) * 255),
     };
+}
+
+export function rgbToHex(r: number, g: number, b: number): string {
+  const to = (x: number) => Math.round(Math.min(255, Math.max(0, x))).toString(16).padStart(2, "0");
+  return `#${to(r)}${to(g)}${to(b)}`;
+}
+
+export function lerpHex(fromHex: string, toHex: string, t: number): string {
+  const a = hexToRgb(fromHex);
+  const b = hexToRgb(toHex);
+  const u = clamp01(t);
+  return rgbToHex(
+    lerp(a.r, b.r, u),
+    lerp(a.g, b.g, u),
+    lerp(a.b, b.b, u),
+  );
 }
   
 export function clamp01(n: number) {

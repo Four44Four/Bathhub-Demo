@@ -32,15 +32,12 @@ export function installMapMarker(
 ): MapMarkerHandle {
   const scene = viewer.scene;
 
-  const heightM = 10;
-
   const globeImage = installGlobeImage(Cesium, viewer, {
     name: "MapMarker",
     color: MapMarkerConsts.COLOR,
     opacity: MapMarkerConsts.OPACITY,
     image: MapMarkerConsts.IMAGE,
     size: MapMarkerConsts.SIZE,
-    heightAboveEllipsoidM: heightM,
     horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
     verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
   });

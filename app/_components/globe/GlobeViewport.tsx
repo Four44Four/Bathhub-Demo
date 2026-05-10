@@ -15,6 +15,7 @@ import * as Utils from "../Utils";
 import * as ServerDebug from "../../_server/Debug";
 import { type Point } from "../../_shared/Utils";
 import { installClickedIndicator } from "./ClickedIndicator";
+import { installDebugCrosshair } from "./DebugCrosshair";
 import { installMapMarker } from "./MapMarker";
 import { installOrbitCameraControls, type InstalledOrbitCameraControls } from "./Camera";
 
@@ -558,6 +559,7 @@ export function GlobeViewport({
       }
 
       const mapMarker = installMapMarker(Cesium, viewer, () => viewportCenterLatLonRef.current);
+      const debugCrosshair = installDebugCrosshair(Cesium, viewer, () => viewportCenterLatLonRef.current);
 
       isClientIdle = false;
 
@@ -582,6 +584,7 @@ export function GlobeViewport({
         const p = computeViewportCenterLatLon(viewer, Cesium);
         if (p) viewportCenterLatLonRef.current = p;
         mapMarker.refreshViewportFollowFromCache();
+        if (p) debugCrosshair?.notifyViewportCenterSampled();
         viewer.scene.requestRender();
       };
 
@@ -722,6 +725,7 @@ export function GlobeViewport({
         camera: viewer.camera,
         clickedIndicator,
         mapMarker,
+        debugCrosshair,
         stopViewportSampler,
         removeInputListeners: () => {
           cameraControls.destroy();
@@ -738,6 +742,7 @@ export function GlobeViewport({
           camera: CesiumTypes.Camera;
           clickedIndicator: { destroy: () => void };
           mapMarker: ReturnType<typeof installMapMarker>;
+          debugCrosshair: ReturnType<typeof installDebugCrosshair>;
           stopViewportSampler: () => void;
           removeInputListeners: () => void;
         }
@@ -764,6 +769,7 @@ export function GlobeViewport({
       cleanup?.removeInputListeners();
       cleanup?.clickedIndicator.destroy();
       cleanup?.mapMarker.destroy();
+      cleanup?.debugCrosshair?.destroy();
       ro?.disconnect();
       viewer?.destroy();
       viewerRef.current = null;

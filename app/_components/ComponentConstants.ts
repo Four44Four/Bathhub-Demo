@@ -33,6 +33,21 @@ export const MapMarker = {
     OPACITY: 1.0,
 } as const;
 
+export const DebugCrosshair = {
+    ENABLED: true,
+    IMAGE: "/crosshairs.svg",
+    /** Default billboard tint when idle / after blend completes (CSS hex). */
+    BASE_COLOR: "#FF0000",
+    /** Flash highlight color when the viewport center is resampled (CSS hex). */
+    SECONDARY_COLOR: "#FF9696",
+    /** Screen-space width/height in CSS pixels */
+    SIZE: 20,
+    /** Milliseconds for billboard opacity to fade from 1 to 0 after each sample. */
+    FADE_OUT_MS: 1000,
+    /** Milliseconds to blend tint from {@link DebugCrosshair.SECONDARY_COLOR} back to {@link DebugCrosshair.BASE_COLOR}. */
+    BLEND_OUT_COLORS_MS: 500,
+} as const;
+
 export const Globe = {    
     // Target initial zoom level after geolocation is granted/processed:
     // distance from the globe surface (meters).

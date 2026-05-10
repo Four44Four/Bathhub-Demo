@@ -15,7 +15,73 @@ import * as Utils from "../Utils";
 import * as ServerDebug from "../../_server/Debug";
 import { type Point } from "../../_shared/Utils";
 import { installClickedIndicator } from "./ClickedIndicator";
+import { installMapMarker } from "./MapMarker";
 import { installOrbitCameraControls, type InstalledOrbitCameraControls } from "./Camera";
+
+/** Sample interval while dragging, pinching, wheel-zoom smoothing, or programmatic camera animation is active. */
+const UPDATE_GLOBE_VIEWPORT_CENTER_DELAY_MS = 50;
+/**
+ * After this many milliseconds with no active globe drag/zoom/animation (`isGlobeViewportSamplerBusy`),
+ * the client is treated as idle for viewport-center sampling.
+ */
+const GLOBE_VIEWPORT_DETECT_IDLE_MS = 500;
+
+/** Set to true once `GLOBE_VIEWPORT_DETECT_IDLE_MS` elapses without move/zoom activity; cleared when activity resumes. */
+let isClientIdle = false;
+
+function computeViewportCenterLatLon(
+  viewer: CesiumTypes.Viewer,
+  Cesium: typeof import("cesium"),
+): Point | null {
+  const canvas = viewer.scene.canvas;
+  const cw = canvas.clientWidth;
+  const ch = canvas.clientHeight;
+  if (cw < 1 || ch < 1) return null;
+  const center = new Cesium.Cartesian2(cw / 2, ch / 2);
+  const ellipsoid = viewer.scene.globe.ellipsoid;
+
+  // Match tap picking (`Camera.ts` pointer-up): `globe.pick` alone skews at max zoom where the
+  // depth buffer matches the draped imagery better than ray–globe mesh intersection.
+  let carto: CesiumTypes.Cartographic | undefined;
+
+  try {
+    if (viewer.scene.pickPositionSupported) {
+      const world = viewer.scene.pickPosition(center);
+      if (Cesium.defined(world)) {
+        carto = Cesium.Cartographic.fromCartesian(world as CesiumTypes.Cartesian3, ellipsoid);
+      }
+    }
+  } catch {
+    // ignore
+  }
+
+  if (!carto) {
+    try {
+      const ray = viewer.camera.getPickRay(center);
+      if (ray) {
+        const gp = viewer.scene.globe.pick(ray, viewer.scene);
+        if (Cesium.defined(gp)) {
+          carto = Cesium.Cartographic.fromCartesian(gp as CesiumTypes.Cartesian3, ellipsoid);
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  if (!carto) {
+    const world = viewer.camera.pickEllipsoid(center, ellipsoid);
+    if (world) {
+      carto = Cesium.Cartographic.fromCartesian(world, ellipsoid);
+    }
+  }
+
+  if (!carto) return null;
+  const lat = Cesium.Math.toDegrees(carto.latitude);
+  const lon = Cesium.Math.toDegrees(carto.longitude);
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+  return { latitude: lat, longitude: lon };
+}
 
 /**
  * Imperative handle exposed via the `ref` prop so callers can drive the camera
@@ -151,6 +217,8 @@ export function GlobeViewport({
   const clickedIndicatorApiRef = useRef<
     ReturnType<typeof installClickedIndicator> | null
   >(null);
+  /** Shared cache for `getViewportCenterLatLon`, MapMarker viewport-follow mode, and callers like `getStartPos`. */
+  const viewportCenterLatLonRef = useRef<Point | null>(null);
 
   useImperativeHandle<GlobeViewportHandle | null, GlobeViewportHandle>(
     ref,
@@ -179,25 +247,7 @@ export function GlobeViewport({
           pendingZoomToInitRef.current = { snap: true };
         }
       },
-      getViewportCenterLatLon: () => {
-        const viewer = viewerRef.current;
-        const Cesium = cesiumNsRef.current;
-        if (!viewer || !Cesium) return null;
-        const canvas = viewer.scene.canvas;
-        const cw = canvas.clientWidth;
-        const ch = canvas.clientHeight;
-        if (cw < 1 || ch < 1) return null;
-        const center = new Cesium.Cartesian2(cw / 2, ch / 2);
-        const ray = viewer.camera.getPickRay(center);
-        if (!Cesium.defined(ray)) return null;
-        const hit = viewer.scene.globe.pick(ray, viewer.scene);
-        if (!Cesium.defined(hit)) return null;
-        const carto = Cesium.Cartographic.fromCartesian(hit);
-        return {
-          latitude: Cesium.Math.toDegrees(carto.latitude),
-          longitude: Cesium.Math.toDegrees(carto.longitude),
-        };
-      },
+      getViewportCenterLatLon: () => viewportCenterLatLonRef.current,
       getClickedIndicatorLatLon: () => {
         const api = clickedIndicatorApiRef.current;
         if (!api) return null;
@@ -455,6 +505,7 @@ export function GlobeViewport({
 
       // Center the camera on the requested init lat/long.
       const radius = ellipsoid.maximumRadius;
+      const viewportSamplerWakeRef: { ensureBusy?: () => void } = {};
       const cameraControls = installOrbitCameraControls({
         Cesium,
         viewer,
@@ -466,6 +517,7 @@ export function GlobeViewport({
         containerRef,
         zoomIndicatorRootRef,
         onZoomIndicatorPulse,
+        onGlobeViewportInteraction: () => viewportSamplerWakeRef.ensureBusy?.(),
         onClickLatLonDegrees: (lat, lon) => {
           const logString = `Lat: ${lat}, Lon: ${lon}`;
           ServerDebug.log(logString);
@@ -489,6 +541,106 @@ export function GlobeViewport({
         if (pendingZoom.snap) cameraControls.snapZoomToInitTarget();
         else cameraControls.animateZoomToInitTarget(pendingZoom.durationMs);
       }
+
+      const mapMarker = installMapMarker(Cesium, viewer, () => viewportCenterLatLonRef.current);
+
+      isClientIdle = false;
+
+      let viewportSamplerTimer: number | null = null;
+      let idleDetectTimer: number | null = null;
+      let busySamplingActive = false;
+
+      const stopViewportSampler = () => {
+        if (viewportSamplerTimer !== null) {
+          clearTimeout(viewportSamplerTimer);
+          viewportSamplerTimer = null;
+        }
+        if (idleDetectTimer !== null) {
+          clearTimeout(idleDetectTimer);
+          idleDetectTimer = null;
+        }
+        busySamplingActive = false;
+      };
+
+      const runViewportCenterSample = () => {
+        if (cancelled || !viewer) return;
+        const p = computeViewportCenterLatLon(viewer, Cesium);
+        if (p) viewportCenterLatLonRef.current = p;
+        mapMarker.refreshViewportFollowFromCache();
+        viewer.scene.requestRender();
+      };
+
+      /** Single deferred sample when the client has just been classified idle (does not reschedule). */
+      const scheduleNextViewportCenterSample = () => {
+        if (cancelled || !viewer) return;
+        if (viewportSamplerTimer !== null) {
+          clearTimeout(viewportSamplerTimer);
+          viewportSamplerTimer = null;
+        }
+        viewportSamplerTimer = window.setTimeout(() => {
+          viewportSamplerTimer = null;
+          runViewportCenterSample();
+        }, 0);
+      };
+
+      const armIdleDetection = () => {
+        if (idleDetectTimer !== null) {
+          clearTimeout(idleDetectTimer);
+          idleDetectTimer = null;
+        }
+        idleDetectTimer = window.setTimeout(() => {
+          idleDetectTimer = null;
+          if (cancelled || !viewer || cameraControls.isGlobeViewportSamplerBusy()) return;
+          isClientIdle = true;
+          scheduleNextViewportCenterSample();
+        }, GLOBE_VIEWPORT_DETECT_IDLE_MS);
+      };
+
+      const busySamplingTick = () => {
+        if (cancelled || !viewer) {
+          busySamplingActive = false;
+          return;
+        }
+        runViewportCenterSample();
+        if (cameraControls.isGlobeViewportSamplerBusy()) {
+          viewportSamplerTimer = window.setTimeout(busySamplingTick, UPDATE_GLOBE_VIEWPORT_CENTER_DELAY_MS);
+        } else {
+          busySamplingActive = false;
+          isClientIdle = false;
+          armIdleDetection();
+        }
+      };
+
+      const ensureBusySampling = () => {
+        if (cancelled) return;
+        isClientIdle = false;
+        if (idleDetectTimer !== null) {
+          clearTimeout(idleDetectTimer);
+          idleDetectTimer = null;
+        }
+        if (busySamplingActive) return;
+        busySamplingActive = true;
+        if (viewportSamplerTimer !== null) {
+          clearTimeout(viewportSamplerTimer);
+          viewportSamplerTimer = null;
+        }
+        // Sample immediately so brief drags/zooms still update before the first delayed tick.
+        runViewportCenterSample();
+        viewportSamplerTimer = window.setTimeout(busySamplingTick, UPDATE_GLOBE_VIEWPORT_CENTER_DELAY_MS);
+      };
+
+      viewportSamplerWakeRef.ensureBusy = ensureBusySampling;
+
+      const samplerKickOnCameraChanged = () => {
+        if (cancelled || !viewer) return;
+        if (cameraControls.isGlobeViewportSamplerBusy()) {
+          ensureBusySampling();
+        }
+      };
+
+      runViewportCenterSample();
+      armIdleDetection();
+      viewer.camera.changed.addEventListener(samplerKickOnCameraChanged);
 
       // Fade the high-zoom detail layer in well before the base layer's coarse
       // tiles become visibly chunky. The base layer's max level (9) means tiles
@@ -551,8 +703,11 @@ export function GlobeViewport({
       return {
         ro,
         onCameraChanged: updateDetail,
+        onSamplerCameraChanged: samplerKickOnCameraChanged,
         camera: viewer.camera,
         clickedIndicator,
+        mapMarker,
+        stopViewportSampler,
         removeInputListeners: () => {
           cameraControls.destroy();
         },
@@ -564,8 +719,11 @@ export function GlobeViewport({
       | {
           ro: ResizeObserver;
           onCameraChanged: () => void;
+          onSamplerCameraChanged: () => void;
           camera: CesiumTypes.Camera;
           clickedIndicator: { destroy: () => void };
+          mapMarker: ReturnType<typeof installMapMarker>;
+          stopViewportSampler: () => void;
           removeInputListeners: () => void;
         }
       | null = null;
@@ -583,14 +741,21 @@ export function GlobeViewport({
 
     return () => {
       cancelled = true;
+      cleanup?.stopViewportSampler();
+      if (cleanup) {
+        cleanup.camera.changed.removeEventListener(cleanup.onSamplerCameraChanged);
+      }
       cleanup?.camera.changed.removeEventListener(cleanup.onCameraChanged);
       cleanup?.removeInputListeners();
       cleanup?.clickedIndicator.destroy();
+      cleanup?.mapMarker.destroy();
       ro?.disconnect();
       viewer?.destroy();
       viewerRef.current = null;
       cesiumNsRef.current = null;
       clickedIndicatorApiRef.current = null;
+      viewportCenterLatLonRef.current = null;
+      isClientIdle = false;
       // Drop the imperative-handle target so a late `animateTo` can't drive a
       // destroyed viewer. Future calls will re-queue into pendingAnimateToRef.
       cameraControlsRef.current = null;

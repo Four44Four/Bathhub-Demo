@@ -16,11 +16,18 @@ export type InstallOrbitCameraOptions = {
   zoomIndicatorRootRef?: RefObject<HTMLElement | null>;
   onZoomIndicatorPulse?: (x: number, y: number) => void;
   onClickLatLonDegrees?: (lat: number, lon: number) => void;
+  /** Fired on pointer down, wheel, and pinch start so viewport sampling can wake before `camera.changed`. */
+  onGlobeViewportInteraction?: () => void;
 };
 
 export type InstalledOrbitCameraControls = {
   /** Call on cleanup to remove all input listeners and cancel animations. */
   destroy: () => void;
+  /**
+   * True while the user is dragging/pinching, or a wheel-smooth-zoom / programmatic
+   * rotate-or-zoom animation is in flight. Used to throttle viewport-center sampling.
+   */
+  isGlobeViewportSamplerBusy: () => boolean;
   /**
    * Smoothly rotate the orbit camera so the surface point at (latDeg, longDeg)
    * is centered. Does NOT change zoom (range). Any user input (drag/wheel/pinch)
@@ -49,8 +56,17 @@ export function installOrbitCameraControls({
   zoomIndicatorRootRef,
   onZoomIndicatorPulse,
   onClickLatLonDegrees,
+  onGlobeViewportInteraction,
 }: InstallOrbitCameraOptions): InstalledOrbitCameraControls {
   const EPS = 1e-3;
+
+  const notifyGlobeViewportInteraction = () => {
+    try {
+      onGlobeViewportInteraction?.();
+    } catch {
+      // ignore third-party hook failures
+    }
+  };
 
   const canvas = viewer.scene.canvas;
   canvas.style.touchAction = "none";
@@ -374,6 +390,7 @@ export function installOrbitCameraControls({
 
   cesiumGestureHandler.setInputAction(
     (e: { position1: { x: number; y: number }; position2: { x: number; y: number } }) => {
+      notifyGlobeViewportInteraction();
       isPinching = true;
       const mid = { x: (e.position1.x + e.position2.x) / 2, y: (e.position1.y + e.position2.y) / 2 };
       const midClient = canvasToClient(mid);
@@ -622,6 +639,8 @@ export function installOrbitCameraControls({
     // Any user touch/click cancels a programmatic rotation animation.
     cancelRotateAnim();
 
+    notifyGlobeViewportInteraction();
+
     try {
       canvas.setPointerCapture(e.pointerId);
     } catch {
@@ -829,6 +848,8 @@ export function installOrbitCameraControls({
     // Any user wheel input cancels a programmatic rotation animation.
     cancelRotateAnim();
 
+    notifyGlobeViewportInteraction();
+
     const z = zoomRateScale01();
     const scale = Math.exp(e.deltaY * GlobeConsts.ZOOM_SENS * z * 0.55);
     // Base the next target on the *current* camera range.
@@ -859,7 +880,11 @@ export function installOrbitCameraControls({
 
   applyOrbit();
 
+  const isGlobeViewportSamplerBusy = () =>
+    pointers.size > 0 || wheelZoomRaf !== null || rotateAnimRaf !== null;
+
   return {
+    isGlobeViewportSamplerBusy,
     animateTo,
     animateZoomToInitTarget: (durationMs?: number) => {
       // Reuse the existing smooth wheel-zoom target codepath.

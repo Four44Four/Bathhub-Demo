@@ -12,6 +12,8 @@ export type GlobeImageInitOptions = {
   size: number;
   /** Meters above the globe ellipsoid surface */
   heightAboveEllipsoidM?: number;
+  horizontalOrigin?: CesiumTypes.HorizontalOrigin;
+  verticalOrigin?: CesiumTypes.VerticalOrigin;
 };
 
 export type GlobeImageHandle = {
@@ -32,6 +34,8 @@ export function installGlobeImage(
     image,
     size,
     heightAboveEllipsoidM = 0,
+    horizontalOrigin: horizontalOriginOpt,
+    verticalOrigin: verticalOriginOpt,
   } = options;
 
   const scene = viewer.scene;
@@ -49,8 +53,8 @@ export function installGlobeImage(
       width: size,
       height: size,
       color: Cesium.Color.fromCssColorString(color).withAlpha(opacity),
-      horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
-      verticalOrigin: Cesium.VerticalOrigin.CENTER,
+      horizontalOrigin: horizontalOriginOpt ?? Cesium.HorizontalOrigin.CENTER,
+      verticalOrigin: verticalOriginOpt ?? Cesium.VerticalOrigin.CENTER,
       disableDepthTestDistance: Number.POSITIVE_INFINITY,
     },
   });

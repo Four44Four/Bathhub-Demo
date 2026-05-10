@@ -113,8 +113,8 @@ export function getPointsGeoJson(
 ): Array<Point> {
   return geoJson.features[0].geometry.coordinates.map(it => {
     return {
-      latitude: it[0], 
-      longitude: it[1] 
+      latitude: it[1], 
+      longitude: it[0] 
     };
   });
 }

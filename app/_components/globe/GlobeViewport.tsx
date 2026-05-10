@@ -18,6 +18,7 @@ import { type Point } from "../../_shared/Utils";
 import { installClickedIndicator } from "./ClickedIndicator";
 import { installDebugCrosshair } from "./DebugCrosshair";
 import { installMapMarker } from "./MapMarker";
+import { installPath, type PathHandle } from "./Path";
 import { installOrbitCameraControls, type InstalledOrbitCameraControls } from "./Camera";
 
 /** Set to true once `GLOBE_VIEWPORT_DETECT_IDLE_MS` elapses without move/zoom activity; cleared when activity resumes. */
@@ -93,6 +94,9 @@ export type GlobeViewportHandle = {
   getViewportCenterLatLon: () => Point | null;
   /** Lat/long of the tap/click marker on the globe, if the user has clicked. */
   getClickedIndicatorLatLon: () => Point | null;
+  /** Renders a path on the globe (see `Path.ts` for styling). */
+  setPathFromLatLonPoints: (points: Point[]) => void;
+  clearPath: () => void;
 };
 
 type GlobeViewportProps = {
@@ -220,6 +224,7 @@ export function GlobeViewport({
   const clickedIndicatorApiRef = useRef<
     ReturnType<typeof installClickedIndicator> | null
   >(null);
+  const pathHandleRef = useRef<PathHandle | null>(null);
   /** Shared cache for `getViewportCenterLatLon`, MapMarker viewport-follow mode, and callers like `getStartPos`. */
   const viewportCenterLatLonRef = useRef<Point | null>(null);
   const [mapMarkerStaticOverlay, setMapMarkerStaticOverlay] = useState(true);
@@ -266,6 +271,12 @@ export function GlobeViewport({
         const p = api.getLatLonDegrees();
         if (!p) return null;
         return { latitude: p.lat, longitude: p.lon };
+      },
+      setPathFromLatLonPoints: (points) => {
+        pathHandleRef.current?.setPath(points);
+      },
+      clearPath: () => {
+        pathHandleRef.current?.clearPath();
       },
     }),
     [],
@@ -473,6 +484,9 @@ export function GlobeViewport({
 
       const clickedIndicator = installClickedIndicator(Cesium, viewer);
       clickedIndicatorApiRef.current = clickedIndicator;
+
+      const pathHandle = installPath(Cesium, viewer, ellipsoid);
+      pathHandleRef.current = pathHandle;
 
       // Ensure Cesium never handles double-click / double-tap camera actions.
       // We keep our own pointer-based interaction, but remove the default input actions
@@ -717,9 +731,15 @@ export function GlobeViewport({
       updateDetail();
       viewer.camera.changed.addEventListener(updateDetail);
 
+      const rebuildPathOnCameraMoveEnd = () => {
+        pathHandle.rebuildActivePath();
+      };
+      viewer.camera.moveEnd.addEventListener(rebuildPathOnCameraMoveEnd);
+
       const ro = new ResizeObserver(() => {
         viewer?.resize();
         viewer?.forceResize();
+        pathHandle.rebuildActivePath();
         viewer?.scene.requestRender();
       });
       ro.observe(mount);
@@ -729,8 +749,10 @@ export function GlobeViewport({
         ro,
         onCameraChanged: updateDetail,
         onSamplerCameraChanged: samplerKickOnCameraChanged,
+        onCameraMoveEnd: rebuildPathOnCameraMoveEnd,
         camera: viewer.camera,
         clickedIndicator,
+        pathHandle,
         mapMarker,
         debugCrosshair,
         stopViewportSampler,
@@ -746,8 +768,10 @@ export function GlobeViewport({
           ro: ResizeObserver;
           onCameraChanged: () => void;
           onSamplerCameraChanged: () => void;
+          onCameraMoveEnd: () => void;
           camera: CesiumTypes.Camera;
           clickedIndicator: { destroy: () => void };
+          pathHandle: PathHandle;
           mapMarker: ReturnType<typeof installMapMarker>;
           debugCrosshair: ReturnType<typeof installDebugCrosshair>;
           stopViewportSampler: () => void;
@@ -773,8 +797,11 @@ export function GlobeViewport({
         cleanup.camera.changed.removeEventListener(cleanup.onSamplerCameraChanged);
       }
       cleanup?.camera.changed.removeEventListener(cleanup.onCameraChanged);
+      cleanup?.camera.moveEnd.removeEventListener(cleanup.onCameraMoveEnd);
       cleanup?.removeInputListeners();
       cleanup?.clickedIndicator.destroy();
+      cleanup?.pathHandle.destroy();
+      pathHandleRef.current = null;
       cleanup?.mapMarker.destroy();
       cleanup?.debugCrosshair?.destroy();
       ro?.disconnect();

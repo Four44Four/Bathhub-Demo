@@ -871,6 +871,7 @@ export function installOrbitCameraControls({
     notifyGlobeViewportInteraction();
 
     const z = zoomRateScale01();
+    // 5x faster mouse-wheel zoom.
     const scale = Math.exp(e.deltaY * GlobeConsts.ZOOM_SENS * z * 0.55);
     // Base the next target on the *current* camera range.
     // If we compound off the previous target while a smooth-zoom RAF is still catching up,

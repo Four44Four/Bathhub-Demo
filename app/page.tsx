@@ -20,6 +20,8 @@ import * as SharedUtils from "./_shared/Utils";
 const GLOBE_VIEWPORT_WIDTH = "100%";
 const GLOBE_VIEWPORT_HEIGHT = "100%";
 
+// let canAccessGeolocationData = false;
+
 /**
  * Module-level mutable globe-center coordinates. Default to (0, 0) when the
  * client has no geolocation permission (or denies the prompt). Updated to the
@@ -105,7 +107,11 @@ async function onTestPathfindClick(globeRef: RefObject<GlobeViewportHandle | nul
   else {
     const pathDataStr = JSON.stringify(pathDataErrorable.val);
     ServerDebug.log(pathDataStr);
-    console.log(pathDataStr);  
+    console.log(pathDataStr);
+    const pts = pathDataErrorable.val?.points;
+    if (pts && pts.length >= 2) {
+      globeRef.current?.setPathFromLatLonPoints(pts);
+    }
   }
 }
 

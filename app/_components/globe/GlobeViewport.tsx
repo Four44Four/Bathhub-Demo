@@ -4,13 +4,14 @@ import {
   useEffect,
   useImperativeHandle,
   useRef,
+  useState,
   type Ref,
   type RefObject,
 } from "react";
 import type * as CesiumTypes from "cesium";
 import "cesium/Build/Cesium/Widgets/widgets.css";
 
-import { Globe as GlobeConsts } from "../ComponentConstants";
+import { Globe as GlobeConsts, MapMarker as MapMarkerConsts } from "../ComponentConstants";
 import * as Utils from "../Utils";
 import * as ServerDebug from "../../_server/Debug";
 import { type Point } from "../../_shared/Utils";
@@ -221,6 +222,7 @@ export function GlobeViewport({
   >(null);
   /** Shared cache for `getViewportCenterLatLon`, MapMarker viewport-follow mode, and callers like `getStartPos`. */
   const viewportCenterLatLonRef = useRef<Point | null>(null);
+  const [mapMarkerStaticOverlay, setMapMarkerStaticOverlay] = useState(true);
 
   useImperativeHandle<GlobeViewportHandle | null, GlobeViewportHandle>(
     ref,
@@ -558,7 +560,12 @@ export function GlobeViewport({
         cameraControls.snapTo(pendingSnap.lat, pendingSnap.long);
       }
 
-      const mapMarker = installMapMarker(Cesium, viewer, () => viewportCenterLatLonRef.current);
+      const mapMarker = installMapMarker(
+        Cesium,
+        viewer,
+        () => viewportCenterLatLonRef.current,
+        setMapMarkerStaticOverlay,
+      );
       const debugCrosshair = installDebugCrosshair(Cesium, viewer, () => viewportCenterLatLonRef.current);
 
       isClientIdle = false;
@@ -816,6 +823,35 @@ export function GlobeViewport({
         }
       >
         <div ref={mountRef} className="h-full w-full" />
+        {mapMarkerStaticOverlay ? (
+          <div
+            className="pointer-events-none absolute inset-0 z-[1]"
+            aria-hidden
+          >
+            <div
+              className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-full"
+              style={{
+                width: MapMarkerConsts.SIZE,
+                height: MapMarkerConsts.SIZE,
+              }}
+            >
+              <img
+                alt=""
+                className="block h-full w-full select-none object-contain"
+                draggable={false}
+                height={MapMarkerConsts.SIZE}
+                src={MapMarkerConsts.IMAGE}
+                style={{
+                  opacity: MapMarkerConsts.OPACITY,
+                  // Thin dark rim around the alpha silhouette (Cesium-style billboard edge).
+                  filter:
+                    "drop-shadow(0 0 0.55px rgba(12, 13, 18, 0.92)) drop-shadow(0 0 1.15px rgba(12, 13, 18, 0.42))",
+                }}
+                width={MapMarkerConsts.SIZE}
+              />
+            </div>
+          </div>
+        ) : null}
       </div>
     </>
   );

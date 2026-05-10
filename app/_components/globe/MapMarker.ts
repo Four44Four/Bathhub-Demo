@@ -10,7 +10,7 @@ export type MapMarkerCachedViewportCenter = () => {
 } | null;
 
 export type MapMarkerHandle = {
-  /** Re-apply the cached viewport center to the billboard (no-op when geolocation is active). */
+  /** Viewport-center sampler hook; keeps the billboard hidden while static overlay mode is active. */
   refreshViewportFollowFromCache: () => void;
   destroy: () => void;
 };
@@ -21,14 +21,21 @@ const GEO_WATCH_OPTS: PositionOptions = {
 };
 
 /**
- * “You are here” marker: follows the viewport center until geolocation is available,
- * then snaps to (and tracks) the device position. Billboard anchor is bottom-center
- * on the ground point (with a small lift matching `ClickedIndicator`).
+ * “You are here” marker: until a geolocation fix is available (permission denied,
+ * prompt, or watch pending), use screen-space UI via `onStaticOverlayModeChange`.
+ * After a fix, the Cesium billboard tracks the device position. Billboard anchor is
+ * bottom-center on the ground point (with a small lift matching `ClickedIndicator`).
  */
 export function installMapMarker(
   Cesium: typeof CesiumTypes,
   viewer: CesiumTypes.Viewer,
   getCachedViewportCenter: MapMarkerCachedViewportCenter,
+  /**
+   * When true, the host should render a fixed 2D marker (same SIZE as `GlobeImage`)
+   * centered on the viewport; the billboard stays hidden. When false, the billboard
+   * is used and the overlay should be removed.
+   */
+  onStaticOverlayModeChange?: (useStaticOverlay: boolean) => void,
 ): MapMarkerHandle {
   const scene = viewer.scene;
 
@@ -43,27 +50,34 @@ export function installMapMarker(
   });
 
   let geoLocked = false;
+  let cancelled = false;
+
+  const notifyStaticOverlay = (useStatic: boolean) => {
+    if (cancelled) return;
+    onStaticOverlayModeChange?.(useStatic);
+  };
 
   const lockToGeolocation = (latDeg: number, lonDeg: number) => {
     geoLocked = true;
     globeImage.setLatLonDegrees(latDeg, lonDeg);
     globeImage.setVisible(true);
+    notifyStaticOverlay(false);
     scene.requestRender();
   };
 
   const refreshViewportFollowFromCache = () => {
     if (geoLocked) return;
-    const p = getCachedViewportCenter();
-    if (!p) return;
-    globeImage.setLatLonDegrees(p.latitude, p.longitude);
-    globeImage.setVisible(true);
+    // Viewport-follow mode uses the fixed screen overlay; keep billboard hidden.
+    globeImage.setVisible(false);
     scene.requestRender();
   };
 
   let watchId: number | null = null;
-  let cancelled = false;
 
   let permListener: { status: PermissionStatus; fn: () => void } | null = null;
+
+  globeImage.setVisible(false);
+  notifyStaticOverlay(true);
 
   const requestGeoSnap = () => {
     if (typeof navigator === "undefined" || !navigator.geolocation) return;

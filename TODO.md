@@ -1,7 +1,4 @@
 # Sprint 1 (frontend/UI)
- - Add a debugging GlobeImage that can be toggled by a constant in ComponentConstants.ts for measuring center calculations
-    - Should flash every time the center is calculated
- - Ensure tiles not visible in frustrum are unrendered
  - On the button press: 
     - Draw a path from current location to clicked
  - Create a swipe-up menu from the bottom of the screen that displays following buttons:

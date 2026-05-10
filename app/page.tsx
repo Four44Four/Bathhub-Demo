@@ -20,7 +20,8 @@ import * as SharedUtils from "./_shared/Utils";
 const GLOBE_VIEWPORT_WIDTH = "100%";
 const GLOBE_VIEWPORT_HEIGHT = "100%";
 
-// let canAccessGeolocationData = false;
+/** Set when geolocation is active for this client (instant bootstrap or post-grant snap/animate). */
+let isClientGeoGranted = false;
 
 /**
  * Module-level mutable globe-center coordinates. Default to (0, 0) when the
@@ -66,20 +67,21 @@ function writeGeoCache(lat: number, lng: number) {
  *    or last known map init if Cesium is not ready. 
  * */
 function getStartPos(globe: GlobeViewportHandle | null): SharedUtils.Point {
-  let retPos = globe?.getViewportCenterLatLon() ?? {
+  if (!isClientGeoGranted) {
+    return (
+      globe?.getViewportCenterLatLon() ?? {
+        latitude: mapInitLat,
+        longitude: mapInitLong,
+      }
+    );
+  }
+
+  // Coordinates from geolocation success callbacks (`applyInstantBootstrapPosition`,
+  // `applyGeolocationPosition`); kept in sync with `mapInitLat` / `mapInitLong`.
+  return {
     latitude: mapInitLat,
     longitude: mapInitLong,
   };
-
-  navigator.geolocation.getCurrentPosition(
-    (posIn) => {
-      retPos = { 
-        latitude: posIn.coords.latitude, 
-        longitude: posIn.coords.longitude 
-      };
-    });
-
-  return retPos;
 }
 
 async function onTestPathfindClick(globeRef: RefObject<GlobeViewportHandle | null>) {
@@ -177,6 +179,7 @@ export default function Home() {
      * trigger the init animation on a 0,0 globe.
      */
     const applyInstantBootstrapPosition = (lat: number, lng: number) => {
+      isClientGeoGranted = true;
       mapInitLat = lat;
       mapInitLong = lng;
       writeGeoCache(lat, lng);
@@ -241,6 +244,7 @@ export default function Home() {
 
       const lat = pos.coords.latitude;
       const long = pos.coords.longitude;
+      isClientGeoGranted = true;
       mapInitLat = lat;
       mapInitLong = long;
       writeGeoCache(lat, long);

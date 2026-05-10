@@ -1,5 +1,4 @@
 # Sprint 1 (frontend/UI)
- - Fix geolocation accessed client always having getStartPos() return viewport center, when it is supposed to return the client's current geolocated pos
  - Rename ./app/_components to ./app/_client
  - Write regression tests for UI and pathfinding logic so far
  - Create a swipe-up menu from the bottom of the screen that displays following buttons:

@@ -1,11 +1,7 @@
 import type * as CesiumTypes from "cesium";
 
+import { MapMarker as MapMarkerConsts } from "../ComponentConstants";
 import { installGlobeImage } from "./GlobeImage";
-
-export const MAP_MARKER_SIZE = 50;
-export const MAP_MARKER_IMAGE = "/bathhub_map_marker.svg";
-export const MAP_MARKER_COLOR = "#FFF";
-export const MAP_MARKER_OPACITY = 1.0;
 
 /** Reads the shared viewport-center cache (updated by `GlobeViewport` on a timer). */
 export type MapMarkerCachedViewportCenter = () => {
@@ -40,10 +36,10 @@ export function installMapMarker(
 
   const globeImage = installGlobeImage(Cesium, viewer, {
     name: "MapMarker",
-    color: MAP_MARKER_COLOR,
-    opacity: MAP_MARKER_OPACITY,
-    image: MAP_MARKER_IMAGE,
-    size: MAP_MARKER_SIZE,
+    color: MapMarkerConsts.COLOR,
+    opacity: MapMarkerConsts.OPACITY,
+    image: MapMarkerConsts.IMAGE,
+    size: MapMarkerConsts.SIZE,
     heightAboveEllipsoidM: heightM,
     horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
     verticalOrigin: Cesium.VerticalOrigin.BOTTOM,

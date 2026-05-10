@@ -39,6 +39,13 @@ export const ClickedIndicator = {
     OPACITY: 1.0,
 } as const;
 
+export const MapMarker = {
+    SIZE: 50,
+    IMAGE: "/bathhub_map_marker.svg",
+    COLOR: "#FFF",
+    OPACITY: 1.0,
+} as const;
+
 export const Globe = {    
     // Target initial zoom level after geolocation is granted/processed:
     // distance from the globe surface (meters).
@@ -56,4 +63,12 @@ export const Globe = {
 
     // Minimum clearance above the globe surface (meters). Smaller => you can zoom closer.
     MIN_SURFACE_CLEARANCE_M: 250,
+
+    /** Sample interval while dragging, pinching, wheel-zoom smoothing, or programmatic camera animation is active. */
+    UPDATE_VIEWPORT_CENTER_DELAY_MS: 50,
+    /**
+     * After this many milliseconds with no active globe drag/zoom/animation (`isGlobeViewportSamplerBusy`),
+     * the client is treated as idle for viewport-center sampling.
+     */
+    VIEWPORT_DETECT_IDLE_MS: 500,
 } as const;

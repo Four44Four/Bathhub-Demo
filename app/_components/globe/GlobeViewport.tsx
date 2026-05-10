@@ -18,14 +18,6 @@ import { installClickedIndicator } from "./ClickedIndicator";
 import { installMapMarker } from "./MapMarker";
 import { installOrbitCameraControls, type InstalledOrbitCameraControls } from "./Camera";
 
-/** Sample interval while dragging, pinching, wheel-zoom smoothing, or programmatic camera animation is active. */
-const UPDATE_GLOBE_VIEWPORT_CENTER_DELAY_MS = 50;
-/**
- * After this many milliseconds with no active globe drag/zoom/animation (`isGlobeViewportSamplerBusy`),
- * the client is treated as idle for viewport-center sampling.
- */
-const GLOBE_VIEWPORT_DETECT_IDLE_MS = 500;
-
 /** Set to true once `GLOBE_VIEWPORT_DETECT_IDLE_MS` elapses without move/zoom activity; cleared when activity resumes. */
 let isClientIdle = false;
 
@@ -593,7 +585,7 @@ export function GlobeViewport({
           if (cancelled || !viewer || cameraControls.isGlobeViewportSamplerBusy()) return;
           isClientIdle = true;
           scheduleNextViewportCenterSample();
-        }, GLOBE_VIEWPORT_DETECT_IDLE_MS);
+        }, GlobeConsts.VIEWPORT_DETECT_IDLE_MS);
       };
 
       const busySamplingTick = () => {
@@ -603,7 +595,7 @@ export function GlobeViewport({
         }
         runViewportCenterSample();
         if (cameraControls.isGlobeViewportSamplerBusy()) {
-          viewportSamplerTimer = window.setTimeout(busySamplingTick, UPDATE_GLOBE_VIEWPORT_CENTER_DELAY_MS);
+          viewportSamplerTimer = window.setTimeout(busySamplingTick, GlobeConsts.UPDATE_VIEWPORT_CENTER_DELAY_MS);
         } else {
           busySamplingActive = false;
           isClientIdle = false;
@@ -626,7 +618,7 @@ export function GlobeViewport({
         }
         // Sample immediately so brief drags/zooms still update before the first delayed tick.
         runViewportCenterSample();
-        viewportSamplerTimer = window.setTimeout(busySamplingTick, UPDATE_GLOBE_VIEWPORT_CENTER_DELAY_MS);
+        viewportSamplerTimer = window.setTimeout(busySamplingTick, GlobeConsts.UPDATE_VIEWPORT_CENTER_DELAY_MS);
       };
 
       viewportSamplerWakeRef.ensureBusy = ensureBusySampling;

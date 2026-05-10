@@ -12,6 +12,11 @@ export type InstallOrbitCameraOptions = {
   initLat: number;
   initLong: number;
   width: number | string;
+  /**
+   * When true, the camera starts at `CAMERA_INIT_SURFACE_OFFSET` above the surface instead of
+   * the default far “cover the viewport” distance used for `width === "100%"` layouts.
+   */
+  startAtInitTargetRange?: boolean;
   containerRef: RefObject<HTMLElement | null>;
   zoomIndicatorRootRef?: RefObject<HTMLElement | null>;
   onZoomIndicatorPulse?: (x: number, y: number) => void;
@@ -34,6 +39,8 @@ export type InstalledOrbitCameraControls = {
    * cancels the animation immediately so it never fights the user.
    */
   animateTo: (latDeg: number, longDeg: number, durationMs?: number) => void;
+  /** Set orbit angles immediately (no animation). Does NOT change zoom (range). */
+  snapTo: (latDeg: number, longDeg: number) => void;
   /**
    * Smoothly zoom the camera so it ends `Globe.CAMERA_INIT_SURFACE_OFFSET` meters
    * above the globe surface. Intended to be triggered when geolocation is
@@ -52,6 +59,7 @@ export function installOrbitCameraControls({
   initLat,
   initLong,
   width,
+  startAtInitTargetRange,
   containerRef,
   zoomIndicatorRootRef,
   onZoomIndicatorPulse,
@@ -128,9 +136,22 @@ export function installOrbitCameraControls({
   controller.maximumTiltAngle = Math.PI / 2.0;
   controller.enableCollisionDetection = true;
 
+  const clampRangeValue = (next: number) => {
+    const minSurface =
+      viewer.scene.screenSpaceCameraController.minimumZoomDistance ?? GlobeConsts.MIN_SURFACE_CLEARANCE_M;
+    const maxSurface = viewer.scene.screenSpaceCameraController.maximumZoomDistance ?? radius * 20.0;
+    const minRange = radius + minSurface;
+    const maxRange = maxSurface;
+    return Utils.clamp(next, minRange, maxRange);
+  };
+
+  const initTargetRange = clampRangeValue(radius + GlobeConsts.CAMERA_INIT_SURFACE_OFFSET);
+
   /** Full-bleed layout: zoom so the sphere’s limb subtends the larger of the two frustum FOVs (“cover”), clipping on the shorter axis (portrait: left/right). */
   const fillParent = typeof width === "string" && width === "100%";
-  if (fillParent) {
+  if (startAtInitTargetRange) {
+    range = initTargetRange;
+  } else if (fillParent) {
     viewer.resize();
     viewer.forceResize?.();
     const canvasEl = viewer.scene.canvas;
@@ -176,15 +197,6 @@ export function installOrbitCameraControls({
     const minRange = radius + minSurface;
     const maxRange = maxSurface;
     range = Utils.clamp(next, minRange, maxRange);
-  };
-
-  const clampRangeValue = (next: number) => {
-    const minSurface =
-      viewer.scene.screenSpaceCameraController.minimumZoomDistance ?? GlobeConsts.MIN_SURFACE_CLEARANCE_M;
-    const maxSurface = viewer.scene.screenSpaceCameraController.maximumZoomDistance ?? radius * 20.0;
-    const minRange = radius + minSurface;
-    const maxRange = maxSurface;
-    return Utils.clamp(next, minRange, maxRange);
   };
 
   const rangeAtInstall = range;
@@ -536,10 +548,6 @@ export function installOrbitCameraControls({
   let wheelZoomLastPulseT = 0;
   let wheelZoomLerpRate = 18; // higher = faster convergence
 
-  // Target zoom state (range from globe center) that we snap/animate to once
-  // geolocation is granted/processed.
-  const initTargetRange = clampRangeValue(radius + GlobeConsts.CAMERA_INIT_SURFACE_OFFSET);
-
   // Programmatic orbit-rotation animation (used by `animateTo`). Rotates `theta`/`phi`
   // toward a target without touching `range`. Always cancellable by user input.
   let rotateAnimRaf: number | null = null;
@@ -591,6 +599,18 @@ export function installOrbitCameraControls({
       }
     };
     rotateAnimRaf = requestAnimationFrame(tick);
+  };
+
+  const snapTo = (latDeg: number, longDeg: number) => {
+    cancelRotateAnim();
+    clearZoomAim();
+    theta = (longDeg * Math.PI) / 180;
+    phi = Utils.clamp(
+      (latDeg * Math.PI) / 180,
+      -Math.PI / 2 + EPS,
+      Math.PI / 2 - EPS,
+    );
+    applyOrbit();
   };
 
   const startWheelZoomLoop = () => {
@@ -886,6 +906,7 @@ export function installOrbitCameraControls({
   return {
     isGlobeViewportSamplerBusy,
     animateTo,
+    snapTo,
     animateZoomToInitTarget: (durationMs?: number) => {
       // Reuse the existing smooth wheel-zoom target codepath.
       // If a duration is supplied, tune the exponential rate so we reach ~99% by that time.

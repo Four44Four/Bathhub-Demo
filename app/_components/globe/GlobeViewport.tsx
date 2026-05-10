@@ -85,6 +85,8 @@ export type GlobeViewportHandle = {
   animateTo: (lat: number, long: number, durationMs?: number) => void;
   animateZoomToInitTarget: (durationMs?: number) => void;
   snapZoomToInitTarget: () => void;
+  /** Immediately centers the globe on (lat, long) without rotation animation. */
+  snapTo: (lat: number, long: number) => void;
   /** Lat/long where the map surface lies under the viewport center (camera look target). */
   getViewportCenterLatLon: () => Point | null;
   /** Lat/long of the tap/click marker on the globe, if the user has clicked. */
@@ -94,6 +96,11 @@ export type GlobeViewportHandle = {
 type GlobeViewportProps = {
   initLat: number;
   initLong: number;
+  /**
+   * When true, the camera starts at the post-geolocation zoom distance immediately (no fly-in
+   * from the default whole-globe framing used for full-width layouts).
+   */
+  initialSnapToGeoView?: boolean;
   width: number | string;
   height: number | string;
   /**
@@ -190,6 +197,7 @@ function dimensionCss(value: number | string): string {
 export function GlobeViewport({
   initLat,
   initLong,
+  initialSnapToGeoView = false,
   width,
   height,
   zoomIndicatorRootRef,
@@ -204,6 +212,7 @@ export function GlobeViewport({
   const cameraControlsRef = useRef<InstalledOrbitCameraControls | null>(null);
   const pendingAnimateToRef = useRef<{ lat: number; long: number; durationMs?: number } | null>(null);
   const pendingZoomToInitRef = useRef<{ durationMs?: number; snap?: boolean } | null>(null);
+  const pendingSnapToRef = useRef<{ lat: number; long: number } | null>(null);
   const viewerRef = useRef<CesiumTypes.Viewer | null>(null);
   const cesiumNsRef = useRef<typeof import("cesium") | null>(null);
   const clickedIndicatorApiRef = useRef<
@@ -237,6 +246,14 @@ export function GlobeViewport({
           controls.snapZoomToInitTarget();
         } else {
           pendingZoomToInitRef.current = { snap: true };
+        }
+      },
+      snapTo: (lat, long) => {
+        const controls = cameraControlsRef.current;
+        if (controls) {
+          controls.snapTo(lat, long);
+        } else {
+          pendingSnapToRef.current = { lat, long };
         }
       },
       getViewportCenterLatLon: () => viewportCenterLatLonRef.current,
@@ -506,6 +523,7 @@ export function GlobeViewport({
         initLat,
         initLong,
         width,
+        startAtInitTargetRange: initialSnapToGeoView,
         containerRef,
         zoomIndicatorRootRef,
         onZoomIndicatorPulse,
@@ -532,6 +550,11 @@ export function GlobeViewport({
         pendingZoomToInitRef.current = null;
         if (pendingZoom.snap) cameraControls.snapZoomToInitTarget();
         else cameraControls.animateZoomToInitTarget(pendingZoom.durationMs);
+      }
+      const pendingSnap = pendingSnapToRef.current;
+      if (pendingSnap) {
+        pendingSnapToRef.current = null;
+        cameraControls.snapTo(pendingSnap.lat, pendingSnap.long);
       }
 
       const mapMarker = installMapMarker(Cesium, viewer, () => viewportCenterLatLonRef.current);
@@ -752,7 +775,7 @@ export function GlobeViewport({
       // destroyed viewer. Future calls will re-queue into pendingAnimateToRef.
       cameraControlsRef.current = null;
     };
-  }, [initLat, initLong, width]);
+  }, [initLat, initLong, initialSnapToGeoView, width]);
 
   const fillParent = typeof width === "string" && width === "100%";
 

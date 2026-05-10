@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useRef, useState, RefObject } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, RefObject } from "react";
 import { Button } from "./_components/Button";
 import {
   GlobeViewport,
@@ -31,6 +31,30 @@ const GLOBE_VIEWPORT_HEIGHT = "100%";
  */
 let mapInitLat = 0.0;
 let mapInitLong = 0.0;
+
+const GEO_CACHE_KEY = "bathhub_last_geo_v1";
+
+function readGeoCache(): { lat: number; lng: number } | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = sessionStorage.getItem(GEO_CACHE_KEY);
+    if (!raw) return null;
+    const p = JSON.parse(raw) as { lat?: unknown; lng?: unknown };
+    if (typeof p.lat !== "number" || typeof p.lng !== "number") return null;
+    if (!Number.isFinite(p.lat) || !Number.isFinite(p.lng)) return null;
+    return { lat: p.lat, lng: p.lng };
+  } catch {
+    return null;
+  }
+}
+
+function writeGeoCache(lat: number, lng: number) {
+  try {
+    sessionStorage.setItem(GEO_CACHE_KEY, JSON.stringify({ lat, lng }));
+  } catch {
+    // quota / private mode
+  }
+}
 
 /** 
  * Current client location
@@ -98,10 +122,27 @@ export default function Home() {
   // which causes its useEffect to tear down + re-init the Cesium viewer.
   // We only update it for the "permission already granted" case so the
   // "accepted later" case can use the cheap animation path instead.
-  const [globeInit, setGlobeInit] = useState<{ lat: number; long: number }>({
+  const [globeInit, setGlobeInit] = useState<{
+    lat: number;
+    long: number;
+    /** Session/cache bootstrap: start globe framing + zoom like post-geolocation (no fly-in). */
+    snapInitialView: boolean;
+  }>({
     lat: mapInitLat,
     long: mapInitLong,
+    snapInitialView: false,
   });
+
+  const globeInitRef = useRef(globeInit);
+  globeInitRef.current = globeInit;
+
+  useLayoutEffect(() => {
+    const cached = readGeoCache();
+    if (!cached) return;
+    mapInitLat = cached.lat;
+    mapInitLong = cached.lng;
+    setGlobeInit({ lat: cached.lat, long: cached.lng, snapInitialView: true });
+  }, []);
 
   useEffect(() => {
     if (typeof navigator === "undefined" || !navigator.geolocation) return;
@@ -124,27 +165,106 @@ export default function Home() {
       }
     };
 
+    /**
+     * When permission is already granted, resolve a fix (preferring cache via maximumAge)
+     * before registering `watchPosition`, so the first watch callback cannot race ahead and
+     * trigger the init animation on a 0,0 globe.
+     */
+    const applyInstantBootstrapPosition = (lat: number, lng: number) => {
+      mapInitLat = lat;
+      mapInitLong = lng;
+      writeGeoCache(lat, lng);
+      setGlobeInit((prev) => {
+        const close =
+          Math.abs(prev.lat - lat) < 0.002 && Math.abs(prev.long - lng) < 0.002;
+        if (close && prev.snapInitialView) return prev;
+        if (prev.snapInitialView && !close) {
+          queueMicrotask(() => {
+            globeRef.current?.snapTo(lat, lng);
+          });
+          return prev;
+        }
+        return { lat, long: lng, snapInitialView: true };
+      });
+    };
+
+    const bootstrapGrantedInstantFix = () =>
+      new Promise<void>((resolve) => {
+        const opts: PositionOptions = {
+          maximumAge: Infinity,
+          enableHighAccuracy: false,
+        };
+        const onFix = (pos: GeolocationPosition) => {
+          if (cancelled) return;
+          applyInstantBootstrapPosition(pos.coords.latitude, pos.coords.longitude);
+        };
+
+        const perms = navigator.permissions;
+        if (!perms?.query) {
+          navigator.geolocation.getCurrentPosition(
+            (pos) => {
+              onFix(pos);
+              resolve();
+            },
+            () => resolve(),
+            opts,
+          );
+          return;
+        }
+        perms
+          .query({ name: "geolocation" })
+          .then((status) => {
+            if (cancelled || status.state !== "granted") {
+              resolve();
+              return;
+            }
+            navigator.geolocation.getCurrentPosition(
+              (pos) => {
+                onFix(pos);
+                resolve();
+              },
+              () => resolve(),
+              opts,
+            );
+          })
+          .catch(() => resolve());
+      });
+
     const applyGeolocationPosition = (pos: GeolocationPosition) => {
-      if (cancelled || appliedUserLocation) return;
-      appliedUserLocation = true;
-      clearWatch();
+      if (cancelled) return;
+
       const lat = pos.coords.latitude;
       const long = pos.coords.longitude;
       mapInitLat = lat;
       mapInitLong = long;
+      writeGeoCache(lat, long);
+
+      const prev = globeInitRef.current;
+      const close =
+        Math.abs(lat - prev.lat) < 0.002 && Math.abs(long - prev.long) < 0.002;
+
+      if (prev.snapInitialView && close) {
+        if (!appliedUserLocation) {
+          appliedUserLocation = true;
+          clearWatch();
+        }
+        return;
+      }
+
+      if (appliedUserLocation) return;
+      appliedUserLocation = true;
+      clearWatch();
+
+      if (prev.snapInitialView && !close) {
+        globeRef.current?.snapTo(lat, long);
+        return;
+      }
+
       if (GlobeConsts.ANIMATE_ON_INIT) {
-        // ANIMATE_ON_INIT is true: animate the existing globe to the
-        // user's location instead of jumping to it.
         globeRef.current?.animateTo(lat, long, GlobeConsts.ANIMATE_ON_INIT_DURA);
         globeRef.current?.animateZoomToInitTarget(GlobeConsts.ANIMATE_ON_INIT_DURA);
       } else {
-        // Initialize the JSX at the calculated lat/long: setting state
-        // re-renders Home() and re-mounts the globe at the user's location.
-        setGlobeInit({ lat, long });
-        // The viewer is about to be torn down + re-initialized. If we snap *now*
-        // it will apply to the old viewer and then immediately get destroyed.
-        // Defer so the call targets the newly-mounted GlobeViewport, which will
-        // queue/replay the snap after Cesium finishes loading.
+        setGlobeInit({ lat, long, snapInitialView: false });
         requestAnimationFrame(() => {
           globeRef.current?.snapZoomToInitTarget();
         });
@@ -166,7 +286,6 @@ export default function Home() {
     const startWatch = () => {
       if (cancelled || appliedUserLocation) return;
       clearWatch();
-      console.log("ok")
       watchId = navigator.geolocation.watchPosition(
         applyGeolocationPosition,
         onPositionError,
@@ -174,7 +293,9 @@ export default function Home() {
       );
     };
 
-    startWatch();
+    void bootstrapGrantedInstantFix().then(() => {
+      if (!cancelled) startWatch();
+    });
 
     const retryIfStillWaiting = () => {
       if (cancelled || appliedUserLocation) return;
@@ -210,6 +331,7 @@ export default function Home() {
             ref={globeRef}
             initLat={globeInit.lat}
             initLong={globeInit.long}
+            initialSnapToGeoView={globeInit.snapInitialView}
             width={GLOBE_VIEWPORT_WIDTH}
             height={GLOBE_VIEWPORT_HEIGHT}
             zoomIndicatorRootRef={globeRootRef}

@@ -107,9 +107,27 @@ export default function Home() {
     if (typeof navigator === "undefined" || !navigator.geolocation) return;
 
     let cancelled = false;
+    /** Ensures we only run the init animation once. */
+    let appliedUserLocation = false;
+    let watchId: number | null = null;
 
-    const onPosition = () => (pos: GeolocationPosition) => {
-      if (cancelled) return;
+    // Omit `timeout` so the browser waits indefinitely while the permission prompt is open.
+    const geoOptions: PositionOptions = {
+      enableHighAccuracy: false,
+      maximumAge: 60_000,
+    };
+
+    const clearWatch = () => {
+      if (watchId !== null) {
+        navigator.geolocation.clearWatch(watchId);
+        watchId = null;
+      }
+    };
+
+    const applyGeolocationPosition = (pos: GeolocationPosition) => {
+      if (cancelled || appliedUserLocation) return;
+      appliedUserLocation = true;
+      clearWatch();
       const lat = pos.coords.latitude;
       const long = pos.coords.longitude;
       mapInitLat = lat;
@@ -133,40 +151,44 @@ export default function Home() {
       }
     };
 
-    const onPositionError = () => {
-      // Denial / timeout / unavailable: leave defaults at (0, 0).
+    const onPositionError = (err: GeolocationPositionError) => {
+      if (cancelled) return;
+      // Hard denial ends the watch; other codes may be transient (Firefox).
+      if (err.code === err.PERMISSION_DENIED) {
+        clearWatch();
+      }
     };
 
-    const requestPosition = () => {
-      navigator.geolocation.getCurrentPosition(
-        onPosition(),
+    /** Firefox: do not `await` anything before registering geolocation — a deferred
+     * `getCurrentPosition` can leave the request untied from the permission prompt so
+     * neither success nor error runs after a slow Allow. `watchPosition` keeps a live
+     * subscription until the first fix (works better than one-shot here). */
+    const startWatch = () => {
+      if (cancelled || appliedUserLocation) return;
+      clearWatch();
+      console.log("ok")
+      watchId = navigator.geolocation.watchPosition(
+        applyGeolocationPosition,
         onPositionError,
-        { enableHighAccuracy: false, timeout: 10_000, maximumAge: 60_000 },
+        geoOptions,
       );
     };
 
-    (async () => {
-      try {
-        // `navigator.permissions` isn't universally available (older Safari),
-        // so this is best-effort: failure falls through to a normal prompt.
-        if (navigator.permissions && typeof navigator.permissions.query === "function") {
-          const status = await navigator.permissions.query({
-            name: "geolocation" as PermissionName,
-          });
-          if (status.state === "denied") {
-            // Don't even try to prompt; defaults stay at (0, 0).
-            return;
-          }
-        }
-      } catch {
-        // Permissions API unavailable or rejected — let getCurrentPosition prompt.
-      }
-      if (cancelled) return;
-      requestPosition();
-    })();
+    startWatch();
+
+    const retryIfStillWaiting = () => {
+      if (cancelled || appliedUserLocation) return;
+      if (document.visibilityState !== "visible") return;
+      startWatch();
+    };
+    window.addEventListener("focus", retryIfStillWaiting);
+    document.addEventListener("visibilitychange", retryIfStillWaiting);
 
     return () => {
       cancelled = true;
+      clearWatch();
+      window.removeEventListener("focus", retryIfStillWaiting);
+      document.removeEventListener("visibilitychange", retryIfStillWaiting);
     };
   }, []);
 

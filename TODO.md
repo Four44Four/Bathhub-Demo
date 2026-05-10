@@ -1,6 +1,9 @@
 # Sprint 1 (frontend/UI)
- - Show current location with a pointer icon
+ - Fix delayed geolocation acceptance not triggering globe and camera animation
+ - Add a debugging GlobeImage that can be toggled by a constant in ComponentConstants.ts for measuring center calculations
+    - Should flash every time the center is calculated
  - Debug why no geolocation perms (using globe viewport center pos) and using Test pathfind button results in ORS API error
+ - Ensure tiles not visible in frustrum are unrendered
  - On the button press: 
     - Draw a path from current location to clicked
  - Create a swipe-up menu from the bottom of the screen that displays following buttons:

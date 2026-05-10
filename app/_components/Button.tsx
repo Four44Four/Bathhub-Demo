@@ -66,6 +66,7 @@ export function Button({
     />
   ) : null;
 
+  console.log(textWeight);
   const textEl = hasText ? (
     <span
       className={textWeight}

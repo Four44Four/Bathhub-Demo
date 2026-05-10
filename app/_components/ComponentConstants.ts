@@ -1,24 +1,11 @@
-import localFont from "next/font/local";
+"use client";
 
-const NOTOSANS_REGULAR = localFont({ 
-    src: "../fonts/NotoSans-Regular.ttf", 
-    display: "swap" 
-});
-
-const NOTOSANS_BOLD = localFont({ 
-    src: "../fonts/NotoSans-Bold.ttf", 
-    display: "swap" 
-});
-
-const NOTOSANS_LIGHT = localFont({ 
-    src: "../fonts/NotoSans-Light.ttf", 
-    display: "swap" 
-});
+import * as Fonts from "../_server/Fonts";
 
 export const Shared = {
-    FONT_REGULAR_CLASS: NOTOSANS_REGULAR.className,
-    FONT_BOLD_CLASS: NOTOSANS_BOLD.className,
-    FONT_LIGHT_CLASS: NOTOSANS_LIGHT.className,
+    FONT_REGULAR_CLASS: Fonts.NOTOSANS_REGULAR_CLASS,
+    FONT_BOLD_CLASS: Fonts.NOTOSANS_BOLD_CLASS,
+    FONT_LIGHT_CLASS: Fonts.NOTOSANS_LIGHT_CLASS,
 } as const;
 
 export const Button = {

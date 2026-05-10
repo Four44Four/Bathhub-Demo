@@ -1,7 +1,5 @@
 # Sprint 1 (frontend/UI)
- - On the button press: 
-    - Draw a path from current location to clicked
- - Fix reloading with geolocation access enabled causing all zoom and globe panning/rotation sensitivities to drastically increase, potentially related to the camera height change being instant and the zoom and globe panning/rotation sensitives using the pre-updated height of the camera from the globe's surface instead of the intended, new height of the camera
+- Fix reloading with geolocation access enabled causing all zoom and globe panning/rotation sensitivities to drastically increase, potentially related to the camera height change being instant and the zoom and globe panning/rotation sensitives using the pre-updated height of the camera from the globe's surface instead of the intended, new height of the camera
  - Fix geolocation accessed client always having getStartPos() return viewport center, when it is supposed to return the client's current geolocated pos
  - Rename ./app/_components to ./app/_client
  - Write regression tests for UI and pathfinding logic so far

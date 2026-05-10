@@ -1,23 +1,11 @@
 import type * as CesiumTypes from "cesium";
 
-export const PATH_BASE_COLOR = "#0000FF";
-export const PATH_SECONDARY_COLOR = "#9292FF";
-export const PATH_GRADIENT_SIZE_PIXELS = 50;
-export const PATH_GRADIENT_ROLL_PERIOD_MS = 1000;
-export const PATH_GRADIENT_ROLL_MAX_FPS = 30;
+import { Path as PathConsts } from "../ComponentConstants";
+import { Point } from "../../_shared/Utils";
+
 export type PathColorMode = "static" | "static-gradient" | "rolling-gradient";
-export const PATH_COLOR_MODE: PathColorMode = "rolling-gradient";
-
-export const PATH_WIDTH_PIXELS = 8;
-export const PATH_OUTLINE_WIDTH_PIXELS = 24;
-export const PATH_STROKE_EDGE_SOFT_PIXELS = 1.25;
-export const PATH_MAX_POLYLINE_SAMPLES = 128;
-export const PATH_MIN_VERTEX_SEPARATION_PIXELS = 10;
-export const PATH_SURFACE_CLEARANCE_METERS = 10;
-
-export type PathLatLonPoint = { latitude: number; longitude: number };
 export type PathHandle = {
-  setPath: (points: PathLatLonPoint[]) => void;
+  setPath: (points: Point[]) => void;
   clearPath: () => void;
   rebuildActivePath: () => void;
   destroy: () => void;
@@ -70,20 +58,20 @@ function buildPathRibbonFabric(
   return {
     type: PATH_RIBBON_FABRIC_TYPE,
     uniforms: {
-      baseColor: Cesium.Color.fromCssColorString(PATH_BASE_COLOR),
-      secondaryColor: Cesium.Color.fromCssColorString(PATH_SECONDARY_COLOR),
+      baseColor: Cesium.Color.fromCssColorString(PathConsts.BASE_COLOR),
+      secondaryColor: Cesium.Color.fromCssColorString(PathConsts.SECONDARY_COLOR),
       gradientAxis: axis,
-      wavelengthPixels: Math.max(1e-6, PATH_GRADIENT_SIZE_PIXELS),
+      wavelengthPixels: Math.max(1e-6, PathConsts.GRADIENT_SIZE_PIXELS),
       phase: phase01,
-      colorMode: pathColorModeToUniform(PATH_COLOR_MODE),
+      colorMode: pathColorModeToUniform(PathConsts.COLOR_MODE),
     },
     source: PATH_RIBBON_CZM_GET_MATERIAL,
   };
 }
 
-function dedupeConsecutive(points: PathLatLonPoint[]): PathLatLonPoint[] {
+function dedupeConsecutive(points: Point[]): Point[] {
   if (points.length < 2) return points;
-  const out: PathLatLonPoint[] = [points[0]];
+  const out: Point[] = [points[0]];
   for (let i = 1; i < points.length; i++) {
     const p = points[i];
     const prev = out[out.length - 1];
@@ -185,10 +173,10 @@ function buildCapsuleSamples(
   Cesium: typeof CesiumTypes,
   scene: CesiumTypes.Scene,
   ellipsoid: CesiumTypes.Ellipsoid,
-  points: PathLatLonPoint[],
+  points: Point[],
 ): CesiumTypes.Cartesian3[] {
   // Match GlobeImage.ts default marker/click-indicator height above ellipsoid.
-  const clearance = PATH_SURFACE_CLEARANCE_METERS;
+  const clearance = PathConsts.SURFACE_CLEARANCE_METERS;
   const raw = points.map((p) =>
     Cesium.Cartesian3.fromDegrees(p.longitude, p.latitude, clearance, ellipsoid),
   );
@@ -200,7 +188,7 @@ function buildCapsuleSamples(
   for (let i = 1; i < raw.length - 1; i++) {
     const a = Cesium.SceneTransforms.worldToWindowCoordinates(scene, raw[lastKept], scratchA);
     const b = Cesium.SceneTransforms.worldToWindowCoordinates(scene, raw[i], scratchB);
-    if (!a || !b || Cesium.Cartesian2.distance(a, b) >= PATH_MIN_VERTEX_SEPARATION_PIXELS) {
+    if (!a || !b || Cesium.Cartesian2.distance(a, b) >= PathConsts.MIN_VERTEX_SEPARATION_PIXELS) {
       lod.push(raw[i]);
       lastKept = i;
     }
@@ -229,10 +217,10 @@ function buildCapsuleSamples(
   }
   merged.push(lod[lod.length - 1]);
   const rounded = roundPolylineCorners(Cesium, merged);
-  if (rounded.length <= PATH_MAX_POLYLINE_SAMPLES) return rounded;
+  if (rounded.length <= PathConsts.MAX_POLYLINE_SAMPLES) return rounded;
   const out: CesiumTypes.Cartesian3[] = [];
-  const denom = Math.max(1, PATH_MAX_POLYLINE_SAMPLES - 1);
-  for (let k = 0; k < PATH_MAX_POLYLINE_SAMPLES; k++) {
+  const denom = Math.max(1, PathConsts.MAX_POLYLINE_SAMPLES - 1);
+  for (let k = 0; k < PathConsts.MAX_POLYLINE_SAMPLES; k++) {
     const t = k / denom;
     out.push(rounded[Math.round(t * (rounded.length - 1))]);
   }
@@ -249,7 +237,7 @@ function buildPathRibbonPrimitive(args: {
   const geometry = Cesium.PolylineGeometry.createGeometry(
     new Cesium.PolylineGeometry({
       positions,
-      width: PATH_WIDTH_PIXELS,
+      width: PathConsts.WIDTH_PIXELS,
       arcType: Cesium.ArcType.GEODESIC,
       granularity: Cesium.Math.toRadians(0.5),
       vertexFormat: Cesium.PolylineMaterialAppearance.VERTEX_FORMAT,
@@ -273,7 +261,7 @@ export function installPath(
   ellipsoid: CesiumTypes.Ellipsoid,
 ): PathHandle {
   const scene = viewer.scene;
-  let activePoints: PathLatLonPoint[] | null = null;
+  let activePoints: Point[] | null = null;
   let primitive: CesiumTypes.Primitive | null = null;
   let material: CesiumTypes.Material | null = null;
   let rollingCancel: (() => void) | null = null;
@@ -300,13 +288,13 @@ export function installPath(
   };
 
   const startRolling = () => {
-    if (PATH_COLOR_MODE !== "rolling-gradient" || !material) return;
+    if ((PathConsts.COLOR_MODE as string) !== "rolling-gradient" || !material) return;
     let raf = 0;
     let last = 0;
-    const minMs = 1000 / Math.max(1, PATH_GRADIENT_ROLL_MAX_FPS);
-    const period = Math.max(1, PATH_GRADIENT_ROLL_PERIOD_MS);
+    const minMs = 1000 / Math.max(1, PathConsts.GRADIENT_ROLL_MAX_FPS);
+    const period = Math.max(1, PathConsts.GRADIENT_ROLL_PERIOD_MS);
     const tick = (now: number) => {
-      if (!material || PATH_COLOR_MODE !== "rolling-gradient") return;
+      if (!material || (PathConsts.COLOR_MODE as string) !== "rolling-gradient") return;
       raf = requestAnimationFrame(tick);
       if (now - last < minMs) return;
       last = now;
@@ -317,14 +305,14 @@ export function installPath(
     rollingCancel = () => cancelAnimationFrame(raf);
   };
 
-  const build = (points: PathLatLonPoint[]) => {
+  const build = (points: Point[]) => {
     const samples = buildCapsuleSamples(Cesium, scene, ellipsoid, points);
     if (samples.length < 2) return;
     const fabric = buildPathRibbonFabric(
       Cesium,
-      PATH_COLOR_MODE === "rolling-gradient"
-        ? (performance.now() % Math.max(1, PATH_GRADIENT_ROLL_PERIOD_MS)) /
-            Math.max(1, PATH_GRADIENT_ROLL_PERIOD_MS)
+      (PathConsts.COLOR_MODE as string)  === "rolling-gradient"
+        ? (performance.now() % Math.max(1, PathConsts.GRADIENT_ROLL_PERIOD_MS)) /
+            Math.max(1, PathConsts.GRADIENT_ROLL_PERIOD_MS)
         : 0,
     );
     material = new Cesium.Material({
@@ -346,7 +334,7 @@ export function installPath(
     scene.requestRender();
   };
 
-  const setPath = (pointsIn: PathLatLonPoint[]) => {
+  const setPath = (pointsIn: Point[]) => {
     teardown();
     const points = dedupeConsecutive(pointsIn);
     if (points.length < 2) {
@@ -380,8 +368,8 @@ export function installPath(
 
 export function setPathBetweenTwoPoints(
   pathHandle: PathHandle,
-  a: PathLatLonPoint,
-  b: PathLatLonPoint,
+  a: Point,
+  b: Point,
 ) {
   pathHandle.setPath([a, b]);
 }

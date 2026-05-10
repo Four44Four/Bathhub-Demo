@@ -1,6 +1,7 @@
 "use client";
 
 import * as Fonts from "../_server/Fonts";
+import { PathColorMode } from "./globe/Path";
 
 export const Shared = {
     FONT_REGULAR_CLASS: Fonts.NOTOSANS_REGULAR_CLASS,
@@ -73,4 +74,19 @@ export const Globe = {
      * the client is treated as idle for viewport-center sampling.
      */
     VIEWPORT_DETECT_IDLE_MS: 500,
+} as const;
+
+export const Path = {
+    BASE_COLOR: "#0000FF",
+    SECONDARY_COLOR: "#9292FF",
+    GRADIENT_SIZE_PIXELS: 50,
+    GRADIENT_ROLL_PERIOD_MS: 1000,
+    GRADIENT_ROLL_MAX_FPS: 30,
+    COLOR_MODE: "rolling-gradient" satisfies PathColorMode,
+    WIDTH_PIXELS: 8,
+    OUTLINE_WIDTH_PIXELS: 24,
+    STROKE_EDGE_SOFT_PIXELS: 1.25,
+    MAX_POLYLINE_SAMPLES: 128,
+    MIN_VERTEX_SEPARATION_PIXELS: 10,
+    SURFACE_CLEARANCE_METERS: 10,
 } as const;

@@ -99,20 +99,6 @@ export function installOrbitCameraControls({
     return Cesium.Cartesian3.normalize(up, up);
   };
 
-  const applyOrbit = () => {
-    // Keep camera in the world frame so orbit/zoom are always centered on globe center.
-    viewer.camera.lookAtTransform(Cesium.Matrix4.IDENTITY);
-    const dir = unitFromAngles(theta, phi);
-    const destination = Cesium.Cartesian3.multiplyByScalar(dir, range, new Cesium.Cartesian3());
-    const direction = Cesium.Cartesian3.negate(dir, new Cesium.Cartesian3());
-    const up = computeUp(dir);
-    viewer.camera.setView({
-      destination,
-      orientation: { direction, up },
-    });
-    viewer.scene.requestRender();
-  };
-
   // Zoom constraints: keep a minimum clearance above the surface so we never clip
   // through the ellipsoid (which can show black).
   viewer.scene.screenSpaceCameraController.minimumZoomDistance = GlobeConsts.MIN_SURFACE_CLEARANCE_M;
@@ -149,9 +135,17 @@ export function installOrbitCameraControls({
 
   /** Full-bleed layout: zoom so the sphere’s limb subtends the larger of the two frustum FOVs (“cover”), clipping on the shorter axis (portrait: left/right). */
   const fillParent = typeof width === "string" && width === "100%";
-  if (startAtInitTargetRange) {
-    range = initTargetRange;
-  } else if (fillParent) {
+
+  /**
+   * Upper reference for zoom + orbit-drag damping (`zoomRateScale01`). For full-bleed layouts this is
+   * **always** the same “cover viewport” orbit radius, even when `startAtInitTargetRange` starts the
+   * camera at `CAMERA_INIT_SURFACE_OFFSET`. That keeps reload-with-geolocation sensitivity aligned
+   * with the pre-permission session (far framing), instead of a tiny `(baseline − minRange)` band near
+   * the surface.
+   */
+  let zoomCurveReferenceRange: number;
+
+  if (fillParent) {
     viewer.resize();
     viewer.forceResize?.();
     const canvasEl = viewer.scene.canvas;
@@ -164,8 +158,12 @@ export function installOrbitCameraControls({
     const fovx = 2 * Math.atan(Math.tan(fovy / 2) * aspect);
     const lim = Math.max(fovx, fovy);
     const minCenter = radius + GlobeConsts.MIN_SURFACE_CLEARANCE_M;
-    const coverDistance = radius / Math.sin(lim / 2);
-    range = Math.max(minCenter, coverDistance);
+    const coverDistance = Math.max(minCenter, radius / Math.sin(lim / 2));
+    zoomCurveReferenceRange = coverDistance;
+    range = startAtInitTargetRange ? initTargetRange : coverDistance;
+  } else {
+    zoomCurveReferenceRange = clampRangeValue(radius * 3.0);
+    range = startAtInitTargetRange ? initTargetRange : zoomCurveReferenceRange;
   }
 
   const getMinRange = () => {
@@ -174,21 +172,19 @@ export function installOrbitCameraControls({
     return radius + minSurface;
   };
 
-  const closeFactor01 = () => {
-    const initialRange = rangeAtInstall;
-    // 1.0 at initial distance, 0.0 at (or below) min range.
+  /** Normalized distance along zoom track (1 = cover framing, 0 = min orbit). Shared by zoom + orbit drag. */
+  const zoomCurveFactor01 = () => {
     const minRange = getMinRange();
-    const denom = Math.max(1, initialRange - minRange);
+    const denom = Math.max(1, zoomCurveReferenceRange - minRange);
     return Utils.clamp((range - minRange) / denom, 0, 1);
   };
 
   const zoomRateScale01 = () => {
-    return Math.max(GlobeConsts.ZOOM_MIN, closeFactor01() / GlobeConsts.ZOOM_DECAY_FACTOR);
+    return Math.max(GlobeConsts.ZOOM_MIN, zoomCurveFactor01() / GlobeConsts.ZOOM_DECAY_FACTOR);
   };
 
-  const rotateSpeedMultiplier = () => {
-    return Math.max(GlobeConsts.ROTATE_MIN, closeFactor01());
-  };
+  /** Left-drag / touch orbit: same damping curve as wheel and right-drag zoom (via `zoomCurveReferenceRange`). */
+  const rotateSpeedMultiplier = () => zoomRateScale01();
 
   const setRange = (next: number) => {
     const minSurface =
@@ -199,7 +195,19 @@ export function installOrbitCameraControls({
     range = Utils.clamp(next, minRange, maxRange);
   };
 
-  const rangeAtInstall = range;
+  const applyOrbit = () => {
+    // Keep camera in the world frame so orbit/zoom are always centered on globe center.
+    viewer.camera.lookAtTransform(Cesium.Matrix4.IDENTITY);
+    const dir = unitFromAngles(theta, phi);
+    const destination = Cesium.Cartesian3.multiplyByScalar(dir, range, new Cesium.Cartesian3());
+    const direction = Cesium.Cartesian3.negate(dir, new Cesium.Cartesian3());
+    const up = computeUp(dir);
+    viewer.camera.setView({
+      destination,
+      orientation: { direction, up },
+    });
+    viewer.scene.requestRender();
+  };
 
   const pulseZoomIndicator = (clientX: number, clientY: number) => {
     const rect = (zoomIndicatorRootRef?.current ?? containerRef.current)?.getBoundingClientRect();
@@ -449,7 +457,7 @@ export function installOrbitCameraControls({
       // Swap pinch in/out: decreasing distance zooms OUT, increasing distance zooms IN.
       // Make pinch 9x as sensitive as wheel-equivalent input.
       const PINCH_SENS = 18.0;
-      const z = Math.max(GlobeConsts.ZOOM_MIN, closeFactor01());
+      const z = zoomRateScale01();
       const scale = Math.exp(-dDist * GlobeConsts.ZOOM_SENS * z * 0.15 * PINCH_SENS);
       if (scale < 1) pulseZoomIndicator(zoomAim.clientX, zoomAim.clientY);
       zoomBy(scale);

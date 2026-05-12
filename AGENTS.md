@@ -20,8 +20,4 @@ Users open app to a 3D map viewport and can:
     - Submit pictures, comments, rating, features for that bathroom
 Users can change persistent settings to affect what using the "Find nearest bathroom" button does
 
-## Globe viewport specifications
- - Globe can be rotated/panned by dragging left click, dragging 1 finger across screen, or dragging 2 fingers across screen
- - Camera facing Globe can be brought closer to Globe's surface by scrolling mouse wheel forward, dragging right click up, or pinching in with 2 fingers
-    - Doing those interactions in the opposite direction will bring the Camera farther from the Globe's surface
- - When using 2 fingers on the Globe, panning and zooming can happen simultaneously
+Specifications for the GlobeViewport are in file ./specifications/GlobeViewport.txt

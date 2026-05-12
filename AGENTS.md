@@ -20,4 +20,8 @@ Users open app to a 3D map viewport and can:
     - Submit pictures, comments, rating, features for that bathroom
 Users can change persistent settings to affect what using the "Find nearest bathroom" button does
 
+## Implementation rules
+ - Always extract purely functional/mathematical logic into modular, top level functions
+ - Use dependency injection pattern whenever possible
+
 Specifications for the GlobeViewport are in file ./specifications/GlobeViewport.txt

@@ -183,6 +183,9 @@ export default function Home() {
       mapInitLat = lat;
       mapInitLong = lng;
       writeGeoCache(lat, lng);
+      // Push to MapMarker before any state change / animation so the billboard
+      // is already in place if this triggers a viewer re-init below.
+      globeRef.current?.setMapMarkerUserLatLon(lat, lng);
       setGlobeInit((prev) => {
         const close =
           Math.abs(prev.lat - lat) < 0.002 && Math.abs(prev.long - lng) < 0.002;
@@ -248,6 +251,10 @@ export default function Home() {
       mapInitLat = lat;
       mapInitLong = long;
       writeGeoCache(lat, long);
+      // Switch MapMarker from the 2D static overlay to the 3D billboard FIRST,
+      // so the swap is visible from the very first frame of the
+      // animateTo / animateZoomToInitTarget transition below.
+      globeRef.current?.setMapMarkerUserLatLon(lat, long);
 
       const prev = globeInitRef.current;
       const close =

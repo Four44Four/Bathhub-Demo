@@ -94,6 +94,14 @@ export type GlobeViewportHandle = {
   getViewportCenterLatLon: () => Point | null;
   /** Lat/long of the tap/click marker on the globe, if the user has clicked. */
   getClickedIndicatorLatLon: () => Point | null;
+  /**
+   * Authoritative "you are here" push from `page.tsx`'s geolocation watcher.
+   * Immediately flips MapMarker from the 2D static overlay to the 3D billboard
+   * at (lat, long). Survives Cesium viewer re-inits (the last pushed value is
+   * replayed when a new MapMarker is installed). Call this BEFORE `animateTo` /
+   * `animateZoomToInitTarget` so the switch is visible from the first animation frame.
+   */
+  setMapMarkerUserLatLon: (lat: number, long: number) => void;
   /** Renders a path on the globe (see `Path.ts` for styling). */
   setPathFromLatLonPoints: (points: Point[]) => void;
   clearPath: () => void;
@@ -228,6 +236,17 @@ export function GlobeViewport({
   /** Shared cache for `getViewportCenterLatLon`, MapMarker viewport-follow mode, and callers like `getStartPos`. */
   const viewportCenterLatLonRef = useRef<Point | null>(null);
   const [mapMarkerStaticOverlay, setMapMarkerStaticOverlay] = useState(true);
+  /**
+   * Live MapMarker handle (replaced when the viewer reinits). The imperative
+   * `setMapMarkerUserLatLon` reads this so callers don't have to know about reinits.
+   */
+  const mapMarkerRef = useRef<ReturnType<typeof installMapMarker> | null>(null);
+  /**
+   * Last user lat/long pushed via `setMapMarkerUserLatLon`. Replayed into newly
+   * installed MapMarkers (e.g., after a Cesium viewer rebuild caused by an
+   * `initLat/initLong` change) so the billboard doesn't fall back to the 2D overlay.
+   */
+  const userGeoLatLonRef = useRef<Point | null>(null);
 
   useImperativeHandle<GlobeViewportHandle | null, GlobeViewportHandle>(
     ref,
@@ -271,6 +290,12 @@ export function GlobeViewport({
         const p = api.getLatLonDegrees();
         if (!p) return null;
         return { latitude: p.lat, longitude: p.lon };
+      },
+      setMapMarkerUserLatLon: (lat, long) => {
+        userGeoLatLonRef.current = { latitude: lat, longitude: long };
+        // If MapMarker isn't installed yet, the value lives in the ref and is
+        // applied via `initialUserLatLonDegrees` on the next install.
+        mapMarkerRef.current?.setUserLatLonDegrees(lat, long);
       },
       setPathFromLatLonPoints: (points) => {
         pathHandleRef.current?.setPath(points);
@@ -579,7 +604,9 @@ export function GlobeViewport({
         viewer,
         () => viewportCenterLatLonRef.current,
         setMapMarkerStaticOverlay,
+        { initialUserLatLonDegrees: userGeoLatLonRef.current },
       );
+      mapMarkerRef.current = mapMarker;
       const debugCrosshair = installDebugCrosshair(Cesium, viewer, () => viewportCenterLatLonRef.current);
 
       isClientIdle = false;
@@ -803,6 +830,7 @@ export function GlobeViewport({
       cleanup?.pathHandle.destroy();
       pathHandleRef.current = null;
       cleanup?.mapMarker.destroy();
+      mapMarkerRef.current = null;
       cleanup?.debugCrosshair?.destroy();
       ro?.disconnect();
       viewer?.destroy();

@@ -12,7 +12,24 @@ export type MapMarkerCachedViewportCenter = () => {
 export type MapMarkerHandle = {
   /** Viewport-center sampler hook; keeps the billboard hidden while static overlay mode is active. */
   refreshViewportFollowFromCache: () => void;
+  /**
+   * Push the user's geolocation directly (e.g., from `page.tsx`'s geolocation
+   * watch). Immediately switches from the static 2D overlay to the 3D billboard
+   * at the supplied lat/lon and locks subsequent viewport-follow updates out.
+   * Idempotent; repeated calls just reposition the billboard.
+   */
+  setUserLatLonDegrees: (latDeg: number, lonDeg: number) => void;
   destroy: () => void;
+};
+
+export type MapMarkerInitOptions = {
+  /**
+   * If non-null, MapMarker starts already locked to this geolocation (3D billboard
+   * mode, no static overlay). Used by the parent (`GlobeViewport`) on re-install so
+   * a previously-known user position survives a Cesium viewer rebuild without
+   * waiting for the in-module watch to refire.
+   */
+  initialUserLatLonDegrees?: { latitude: number; longitude: number } | null;
 };
 
 const GEO_WATCH_OPTS: PositionOptions = {
@@ -25,6 +42,12 @@ const GEO_WATCH_OPTS: PositionOptions = {
  * prompt, or watch pending), use screen-space UI via `onStaticOverlayModeChange`.
  * After a fix, the Cesium billboard tracks the device position. Billboard anchor is
  * bottom-center on the ground point (with a small lift matching `ClickedIndicator`).
+ *
+ * The parent (`GlobeViewport`/`page.tsx`) can also push the user's geolocation via
+ * `MapMarkerHandle.setUserLatLonDegrees` — this is the authoritative path that
+ * guarantees the switch happens at the exact moment the rest of the app (e.g. the
+ * camera rotation + zoom animation triggered on permission grant) gets a fix, even
+ * if the in-module `watchPosition` is slow or quirky after a late Allow (Firefox).
  */
 export function installMapMarker(
   Cesium: typeof CesiumTypes,
@@ -36,6 +59,7 @@ export function installMapMarker(
    * is used and the overlay should be removed.
    */
   onStaticOverlayModeChange?: (useStaticOverlay: boolean) => void,
+  options?: MapMarkerInitOptions,
 ): MapMarkerHandle {
   const scene = viewer.scene;
 
@@ -58,6 +82,7 @@ export function installMapMarker(
   };
 
   const lockToGeolocation = (latDeg: number, lonDeg: number) => {
+    if (cancelled) return;
     geoLocked = true;
     globeImage.setLatLonDegrees(latDeg, lonDeg);
     globeImage.setVisible(true);
@@ -76,8 +101,14 @@ export function installMapMarker(
 
   let permListener: { status: PermissionStatus; fn: () => void } | null = null;
 
-  globeImage.setVisible(false);
-  notifyStaticOverlay(true);
+  // Initial overlay state: locked-from-options skips the static overlay entirely.
+  const initialUser = options?.initialUserLatLonDegrees ?? null;
+  if (initialUser) {
+    lockToGeolocation(initialUser.latitude, initialUser.longitude);
+  } else {
+    globeImage.setVisible(false);
+    notifyStaticOverlay(true);
+  }
 
   const requestGeoSnap = () => {
     if (typeof navigator === "undefined" || !navigator.geolocation) return;
@@ -107,6 +138,21 @@ export function installMapMarker(
 
         const onPermChange = () => {
           if (cancelled || status.state !== "granted") return;
+          // Re-register watchPosition: an existing watcher started while the
+          // permission was still "prompt" can fail to deliver in some browsers
+          // (notably Firefox) after a late Allow, so we install a fresh one in
+          // addition to the one-shot `getCurrentPosition` below.
+          if (watchId !== null && navigator.geolocation) {
+            navigator.geolocation.clearWatch(watchId);
+            watchId = null;
+          }
+          if (navigator.geolocation) {
+            watchId = navigator.geolocation.watchPosition(
+              (pos) => lockToGeolocation(pos.coords.latitude, pos.coords.longitude),
+              () => {},
+              GEO_WATCH_OPTS,
+            );
+          }
           requestGeoSnap();
         };
 
@@ -122,6 +168,10 @@ export function installMapMarker(
 
   return {
     refreshViewportFollowFromCache,
+    setUserLatLonDegrees: (latDeg: number, lonDeg: number) => {
+      if (cancelled) return;
+      lockToGeolocation(latDeg, lonDeg);
+    },
     destroy: () => {
       cancelled = true;
       if (permListener) {

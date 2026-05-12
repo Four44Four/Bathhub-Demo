@@ -13,6 +13,14 @@ export type PathHandle = {
 
 export const PATH_RIBBON_FABRIC_TYPE = "PathCapsuleChainFabric1";
 
+// Cesium's PolylineGeometry emits `st.t` as 0 on one side of the ribbon and 1 on
+// the other (see PolylineGeometry.createGeometry). After perspective-correct
+// reconstruction via `czm_readNonPerspective`, `materialInput.st.t` linearly
+// interpolates across the geometric width, so `dCenter` below is 0 at the
+// centerline and 1 at the geometric edge. We widen the geometry by
+// `2 * STROKE_EDGE_SOFT_PIXELS` and use `edgeStart` to mark where the visible
+// solid stroke ends; alpha smoothsteps from full to zero across the soft band,
+// producing per-pixel anti-aliased stroke edges.
 const PATH_RIBBON_CZM_GET_MATERIAL = [
   "czm_material czm_getMaterial(czm_materialInput materialInput) {",
   "  czm_material material = czm_getDefaultMaterial(materialInput);",
@@ -24,10 +32,12 @@ const PATH_RIBBON_CZM_GET_MATERIAL = [
   "    float blend = 0.5 + 0.5 * sin(u * czm_twoPi);",
   "    pathColor = mix(secondaryColor.rgb, baseColor.rgb, blend);",
   "  }",
+  "  float dCenter = abs(materialInput.st.t - 0.5) * 2.0;",
+  "  float edgeAlpha = 1.0 - smoothstep(edgeStart, 1.0, dCenter);",
   "  material.diffuse = vec3(0.0);",
   "  material.emission = pathColor;",
   "  material.specular = 0.0;",
-  "  material.alpha = 1.0;",
+  "  material.alpha = edgeAlpha;",
   "  return material;",
   "}",
 ].join("\n");
@@ -41,6 +51,7 @@ type PathRibbonFabricJson = {
     wavelengthPixels: number;
     phase: number;
     colorMode: number;
+    edgeStart: number;
   };
   source: string;
 };
@@ -48,6 +59,27 @@ type PathRibbonFabricJson = {
 function pathColorModeToUniform(mode: PathColorMode): number {
   return mode === "rolling-gradient" ? 2 : mode === "static-gradient" ? 1 : 0;
 }
+
+/**
+ * Geometric ribbon width (in CSS pixels) handed to `PolylineGeometry`. The
+ * visible stroke stays at `WIDTH_PIXELS`; the extra padding on each side hosts
+ * the smoothstep AA fade so the antialiased pad never eats into the solid core.
+ */
+const PATH_GEOMETRY_WIDTH_PIXELS =
+  PathConsts.WIDTH_PIXELS + 2 * Math.max(0, PathConsts.STROKE_EDGE_SOFT_PIXELS);
+
+/**
+ * Threshold in `dCenter = abs(st.t - 0.5) * 2` space (0 = centerline,
+ * 1 = geometric edge) at which alpha begins to fall off toward the antialiased
+ * outer edge. Equals the ratio of the solid stroke to the padded geometry.
+ */
+const PATH_EDGE_START = Math.min(
+  1,
+  Math.max(
+    0,
+    PathConsts.WIDTH_PIXELS / Math.max(1e-6, PATH_GEOMETRY_WIDTH_PIXELS),
+  ),
+);
 
 function buildPathRibbonFabric(
   Cesium: typeof CesiumTypes,
@@ -64,6 +96,7 @@ function buildPathRibbonFabric(
       wavelengthPixels: Math.max(1e-6, PathConsts.GRADIENT_SIZE_PIXELS),
       phase: phase01,
       colorMode: pathColorModeToUniform(PathConsts.COLOR_MODE),
+      edgeStart: PATH_EDGE_START,
     },
     source: PATH_RIBBON_CZM_GET_MATERIAL,
   };
@@ -237,7 +270,7 @@ function buildPathRibbonPrimitive(args: {
   const geometry = Cesium.PolylineGeometry.createGeometry(
     new Cesium.PolylineGeometry({
       positions,
-      width: PathConsts.WIDTH_PIXELS,
+      width: PATH_GEOMETRY_WIDTH_PIXELS,
       arcType: Cesium.ArcType.GEODESIC,
       granularity: Cesium.Math.toRadians(0.5),
       vertexFormat: Cesium.PolylineMaterialAppearance.VERTEX_FORMAT,

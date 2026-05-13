@@ -25,14 +25,14 @@ import {
   twoToneLandOutputHsl,
   twoToneWaterOutputHsl,
   type Hsl,
-} from "./pure/TwoToneMapTile";
+} from "../pure/TwoToneMapTile";
 import {
   detailLayerAlphaFromCameraHeightM,
   fxaaEnabledFromCameraHeightM,
   globeMaximumScreenSpaceErrorFromHeightM,
   streetLayerAlphaFromCameraHeightM,
-} from "./pure/GlobeLayerLod";
-import { dimensionCss } from "./pure/GlobeViewportCss";
+} from "../pure/GlobeLayerLod";
+import { dimensionCss } from "../pure/GlobeViewportCss";
 
 /** Set to true once `GLOBE_VIEWPORT_DETECT_IDLE_MS` elapses without move/zoom activity; cleared when activity resumes. */
 let isClientIdle = false;

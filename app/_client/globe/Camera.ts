@@ -3,7 +3,7 @@ import type { RefObject } from "react";
 
 import { Globe as GlobeConsts } from "../ComponentConstants";
 import * as Utils from "../Utils";
-import * as OrbitCam from "./pure/OrbitCamera";
+import * as OrbitCam from "../pure/OrbitCamera";
 
 export type InstallOrbitCameraOptions = {
   Cesium: typeof import("cesium");

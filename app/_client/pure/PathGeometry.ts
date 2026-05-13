@@ -1,4 +1,4 @@
-import type { Point } from "../../../_shared/Utils";
+import type { Point } from "../../_shared/Utils";
 
 export type PathColorMode = "static" | "static-gradient" | "rolling-gradient";
 

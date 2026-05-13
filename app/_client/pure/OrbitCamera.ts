@@ -1,4 +1,4 @@
-import * as Utils from "../../Utils";
+import * as Utils from "../Utils";
 
 export type Vec3 = { x: number; y: number; z: number };
 

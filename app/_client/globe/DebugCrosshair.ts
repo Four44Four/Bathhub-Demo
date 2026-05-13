@@ -4,7 +4,7 @@ import * as Utils from "../Utils";
 import type { MapMarkerCachedViewportCenter } from "./MapMarker";
 import { installGlobeImage } from "./GlobeImage";
 import { DebugCrosshair as DebugCrosshairConsts } from "../ComponentConstants";
-import { linearProgress01 } from "./pure/DebugCrosshair";
+import { linearProgress01 } from "../pure/DebugCrosshair";
 
 export type DebugCrosshairHandle = {
   /** Invoke after `viewportCenterLatLonRef` was updated from a successful viewport-center computation. */

@@ -12,9 +12,9 @@ import {
   quadraticBezierVector3,
   resamplePolylineUniformIndices,
   shouldKeepPathLodVertexAfterMerge,
-} from "./pure/PathGeometry";
+} from "../pure/PathGeometry";
 
-export type { PathColorMode } from "./pure/PathGeometry";
+export type { PathColorMode } from "../pure/PathGeometry";
 export type PathHandle = {
   setPath: (points: Point[]) => void;
   clearPath: () => void;

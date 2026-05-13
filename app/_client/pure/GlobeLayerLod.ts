@@ -1,4 +1,4 @@
-import * as Utils from "../../Utils";
+import * as Utils from "../Utils";
 
 /**
  * Linear crossfade 0→1 as `value` moves from `fadeStart` toward `fullyAt`.

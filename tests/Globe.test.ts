@@ -1,21 +1,17 @@
-// TODO: 
-//  - Test for finger/click dragging rotating the right amount in relation to the current camera height
-//  - Test for 3D point on Globe not updating after `Globe.VIEWPORT_DETECT_IDLE_MS` milliseconds have passed since last zoom or Globe rotation
-//  - Test for having geolocation permissions turned on at load time immediately loading Globe rotation and camera zoom levels to the right values without delay or animations
 import {
     detailLayerAlphaFromCameraHeightM,
     fxaaEnabledFromCameraHeightM,
     globeMaximumScreenSpaceErrorFromHeightM,
     streetLayerAlphaFromCameraHeightM,
-} from "../app/_client/globe/pure/GlobeLayerLod";
+} from "../app/_client/pure/GlobeLayerLod";
 
 import {
     classifyMapPixelAsWater,
     twoToneLandOutputHsl,
     twoToneWaterOutputHsl,
-} from "../app/_client/globe/pure/TwoToneMapTile";
+} from "../app/_client/pure/TwoToneMapTile";
 
-import { dimensionCss } from "../app/_client/globe/pure/GlobeViewportCss";
+import { dimensionCss } from "../app/_client/pure/GlobeViewportCss";
 
 describe("globeLayerLodMath", () => {
     test("detailLayerAlphaFromCameraHeightM", () => {

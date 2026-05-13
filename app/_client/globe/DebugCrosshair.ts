@@ -4,7 +4,6 @@ import * as Utils from "../Utils";
 import type { MapMarkerCachedViewportCenter } from "./MapMarker";
 import { installGlobeImage } from "./GlobeImage";
 import { DebugCrosshair as DebugCrosshairConsts } from "../ComponentConstants";
-import { linearProgress01 } from "../pure/DebugCrosshair";
 
 export type DebugCrosshairHandle = {
   /** Invoke after `viewportCenterLatLonRef` was updated from a successful viewport-center computation. */
@@ -54,9 +53,9 @@ export function installDebugCrosshair(
     const blendT =
       DebugCrosshairConsts.BLEND_OUT_COLORS_MS <= 0
         ? 1
-        : linearProgress01(elapsed, DebugCrosshairConsts.BLEND_OUT_COLORS_MS);
+        : Utils.linearProgress01(elapsed, DebugCrosshairConsts.BLEND_OUT_COLORS_MS);
     const fadeT =
-      DebugCrosshairConsts.FADE_OUT_MS <= 0 ? 1 : linearProgress01(elapsed, DebugCrosshairConsts.FADE_OUT_MS);
+      DebugCrosshairConsts.FADE_OUT_MS <= 0 ? 1 : Utils.linearProgress01(elapsed, DebugCrosshairConsts.FADE_OUT_MS);
 
     const colorHex = Utils.lerpHex(
       DebugCrosshairConsts.SECONDARY_COLOR,

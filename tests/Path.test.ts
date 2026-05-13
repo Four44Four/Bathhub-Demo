@@ -1,4 +1,4 @@
-import * as PathGeom from "../app/_client/globe/pure/PathGeometry";
+import * as PathGeom from "../app/_client/pure/PathGeometry";
 
 describe("pathGeometryMath", () => {
     test("dedupeConsecutiveLngLat", () => {

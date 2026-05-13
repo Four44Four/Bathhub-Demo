@@ -1,5 +1,9 @@
 "use client";
 
+export type Vec3 = { x: number; y: number; z: number };
+
+export type Hsl = { h: number; s: number; l: number };
+
 export function hexToRgb(hex: string): { r: number; g: number; b: number } {
     const normalized = hex.replace("#", "").trim();
     const full = normalized.length === 3 ? normalized.split("").map((c) => c + c).join("") : normalized;
@@ -108,3 +112,24 @@ export function lerpAngleRad(a: number, b: number, t: number) {
   const da = wrapAngleRad(b - a);
   return a + da * t;
 };
+
+/**
+ * Linear progress 0→1 over `durationMs`, or 1 immediately if duration is non-positive.
+ */
+export function linearProgress01(elapsedMs: number, durationMs: number): number {
+  if (durationMs <= 0) return 1;
+  return Math.min(1, elapsedMs / durationMs);
+}
+
+/**
+ * Linear crossfade 0→1 as `value` moves from `fadeStart` toward `fullyAt`.
+ * (Used with camera height: farther = 0, closer = 1 when fadeStart > fullyAt.)
+ */
+export function linearCrossfade01(
+  value: number,
+  fadeStart: number,
+  fullyAt: number,
+): number {
+  const t = (fadeStart - value) / (fadeStart - fullyAt);
+  return clamp01(t);
+}

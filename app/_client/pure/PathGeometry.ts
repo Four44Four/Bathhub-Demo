@@ -1,4 +1,5 @@
 import type { Point } from "../../_shared/Utils";
+import * as Utils from "../Utils";
 
 export type PathColorMode = "static" | "static-gradient" | "rolling-gradient";
 
@@ -38,9 +39,7 @@ export function dedupeConsecutiveLngLat(points: Point[]): Point[] {
   return out;
 }
 
-export type Vec3 = { x: number; y: number; z: number };
-
-export function quadraticBezierVector3(p0: Vec3, p1: Vec3, p2: Vec3, t: number): Vec3 {
+export function quadraticBezierVector3(p0: Utils.Vec3, p1: Utils.Vec3, p2: Utils.Vec3, t: number): Vec3 {
   const a = (1 - t) * (1 - t);
   const b = 2 * (1 - t) * t;
   const c = t * t;

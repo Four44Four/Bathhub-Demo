@@ -24,7 +24,6 @@ import {
   classifyMapPixelAsWater,
   twoToneLandOutputHsl,
   twoToneWaterOutputHsl,
-  type Hsl,
 } from "../pure/TwoToneMapTile";
 import {
   detailLayerAlphaFromCameraHeightM,
@@ -154,8 +153,8 @@ async function recolorTileToTwoTone(
   const width = image.width;
   const height = image.height;
 
-  const landHsl = Utils.rgbToHsl(land.r, land.g, land.b) as Hsl;
-  const waterHsl = Utils.rgbToHsl(water.r, water.g, water.b) as Hsl;
+  const landHsl = Utils.rgbToHsl(land.r, land.g, land.b) as Utils.Hsl;
+  const waterHsl = Utils.rgbToHsl(water.r, water.g, water.b) as Utils.Hsl;
 
   const canvas = document.createElement("canvas");
   canvas.width = width;
@@ -175,7 +174,7 @@ async function recolorTileToTwoTone(
 
     // Preserve map detail (roads/labels/features) by using the original pixel's lightness
     // while forcing the hue to match the requested land/water colors.
-    const srcHsl = Utils.rgbToHsl(r, g, b) as Hsl;
+    const srcHsl = Utils.rgbToHsl(r, g, b) as Utils.Hsl;
 
     if (isWater) {
       const hsl = twoToneWaterOutputHsl(srcHsl.l, waterHsl);

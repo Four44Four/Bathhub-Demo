@@ -1,7 +1,5 @@
 import * as Utils from "../Utils";
 
-export type Vec3 = { x: number; y: number; z: number };
-
 /** Center-distance orbit radius clamped to `[sphereRadius + minSurfaceClearance, maxOrbitCenterDistance]`. */
 export function clampOrbitCenterDistanceMeters(args: {
   centerDistanceM: number;
@@ -19,7 +17,7 @@ export function clampOrbitCenterDistanceMeters(args: {
  * matching `Camera.ts`: project world +Z onto the plane orthogonal to `dir`, normalize,
  * or fall back to world +Y when nearly parallel to ±Z.
  */
-export function globeOrbitCameraUpWorldFromDir(dir: Vec3): Vec3 {
+export function globeOrbitCameraUpWorldFromDir(dir: Utils.Vec3): Utils.Vec3 {
   const dot = dir.z;
   const px = dir.x * dot;
   const py = dir.y * dot;
@@ -132,7 +130,7 @@ export function smoothstep01(u: number): number {
 }
 
 /** Unit direction from orbit angles (theta around Z, phi from equator), matching Camera.ts. */
-export function orbitUnitDirectionFromAngles(theta: number, phi: number): Vec3 {
+export function orbitUnitDirectionFromAngles(theta: number, phi: number): Utils.Vec3 {
   return {
     x: Math.cos(phi) * Math.cos(theta),
     y: Math.cos(phi) * Math.sin(theta),
@@ -140,7 +138,7 @@ export function orbitUnitDirectionFromAngles(theta: number, phi: number): Vec3 {
   };
 }
 
-export function sphericalDirToThetaPhi(dir: Vec3): { theta: number; phi: number } {
+export function sphericalDirToThetaPhi(dir: Utils.Vec3): { theta: number; phi: number } {
   return {
     theta: Math.atan2(dir.y, dir.x),
     phi: Math.asin(Utils.clamp(dir.z, -1, 1)),

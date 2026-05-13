@@ -1,18 +1,5 @@
 import * as Utils from "../Utils";
 
-/**
- * Linear crossfade 0→1 as `value` moves from `fadeStart` toward `fullyAt`.
- * (Used with camera height: farther = 0, closer = 1 when fadeStart > fullyAt.)
- */
-export function linearCrossfade01(
-  value: number,
-  fadeStart: number,
-  fullyAt: number,
-): number {
-  const t = (fadeStart - value) / (fadeStart - fullyAt);
-  return Utils.clamp01(t);
-}
-
 export type GlobeLodThresholds = {
   detailFadeStartM: number;
   detailFullyVisibleM: number;
@@ -33,7 +20,7 @@ export function detailLayerAlphaFromCameraHeightM(
   heightM: number,
   thresholds: GlobeLodThresholds = DEFAULT_THRESHOLDS,
 ): number {
-  return linearCrossfade01(
+  return Utils.linearCrossfade01(
     heightM,
     thresholds.detailFadeStartM,
     thresholds.detailFullyVisibleM,
@@ -44,7 +31,7 @@ export function streetLayerAlphaFromCameraHeightM(
   heightM: number,
   thresholds: GlobeLodThresholds = DEFAULT_THRESHOLDS,
 ): number {
-  return linearCrossfade01(
+  return Utils.linearCrossfade01(
     heightM,
     thresholds.streetFadeStartM,
     thresholds.streetFullyVisibleM,

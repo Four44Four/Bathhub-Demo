@@ -1,6 +1,3 @@
-# Finds Bathrooms Near You
- - Powered by Cesium Ion, Open Routing Service, and Open Street Map
-
 # Frontend Features
 ## Home page
  - Map with detailed, 3D globe rendering of the world
@@ -37,6 +34,20 @@
 ## Add new bathroom review
 ## Add new bathroom pic
 ## Add new bathroom misc info
+
+# Tech stack
+ - Next.js
+    - Fullstack framework
+ - Cesium
+    - Rendering engine
+ - Open Street Map
+    - Distant mapping data
+ - Carto
+    - Detailed mapping data
+ - Open Route Service
+    - Route path calculation
+ - Jest
+    - Testing library
 
 # Required API keys (in env vars)
  - OPEN_ROUTE_SERVICE_API_KEY

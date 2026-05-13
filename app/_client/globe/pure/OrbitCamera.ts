@@ -1,5 +1,127 @@
 import * as Utils from "../../Utils";
 
+export type Vec3 = { x: number; y: number; z: number };
+
+/** Center-distance orbit radius clamped to `[sphereRadius + minSurfaceClearance, maxOrbitCenterDistance]`. */
+export function clampOrbitCenterDistanceMeters(args: {
+  centerDistanceM: number;
+  sphereRadiusM: number;
+  minSurfaceClearanceM: number;
+  maxOrbitCenterDistanceM: number;
+}): number {
+  const minRange = args.sphereRadiusM + args.minSurfaceClearanceM;
+  const maxRange = args.maxOrbitCenterDistanceM;
+  return Utils.clamp(args.centerDistanceM, minRange, maxRange);
+}
+
+/**
+ * World-space “up” for `setView` when the camera looks from `dir` (unit, center → eye),
+ * matching `Camera.ts`: project world +Z onto the plane orthogonal to `dir`, normalize,
+ * or fall back to world +Y when nearly parallel to ±Z.
+ */
+export function globeOrbitCameraUpWorldFromDir(dir: Vec3): Vec3 {
+  const dot = dir.z;
+  const px = dir.x * dot;
+  const py = dir.y * dot;
+  const pz = dir.z * dot;
+  let ux = -px;
+  let uy = -py;
+  let uz = 1 - pz;
+  const mag = Math.hypot(ux, uy, uz);
+  if (mag < 1e-6) {
+    return { x: 0, y: 1, z: 0 };
+  }
+  const inv = 1 / mag;
+  ux *= inv;
+  uy *= inv;
+  uz *= inv;
+  return { x: ux, y: uy, z: uz };
+}
+
+/** Shortest signed longitude delta in radians (same convention as `Utils.wrapAngleRad`). */
+export function orbitShortestDeltaLongitudeRad(fromThetaRad: number, toThetaRad: number): number {
+  return Utils.wrapAngleRad(toThetaRad - fromThetaRad);
+}
+
+/** One eased sample of the programmatic rotate-only animation in `Camera.animateTo`. */
+export function sampledOrbitRotateAnimAngles(args: {
+  startThetaRad: number;
+  startPhiRad: number;
+  deltaThetaRad: number;
+  deltaPhiRad: number;
+  /** `clamp((now - startT) / durationMs, 0, 1)` before smoothstep. */
+  linearProgress01: number;
+  latEps: number;
+}): { thetaRad: number; phiRad: number } {
+  const u = Utils.clamp(args.linearProgress01, 0, 1);
+  const e = smoothstep01(u);
+  return {
+    thetaRad: args.startThetaRad + args.deltaThetaRad * e,
+    phiRad: clampOrbitLatitudeRad(args.startPhiRad + args.deltaPhiRad * e, args.latEps),
+  };
+}
+
+/** Merges zoom-aim interpolation into orbit angles (same as `applyZoomAimIfActive` in `Camera.ts`). */
+export function zoomAimMergedOrbitAngles(args: {
+  startTheta: number;
+  startPhi: number;
+  targetTheta: number;
+  targetPhi: number;
+  startRange: number;
+  range: number;
+  minRange: number;
+  panOffsetTheta: number;
+  panOffsetPhi: number;
+  latEps: number;
+}): { theta: number; phi: number } {
+  const fs = zoomAimInterpolationFactor01(args.startRange, args.range, args.minRange);
+  return {
+    theta: Utils.lerpAngleRad(args.startTheta, args.targetTheta, fs) + args.panOffsetTheta,
+    phi: clampOrbitLatitudeRad(
+      Utils.lerp(args.startPhi, args.targetPhi, fs) + args.panOffsetPhi,
+      args.latEps,
+    ),
+  };
+}
+
+/**
+ * Initial orbit `range` and `zoomCurveReferenceRange` after install (full-bleed vs fixed layout).
+ */
+export function initialOrbitRangeAndZoomReference(args: {
+  fillParent: boolean;
+  /** Required when `fillParent` (from {@link sphereCoverOrbitDistanceMeters}). */
+  coverOrbitDistanceM: number | null;
+  sphereRadiusM: number;
+  minSurfaceClearanceM: number;
+  maxOrbitCenterDistanceM: number;
+  cameraInitSurfaceOffsetM: number;
+  startAtInitTargetRange?: boolean;
+}): { rangeM: number; zoomCurveReferenceRangeM: number } {
+  const initTarget = clampOrbitCenterDistanceMeters({
+    centerDistanceM: args.sphereRadiusM + args.cameraInitSurfaceOffsetM,
+    sphereRadiusM: args.sphereRadiusM,
+    minSurfaceClearanceM: args.minSurfaceClearanceM,
+    maxOrbitCenterDistanceM: args.maxOrbitCenterDistanceM,
+  });
+  if (args.fillParent) {
+    const cover = args.coverOrbitDistanceM!;
+    return {
+      zoomCurveReferenceRangeM: cover,
+      rangeM: args.startAtInitTargetRange ? initTarget : cover,
+    };
+  }
+  const ref = clampOrbitCenterDistanceMeters({
+    centerDistanceM: args.sphereRadiusM * 3.0,
+    sphereRadiusM: args.sphereRadiusM,
+    minSurfaceClearanceM: args.minSurfaceClearanceM,
+    maxOrbitCenterDistanceM: args.maxOrbitCenterDistanceM,
+  });
+  return {
+    zoomCurveReferenceRangeM: ref,
+    rangeM: args.startAtInitTargetRange ? initTarget : ref,
+  };
+}
+
 export function degreesToRadians(deg: number): number {
   return (deg * Math.PI) / 180;
 }
@@ -8,8 +130,6 @@ export function smoothstep01(u: number): number {
   const t = Utils.clamp01(u);
   return t * t * (3 - 2 * t);
 }
-
-export type Vec3 = { x: number; y: number; z: number };
 
 /** Unit direction from orbit angles (theta around Z, phi from equator), matching Camera.ts. */
 export function orbitUnitDirectionFromAngles(theta: number, phi: number): Vec3 {
@@ -179,6 +299,91 @@ export function wheelZoomExponentialBlendAlpha(
   lerpRate: number,
 ): number {
   return 1 - Math.exp(-dtSeconds * lerpRate);
+}
+
+/** Same dt cap as `Camera.ts` wheel RAF: seconds since last tick, floored at 0, capped at 50ms. */
+export function wheelZoomLoopDtSecondsClamped(
+  tNowMs: number,
+  wheelZoomLastTMs: number,
+): number {
+  return Math.min(0.05, Math.max(0, (tNowMs - wheelZoomLastTMs) / 1000));
+}
+
+/**
+ * One frame of the exponential smooth-zoom RAF loop (wheel / programmatic zoom-to-init).
+ * Side effects (`applyOrbit`, pulse UI) stay in `Camera.ts`.
+ */
+export function wheelSmoothZoomLerpTick(args: {
+  tNowMs: number;
+  wheelZoomLastTMs: number;
+  rangeM: number;
+  wheelZoomTargetRangeM: number;
+  lerpRate: number;
+  orbitRangeClamp: {
+    sphereRadiusM: number;
+    minSurfaceClearanceM: number;
+    maxOrbitCenterDistanceM: number;
+  };
+  /** `zoomAim.startRange` when a zoom-aim session exists, else `null`. */
+  zoomAimStartRangeM: number | null;
+  wheelZoomLastPulseTMs: number;
+  hasWheelZoomLastClient: boolean;
+}): {
+  wheelZoomLastTMs: number;
+  rangeM: number;
+  stopLoop: boolean;
+  /** When true, caller resets lerp rate to 18 (default wheel smoothing). */
+  resetDefaultLerpRate: boolean;
+  /** When stopping: clear zoom aim if `|range − zoomAim.startRange| < 0.5`. */
+  clearZoomAimIfNearStart: boolean;
+  shouldPulseZoomIndicator: boolean;
+  wheelZoomLastPulseTMs: number;
+} {
+  const wheelZoomLastTMs = args.tNowMs;
+  const dt = wheelZoomLoopDtSecondsClamped(args.tNowMs, args.wheelZoomLastTMs);
+  const remaining = Math.abs(args.wheelZoomTargetRangeM - args.rangeM);
+  if (remaining < 0.01) {
+    const clearZoomAimIfNearStart =
+      args.zoomAimStartRangeM !== null &&
+      Math.abs(args.rangeM - args.zoomAimStartRangeM) < 0.5;
+    return {
+      wheelZoomLastTMs,
+      rangeM: args.rangeM,
+      stopLoop: true,
+      resetDefaultLerpRate: true,
+      clearZoomAimIfNearStart,
+      shouldPulseZoomIndicator: false,
+      wheelZoomLastPulseTMs: args.wheelZoomLastPulseTMs,
+    };
+  }
+
+  const alpha = wheelZoomExponentialBlendAlpha(dt, args.lerpRate);
+  const prevRange = args.rangeM;
+  const lerped = Utils.lerp(args.rangeM, args.wheelZoomTargetRangeM, alpha);
+  const nextRangeM = clampOrbitCenterDistanceMeters({
+    centerDistanceM: lerped,
+    sphereRadiusM: args.orbitRangeClamp.sphereRadiusM,
+    minSurfaceClearanceM: args.orbitRangeClamp.minSurfaceClearanceM,
+    maxOrbitCenterDistanceM: args.orbitRangeClamp.maxOrbitCenterDistanceM,
+  });
+
+  const zoomingIn = args.wheelZoomTargetRangeM < prevRange - 1e-6;
+  const shouldPulseZoomIndicator =
+    args.hasWheelZoomLastClient &&
+    zoomingIn &&
+    args.tNowMs - args.wheelZoomLastPulseTMs > 60;
+
+  return {
+    wheelZoomLastTMs,
+    rangeM: nextRangeM,
+    stopLoop: false,
+    resetDefaultLerpRate: false,
+    clearZoomAimIfNearStart: false,
+    shouldPulseZoomIndicator,
+    wheelZoomLastPulseTMs: shouldPulseZoomIndicator
+      ? args.tNowMs
+      : args.wheelZoomLastPulseTMs,
+  };
 }
 
 /** Rate such that `1 - exp(-rate * durationS) ≈ 0.99` (same constant as Camera.ts). */

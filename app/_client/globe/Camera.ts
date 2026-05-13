@@ -84,7 +84,7 @@ export function installOrbitCameraControls({
   // theta: longitude-like angle around Z axis; phi: latitude-like angle from equator.
   let theta = OrbitCam.degreesToRadians(initLong);
   let phi = OrbitCam.degreesToRadians(initLat);
-  let range = radius * 3.0;
+  let range: number;
 
   const unitFromAngles = (t: number, p: number) => {
     const v = OrbitCam.orbitUnitDirectionFromAngles(t, p);
@@ -92,14 +92,12 @@ export function installOrbitCameraControls({
   };
 
   const computeUp = (dirFromCenter: CesiumTypes.Cartesian3) => {
-    // Try to keep "up" roughly aligned with world +Z, projected onto the tangent plane.
-    const z = Cesium.Cartesian3.UNIT_Z;
-    const dot = Cesium.Cartesian3.dot(z, dirFromCenter);
-    const proj = Cesium.Cartesian3.multiplyByScalar(dirFromCenter, dot, new Cesium.Cartesian3());
-    const up = Cesium.Cartesian3.subtract(z, proj, new Cesium.Cartesian3());
-    const mag = Cesium.Cartesian3.magnitude(up);
-    if (mag < 1e-6) return Cesium.Cartesian3.UNIT_Y;
-    return Cesium.Cartesian3.normalize(up, up);
+    const v = OrbitCam.globeOrbitCameraUpWorldFromDir({
+      x: dirFromCenter.x,
+      y: dirFromCenter.y,
+      z: dirFromCenter.z,
+    });
+    return new Cesium.Cartesian3(v.x, v.y, v.z);
   };
 
   // Zoom constraints: keep a minimum clearance above the surface so we never clip
@@ -125,29 +123,19 @@ export function installOrbitCameraControls({
   controller.maximumTiltAngle = Math.PI / 2.0;
   controller.enableCollisionDetection = true;
 
-  const clampRangeValue = (next: number) => {
-    const minSurface =
-      viewer.scene.screenSpaceCameraController.minimumZoomDistance ?? GlobeConsts.MIN_SURFACE_CLEARANCE_M;
-    const maxSurface = viewer.scene.screenSpaceCameraController.maximumZoomDistance ?? radius * 20.0;
-    const minRange = radius + minSurface;
-    const maxRange = maxSurface;
-    return Utils.clamp(next, minRange, maxRange);
-  };
-
-  const initTargetRange = clampRangeValue(radius + GlobeConsts.CAMERA_INIT_SURFACE_OFFSET);
+  const initTargetRange = OrbitCam.clampOrbitCenterDistanceMeters({
+    centerDistanceM: radius + GlobeConsts.CAMERA_INIT_SURFACE_OFFSET,
+    sphereRadiusM: radius,
+    minSurfaceClearanceM:
+      viewer.scene.screenSpaceCameraController.minimumZoomDistance ?? GlobeConsts.MIN_SURFACE_CLEARANCE_M,
+    maxOrbitCenterDistanceM:
+      viewer.scene.screenSpaceCameraController.maximumZoomDistance ?? radius * 20.0,
+  });
 
   /** Full-bleed layout: zoom so the sphere’s limb subtends the larger of the two frustum FOVs (“cover”), clipping on the shorter axis (portrait: left/right). */
   const fillParent = typeof width === "string" && width === "100%";
 
-  /**
-   * Upper reference for zoom + orbit-drag damping (`zoomRateScale01`). For full-bleed layouts this is
-   * **always** the same “cover viewport” orbit radius, even when `startAtInitTargetRange` starts the
-   * camera at `CAMERA_INIT_SURFACE_OFFSET`. That keeps reload-with-geolocation sensitivity aligned
-   * with the pre-permission session (far framing), instead of a tiny `(baseline − minRange)` band near
-   * the surface.
-   */
-  let zoomCurveReferenceRange: number;
-
+  let coverOrbitDistanceM: number | null = null;
   if (fillParent) {
     viewer.resize();
     viewer.forceResize?.();
@@ -159,18 +147,34 @@ export function installOrbitCameraControls({
     const fovy = frustum.fovy ?? (60 * Math.PI) / 180;
     const aspect = frustum.aspectRatio ?? canvasEl.clientWidth / Math.max(1, canvasEl.clientHeight);
     const minCenter = radius + GlobeConsts.MIN_SURFACE_CLEARANCE_M;
-    const coverDistance = OrbitCam.sphereCoverOrbitDistanceMeters({
+    coverOrbitDistanceM = OrbitCam.sphereCoverOrbitDistanceMeters({
       sphereRadiusM: radius,
       minCenterDistanceM: minCenter,
       fovyRad: fovy,
       aspect,
     });
-    zoomCurveReferenceRange = coverDistance;
-    range = startAtInitTargetRange ? initTargetRange : coverDistance;
-  } else {
-    zoomCurveReferenceRange = clampRangeValue(radius * 3.0);
-    range = startAtInitTargetRange ? initTargetRange : zoomCurveReferenceRange;
   }
+
+  /**
+   * Upper reference for zoom + orbit-drag damping (`zoomRateScale01`). For full-bleed layouts this is
+   * **always** the same “cover viewport” orbit radius, even when `startAtInitTargetRange` starts the
+   * camera at `CAMERA_INIT_SURFACE_OFFSET`. That keeps reload-with-geolocation sensitivity aligned
+   * with the pre-permission session (far framing), instead of a tiny `(baseline − minRange)` band near
+   * the surface.
+   */
+  const { rangeM, zoomCurveReferenceRangeM } = OrbitCam.initialOrbitRangeAndZoomReference({
+    fillParent,
+    coverOrbitDistanceM,
+    sphereRadiusM: radius,
+    minSurfaceClearanceM:
+      viewer.scene.screenSpaceCameraController.minimumZoomDistance ?? GlobeConsts.MIN_SURFACE_CLEARANCE_M,
+    maxOrbitCenterDistanceM:
+      viewer.scene.screenSpaceCameraController.maximumZoomDistance ?? radius * 20.0,
+    cameraInitSurfaceOffsetM: GlobeConsts.CAMERA_INIT_SURFACE_OFFSET,
+    startAtInitTargetRange,
+  });
+  range = rangeM;
+  const zoomCurveReferenceRange = zoomCurveReferenceRangeM;
 
   const getMinRange = () => {
     const minSurface =
@@ -196,12 +200,14 @@ export function installOrbitCameraControls({
   const rotateSpeedMultiplier = () => zoomRateScale01();
 
   const setRange = (next: number) => {
-    const minSurface =
-      viewer.scene.screenSpaceCameraController.minimumZoomDistance ?? GlobeConsts.MIN_SURFACE_CLEARANCE_M;
-    const maxSurface = viewer.scene.screenSpaceCameraController.maximumZoomDistance ?? radius * 20.0;
-    const minRange = radius + minSurface;
-    const maxRange = maxSurface;
-    range = Utils.clamp(next, minRange, maxRange);
+    range = OrbitCam.clampOrbitCenterDistanceMeters({
+      centerDistanceM: next,
+      sphereRadiusM: radius,
+      minSurfaceClearanceM:
+        viewer.scene.screenSpaceCameraController.minimumZoomDistance ?? GlobeConsts.MIN_SURFACE_CLEARANCE_M,
+      maxOrbitCenterDistanceM:
+        viewer.scene.screenSpaceCameraController.maximumZoomDistance ?? radius * 20.0,
+    });
   };
 
   const applyOrbit = () => {
@@ -326,12 +332,20 @@ export function installOrbitCameraControls({
   const applyZoomAimIfActive = () => {
     if (!zoomAim) return;
     const minRange = getMinRange();
-    const fs = OrbitCam.zoomAimInterpolationFactor01(zoomAim.startRange, range, minRange);
-    theta = Utils.lerpAngleRad(zoomAim.startTheta, zoomAim.targetTheta, fs) + zoomAim.panOffsetTheta;
-    phi = OrbitCam.clampOrbitLatitudeRad(
-      Utils.lerp(zoomAim.startPhi, zoomAim.targetPhi, fs) + zoomAim.panOffsetPhi,
-      EPS,
-    );
+    const merged = OrbitCam.zoomAimMergedOrbitAngles({
+      startTheta: zoomAim.startTheta,
+      startPhi: zoomAim.startPhi,
+      targetTheta: zoomAim.targetTheta,
+      targetPhi: zoomAim.targetPhi,
+      startRange: zoomAim.startRange,
+      range,
+      minRange,
+      panOffsetTheta: zoomAim.panOffsetTheta,
+      panOffsetPhi: zoomAim.panOffsetPhi,
+      latEps: EPS,
+    });
+    theta = merged.theta;
+    phi = merged.phi;
   };
 
   const zoomBy = (scale: number) => {
@@ -562,7 +576,7 @@ export function installOrbitCameraControls({
     const startTheta = theta;
     const startPhi = phi;
     // Take the shortest way around the sphere (e.g. -179° → +179° rotates 2°, not 358°).
-    const dTheta = Utils.wrapAngleRad(targetTheta - startTheta);
+    const dTheta = OrbitCam.orbitShortestDeltaLongitudeRad(startTheta, targetTheta);
     const dPhi = targetPhi - startPhi;
 
     if (Math.abs(dTheta) < 1e-6 && Math.abs(dPhi) < 1e-6) return;
@@ -573,10 +587,16 @@ export function installOrbitCameraControls({
 
     const tick = (now: number) => {
       const u = Utils.clamp((now - startT) / dur, 0, 1);
-      // smoothstep ease-in/out
-      const e = OrbitCam.smoothstep01(u);
-      theta = startTheta + dTheta * e;
-      phi = OrbitCam.clampOrbitLatitudeRad(startPhi + dPhi * e, EPS);
+      const sample = OrbitCam.sampledOrbitRotateAnimAngles({
+        startThetaRad: startTheta,
+        startPhiRad: startPhi,
+        deltaThetaRad: dTheta,
+        deltaPhiRad: dPhi,
+        linearProgress01: u,
+        latEps: EPS,
+      });
+      theta = sample.thetaRad;
+      phi = sample.phiRad;
       applyOrbit();
       if (u < 1) {
         rotateAnimRaf = requestAnimationFrame(tick);
@@ -600,26 +620,36 @@ export function installOrbitCameraControls({
     wheelZoomLastT = performance.now();
 
     const tick = (tNow: number) => {
-      const dt = Math.min(0.05, Math.max(0, (tNow - wheelZoomLastT) / 1000));
-      wheelZoomLastT = tNow;
+      const orbitRangeClamp = {
+        sphereRadiusM: radius,
+        minSurfaceClearanceM:
+          viewer.scene.screenSpaceCameraController.minimumZoomDistance ?? GlobeConsts.MIN_SURFACE_CLEARANCE_M,
+        maxOrbitCenterDistanceM:
+          viewer.scene.screenSpaceCameraController.maximumZoomDistance ?? radius * 20.0,
+      };
+      const step = OrbitCam.wheelSmoothZoomLerpTick({
+        tNowMs: tNow,
+        wheelZoomLastTMs: wheelZoomLastT,
+        rangeM: range,
+        wheelZoomTargetRangeM: wheelZoomTargetRange,
+        lerpRate: wheelZoomLerpRate,
+        orbitRangeClamp,
+        zoomAimStartRangeM: zoomAim?.startRange ?? null,
+        wheelZoomLastPulseTMs: wheelZoomLastPulseT,
+        hasWheelZoomLastClient: wheelZoomLastClient != null,
+      });
+      wheelZoomLastT = step.wheelZoomLastTMs;
 
-      const remaining = Math.abs(wheelZoomTargetRange - range);
-      if (remaining < 0.01) {
-        if (zoomAim && Math.abs(range - zoomAim.startRange) < 0.5) clearZoomAim();
+      if (step.stopLoop) {
+        if (step.clearZoomAimIfNearStart) clearZoomAim();
         wheelZoomRaf = null;
-        wheelZoomLerpRate = 18;
+        if (step.resetDefaultLerpRate) wheelZoomLerpRate = 18;
         return;
       }
 
-      const alpha = OrbitCam.wheelZoomExponentialBlendAlpha(dt, wheelZoomLerpRate);
-      const prevRange = range;
-      const nextRange = Utils.lerp(range, wheelZoomTargetRange, alpha);
-      setRange(nextRange);
-
-      const zoomingIn = wheelZoomTargetRange < prevRange - 1e-6;
-
-      if (wheelZoomLastClient && zoomingIn && tNow - wheelZoomLastPulseT > 60) {
-        wheelZoomLastPulseT = tNow;
+      range = step.rangeM;
+      wheelZoomLastPulseT = step.wheelZoomLastPulseTMs;
+      if (step.shouldPulseZoomIndicator && wheelZoomLastClient) {
         pulseZoomIndicator(wheelZoomLastClient.x, wheelZoomLastClient.y);
       }
 

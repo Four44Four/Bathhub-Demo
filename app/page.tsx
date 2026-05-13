@@ -278,6 +278,7 @@ export default function Home() {
       }
 
       if (GlobeConsts.ANIMATE_ON_INIT) {
+        globeRef.current?.beginGeoArrivalInteractionLock();
         globeRef.current?.animateTo(lat, long, GlobeConsts.ANIMATE_ON_INIT_DURA);
         globeRef.current?.animateZoomToInitTarget(GlobeConsts.ANIMATE_ON_INIT_DURA);
       } else {

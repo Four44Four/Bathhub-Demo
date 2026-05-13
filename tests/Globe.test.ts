@@ -12,6 +12,8 @@ import {
 } from "../app/_client/pure/TwoToneMapTile";
 
 import { dimensionCss } from "../app/_client/pure/GlobeViewportCss";
+import * as GeoArrival from "../app/_client/pure/GeoArrivalCameraLock";
+import { Globe as GlobeConsts } from "../app/_client/ComponentConstants";
 
 describe("globeLayerLodMath", () => {
     test("detailLayerAlphaFromCameraHeightM", () => {
@@ -67,4 +69,47 @@ describe("globeViewportCssMath", () => {
       expect(dimensionCss(12)).toBe("12px");
       expect(dimensionCss("100%")).toBe("100%");
     });
+});
+
+describe("geoArrivalCameraLock", () => {
+  const dura = GlobeConsts.ANIMATE_ON_INIT_DURA;
+
+  test("begin locks immediately; tick before duration keeps locked", () => {
+    let s = GeoArrival.initialGeoArrivalLockState();
+    expect(GeoArrival.isGlobeOrbitUserInputAllowed(s)).toBe(true);
+    s = GeoArrival.beginGeoArrivalLock(s, 10_000, dura);
+    expect(GeoArrival.isGlobeOrbitUserInputAllowed(s)).toBe(false);
+    s = GeoArrival.reduceGeoArrivalLockForTick(s, 10_000 + dura - 1);
+    expect(GeoArrival.isGlobeOrbitUserInputAllowed(s)).toBe(false);
+    expect(s.kind).toBe("locked");
+  });
+
+  test("release after exactly lockDurationMs elapsed", () => {
+    let s = GeoArrival.beginGeoArrivalLock(GeoArrival.initialGeoArrivalLockState(), 0, dura);
+    s = GeoArrival.reduceGeoArrivalLockForTick(s, dura);
+    expect(s.kind).toBe("idle");
+    expect(GeoArrival.isGlobeOrbitUserInputAllowed(s)).toBe(true);
+  });
+
+  test("idle reduce is a no-op", () => {
+    const s = GeoArrival.initialGeoArrivalLockState();
+    const next = GeoArrival.reduceGeoArrivalLockForTick(s, 99_999);
+    expect(next).toBe(s);
+  });
+
+  test("begin restarts lock window", () => {
+    let s = GeoArrival.beginGeoArrivalLock(GeoArrival.initialGeoArrivalLockState(), 0, dura);
+    s = GeoArrival.reduceGeoArrivalLockForTick(s, 1000);
+    expect(s.kind).toBe("locked");
+    s = GeoArrival.beginGeoArrivalLock(s, 1000, dura);
+    expect(s).toMatchObject({ kind: "locked", lockedAtMs: 1000 });
+    s = GeoArrival.reduceGeoArrivalLockForTick(s, 1000 + dura);
+    expect(s.kind).toBe("idle");
+  });
+
+  test("zero duration unlocks on next tick", () => {
+    let s = GeoArrival.beginGeoArrivalLock(GeoArrival.initialGeoArrivalLockState(), 5, 0);
+    s = GeoArrival.reduceGeoArrivalLockForTick(s, 5);
+    expect(s.kind).toBe("idle");
+  });
 });

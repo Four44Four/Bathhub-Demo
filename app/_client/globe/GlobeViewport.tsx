@@ -32,6 +32,7 @@ import {
   streetLayerAlphaFromCameraHeightM,
 } from "../pure/GlobeLayerLod";
 import { dimensionCss } from "../pure/GlobeViewportCss";
+import * as GeoArrival from "../pure/GeoArrivalCameraLock";
 
 /** Set to true once `GLOBE_VIEWPORT_DETECT_IDLE_MS` elapses without move/zoom activity; cleared when activity resumes. */
 let isClientIdle = false;
@@ -114,6 +115,12 @@ export type GlobeViewportHandle = {
    * `animateZoomToInitTarget` so the switch is visible from the first animation frame.
    */
   setMapMarkerUserLatLon: (lat: number, long: number) => void;
+  /**
+   * Call immediately before `animateTo` + `animateZoomToInitTarget` for the post-permission
+   * geolocation sequence. Orbit pointer/wheel/pinch stays disabled for exactly
+   * {@link GlobeConsts.ANIMATE_ON_INIT_DURA} ms (same as init animations).
+   */
+  beginGeoArrivalInteractionLock: () => void;
   /** Renders a path on the globe (see `Path.ts` for styling). */
   setPathFromLatLonPoints: (points: Point[]) => void;
   clearPath: () => void;
@@ -244,6 +251,7 @@ export function GlobeViewport({
    * `initLat/initLong` change) so the billboard doesn't fall back to the 2D overlay.
    */
   const userGeoLatLonRef = useRef<Point | null>(null);
+  const geoArrivalLockStateRef = useRef(GeoArrival.initialGeoArrivalLockState());
 
   useImperativeHandle<GlobeViewportHandle | null, GlobeViewportHandle>(
     ref,
@@ -293,6 +301,14 @@ export function GlobeViewport({
         // If MapMarker isn't installed yet, the value lives in the ref and is
         // applied via `initialUserLatLonDegrees` on the next install.
         mapMarkerRef.current?.setUserLatLonDegrees(lat, long);
+      },
+      beginGeoArrivalInteractionLock: () => {
+        const now = typeof performance !== "undefined" ? performance.now() : Date.now();
+        geoArrivalLockStateRef.current = GeoArrival.beginGeoArrivalLock(
+          geoArrivalLockStateRef.current,
+          now,
+          GlobeConsts.ANIMATE_ON_INIT_DURA,
+        );
       },
       setPathFromLatLonPoints: (points) => {
         pathHandleRef.current?.setPath(points);
@@ -554,6 +570,13 @@ export function GlobeViewport({
       // Center the camera on the requested init lat/long.
       const radius = ellipsoid.maximumRadius;
       const viewportSamplerWakeRef: { ensureBusy?: () => void } = {};
+      const tickGeoArrivalLock = () => {
+        const nowMs = typeof performance !== "undefined" ? performance.now() : Date.now();
+        geoArrivalLockStateRef.current = GeoArrival.reduceGeoArrivalLockForTick(
+          geoArrivalLockStateRef.current,
+          nowMs,
+        );
+      };
       const cameraControls = installOrbitCameraControls({
         Cesium,
         viewer,
@@ -572,6 +595,10 @@ export function GlobeViewport({
           ServerDebug.log(logString);
           console.log(logString);
           clickedIndicator.setLatLonDegrees(lat, lon);
+        },
+        isUserGlobeOrbitInputAllowed: () => {
+          tickGeoArrivalLock();
+          return GeoArrival.isGlobeOrbitUserInputAllowed(geoArrivalLockStateRef.current);
         },
       });
 
@@ -664,6 +691,7 @@ export function GlobeViewport({
           busySamplingActive = false;
           return;
         }
+        tickGeoArrivalLock();
         runViewportCenterSample();
         if (cameraControls.isGlobeViewportSamplerBusy()) {
           viewportSamplerTimer = window.setTimeout(busySamplingTick, GlobeConsts.UPDATE_VIEWPORT_CENTER_DELAY_MS);
@@ -689,6 +717,7 @@ export function GlobeViewport({
         }
         // Sample immediately so brief drags/zooms still update before the first delayed tick.
         runViewportCenterSample();
+        tickGeoArrivalLock();
         viewportSamplerTimer = window.setTimeout(busySamplingTick, GlobeConsts.UPDATE_VIEWPORT_CENTER_DELAY_MS);
       };
 
@@ -696,6 +725,7 @@ export function GlobeViewport({
 
       const samplerKickOnCameraChanged = () => {
         if (cancelled || !viewer) return;
+        tickGeoArrivalLock();
         if (cameraControls.isGlobeViewportSamplerBusy()) {
           ensureBusySampling();
         }
@@ -817,6 +847,7 @@ export function GlobeViewport({
       clickedIndicatorApiRef.current = null;
       viewportCenterLatLonRef.current = null;
       isClientIdle = false;
+      geoArrivalLockStateRef.current = GeoArrival.initialGeoArrivalLockState();
       // Drop the imperative-handle target so a late `animateTo` can't drive a
       // destroyed viewer. Future calls will re-queue into pendingAnimateToRef.
       cameraControlsRef.current = null;

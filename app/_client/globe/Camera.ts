@@ -24,6 +24,11 @@ export type InstallOrbitCameraOptions = {
   onClickLatLonDegrees?: (lat: number, lon: number) => void;
   /** Fired on pointer down, wheel, and pinch start so viewport sampling can wake before `camera.changed`. */
   onGlobeViewportInteraction?: () => void;
+  /**
+   * When false, pointer/wheel/pinch orbit input is ignored (still allow pointerup/cancel for hygiene).
+   * Used while post-geolocation camera animations run.
+   */
+  isUserGlobeOrbitInputAllowed?: () => boolean;
 };
 
 export type InstalledOrbitCameraControls = {
@@ -66,8 +71,11 @@ export function installOrbitCameraControls({
   onZoomIndicatorPulse,
   onClickLatLonDegrees,
   onGlobeViewportInteraction,
+  isUserGlobeOrbitInputAllowed,
 }: InstallOrbitCameraOptions): InstalledOrbitCameraControls {
   const EPS = 1e-3;
+
+  const allowUserOrbitInput = isUserGlobeOrbitInputAllowed ?? (() => true);
 
   const notifyGlobeViewportInteraction = () => {
     try {
@@ -407,6 +415,7 @@ export function installOrbitCameraControls({
 
   cesiumGestureHandler.setInputAction(
     (e: { position1: { x: number; y: number }; position2: { x: number; y: number } }) => {
+      if (!allowUserOrbitInput()) return;
       notifyGlobeViewportInteraction();
       isPinching = true;
       const mid = OrbitCam.screenMidpoint2D(e.position1, e.position2);
@@ -440,6 +449,7 @@ export function installOrbitCameraControls({
 
   cesiumGestureHandler.setInputAction(
     ((e: unknown) => {
+      if (!allowUserOrbitInput()) return;
       if (!isPinching || !zoomAim) return;
 
       const delta = OrbitCam.readCesiumPinchDistanceDelta(e);
@@ -537,9 +547,11 @@ export function installOrbitCameraControls({
   );
 
   cesiumGestureHandler.setInputAction(() => {
+    const wasPinching = isPinching;
     isPinching = false;
     pinchLastDist = null;
     endPinchZoomSession();
+    if (!wasPinching) return;
     clearZoomAim();
     if (pointers.size === 1) mode = "rotate";
     else if (pointers.size === 0) mode = "none";
@@ -668,6 +680,10 @@ export function installOrbitCameraControls({
   };
 
   const onPointerDown = (e: PointerEvent) => {
+    if (!allowUserOrbitInput()) {
+      e.preventDefault();
+      return;
+    }
     // Any user touch/click cancels a programmatic rotation animation.
     cancelRotateAnim();
 
@@ -738,6 +754,11 @@ export function installOrbitCameraControls({
       vy,
     };
     pointers.set(e.pointerId, next);
+
+    if (!allowUserOrbitInput()) {
+      e.preventDefault();
+      return;
+    }
 
     if (mode === "rotate") {
       const dx = next.x - prev.x;
@@ -879,6 +900,10 @@ export function installOrbitCameraControls({
   };
 
   const onWheel = (e: WheelEvent) => {
+    if (!allowUserOrbitInput()) {
+      e.preventDefault();
+      return;
+    }
     // Any user wheel input cancels a programmatic rotation animation.
     cancelRotateAnim();
 

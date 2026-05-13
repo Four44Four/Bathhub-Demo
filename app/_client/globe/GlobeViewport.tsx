@@ -20,6 +20,19 @@ import { installDebugCrosshair } from "./DebugCrosshair";
 import { installMapMarker } from "./MapMarker";
 import { installPath, type PathHandle } from "./Path";
 import { installOrbitCameraControls, type InstalledOrbitCameraControls } from "./Camera";
+import {
+  classifyMapPixelAsWater,
+  twoToneLandOutputHsl,
+  twoToneWaterOutputHsl,
+  type Hsl,
+} from "./pure/TwoToneMapTile";
+import {
+  detailLayerAlphaFromCameraHeightM,
+  fxaaEnabledFromCameraHeightM,
+  globeMaximumScreenSpaceErrorFromHeightM,
+  streetLayerAlphaFromCameraHeightM,
+} from "./pure/GlobeLayerLod";
+import { dimensionCss } from "./pure/GlobeViewportCss";
 
 /** Set to true once `GLOBE_VIEWPORT_DETECT_IDLE_MS` elapses without move/zoom activity; cleared when activity resumes. */
 let isClientIdle = false;
@@ -133,15 +146,6 @@ type GlobeViewportProps = {
   ref?: Ref<GlobeViewportHandle | null>;
 };
 
-function pixelIsWater(r: number, g: number, b: number) {
-  // Heuristic: classify "blue-ish" pixels as water.
-  // Map tiles include a lot of colors; this doesn't have perfect land/water semantics,
-  // but it enforces the requested two-color palette deterministically.
-  const maxRG = Math.max(r, g);
-  const blueDominance = b - maxRG;
-  return b > 60 && blueDominance > 20 && b > 1.05 * g;
-}
-
 async function recolorTileToTwoTone(
   image: ImageBitmap | HTMLImageElement,
   water: { r: number; g: number; b: number },
@@ -150,8 +154,8 @@ async function recolorTileToTwoTone(
   const width = image.width;
   const height = image.height;
 
-  const landHsl = Utils.rgbToHsl(land.r, land.g, land.b);
-  const waterHsl = Utils.rgbToHsl(water.r, water.g, water.b);
+  const landHsl = Utils.rgbToHsl(land.r, land.g, land.b) as Hsl;
+  const waterHsl = Utils.rgbToHsl(water.r, water.g, water.b) as Hsl;
 
   const canvas = document.createElement("canvas");
   canvas.width = width;
@@ -167,24 +171,22 @@ async function recolorTileToTwoTone(
     const r = d[i + 0];
     const g = d[i + 1];
     const b = d[i + 2];
-    const isWater = pixelIsWater(r, g, b);
+    const isWater = classifyMapPixelAsWater(r, g, b);
 
     // Preserve map detail (roads/labels/features) by using the original pixel's lightness
     // while forcing the hue to match the requested land/water colors.
-    const srcHsl = Utils.rgbToHsl(r, g, b);
+    const srcHsl = Utils.rgbToHsl(r, g, b) as Hsl;
 
     if (isWater) {
-      const l = Utils.clamp01(0.25 + srcHsl.l * 0.35);
-      const s = Utils.clamp01(waterHsl.s * 0.9);
-      const out = Utils.hslToRgb(waterHsl.h, s, l);
+      const hsl = twoToneWaterOutputHsl(srcHsl.l, waterHsl);
+      const out = Utils.hslToRgb(hsl.h, hsl.s, hsl.l);
       d[i + 0] = out.r;
       d[i + 1] = out.g;
       d[i + 2] = out.b;
     } else {
       // Boost contrast on land so streets + features are easier to see.
-      const l = Utils.clamp01(0.18 + srcHsl.l * 0.70);
-      const s = Utils.clamp01(Math.max(landHsl.s, srcHsl.s * 0.35));
-      const out = Utils.hslToRgb(landHsl.h, s, l);
+      const hsl = twoToneLandOutputHsl(srcHsl, landHsl);
+      const out = Utils.hslToRgb(hsl.h, hsl.s, hsl.l);
       d[i + 0] = out.r;
       d[i + 1] = out.g;
       d[i + 2] = out.b;
@@ -202,10 +204,6 @@ async function recolorTileToTwoTone(
 
   // Fallback: return the canvas itself.
   return canvas;
-}
-
-function dimensionCss(value: number | string): string {
-  return typeof value === "number" ? `${value}px` : value;
 }
 
 export function GlobeViewport({
@@ -712,13 +710,10 @@ export function GlobeViewport({
       // tiles become visibly chunky. The base layer's max level (9) means tiles
       // are ~78km wide at the equator; any altitude near or below that produces
       // visible "chunks", so we want the detail layer fully opaque well above it.
-      const detailFadeStart = 8_000_000; // ~8000km — start crossfading early
-      const detailFullyVisible = 1_500_000; // ~1500km — fully on before base looks chunky
       const updateDetail = () => {
         if (!viewer) return;
-        const h = viewer?.camera.positionCartographic.height ?? detailFadeStart;
-        const t = (detailFadeStart - h) / (detailFadeStart - detailFullyVisible);
-        const detailAlpha = Math.min(1, Math.max(0, t));
+        const h = viewer?.camera.positionCartographic.height ?? 8_000_000;
+        const detailAlpha = detailLayerAlphaFromCameraHeightM(h);
         detailLayer.alpha = detailAlpha;
         // Hide entirely (skip tile fetches) while fully transparent so the
         // base layer gets the full network/CPU budget — otherwise zoomed-out
@@ -727,31 +722,15 @@ export function GlobeViewport({
         detailLayer.show = detailAlpha > 0;
 
         // "Street view" fade: only when super close so labels/buildings are readable and stable.
-        const streetFadeStart = 35_000; // ~35km
-        const streetFullyVisible = 2_500; // ~2.5km
-        const ts = (streetFadeStart - h) / (streetFadeStart - streetFullyVisible);
-        const streetAlpha = Math.min(1, Math.max(0, ts));
+        const streetAlpha = streetLayerAlphaFromCameraHeightM(h);
         streetLayer.alpha = streetAlpha;
         streetLayer.show = streetAlpha > 0;
 
         // Drive Cesium's tile-loading aggressiveness with altitude. Lower values
         // load finer tiles earlier, eliminating the "chunky LOD" look at medium
         // zooms without the cost of forcing max detail at far-out views.
-        const superClose = 1_000; // ~1km
-        viewer.scene.globe.maximumScreenSpaceError =
-          h < superClose
-            ? 0.35
-            : h < streetFadeStart
-              ? 0.75
-              : h < detailFullyVisible
-                ? 1.25
-                : h < detailFadeStart
-                  ? 1.6
-                  : 2.0;
-
-        // FXAA can soften thin text/lines; disable it when close for crisper labels.
         const fxaa = viewer.scene.postProcessStages.fxaa;
-        if (fxaa) fxaa.enabled = !(h < streetFadeStart);
+        if (fxaa) fxaa.enabled = !fxaaEnabledFromCameraHeightM(h);
 
         viewer.scene.requestRender();
       };

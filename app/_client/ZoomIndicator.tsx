@@ -1,5 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 
+import {
+  zoomIndicatorOpacityTransitionCss,
+  zoomIndicatorSquareTopLeftCss,
+} from "./globe/pure/ZoomIndicator";
+
 export const ZOOM_INDICATOR_COLOR = "#000";
 export const ZOOM_INDICATOR_FADE_IN_MS = 150;
 export const ZOOM_INDICATOR_FADE_OUT_MS = 500;
@@ -51,11 +56,11 @@ export function ZoomIndicator({ x, y, pulse, hidden }: ZoomIndicatorProps) {
 
   const style = useMemo((): React.CSSProperties => {
     const size = ZOOM_INDICATOR_SIZE;
-    const half = size / 2;
+    const { left, top } = zoomIndicatorSquareTopLeftCss(x, y, size);
     return {
       position: "absolute",
-      left: x - half,
-      top: y - half,
+      left,
+      top,
       width: size,
       height: size,
       borderRadius: "9999px",
@@ -64,9 +69,11 @@ export function ZoomIndicator({ x, y, pulse, hidden }: ZoomIndicatorProps) {
       opacity: hidden ? 0 : opacity,
       transition: hidden
         ? "none"
-        : phase === "in"
-          ? `opacity ${ZOOM_INDICATOR_FADE_IN_MS}ms ease-out`
-          : `opacity ${ZOOM_INDICATOR_FADE_OUT_MS}ms linear`,
+        : zoomIndicatorOpacityTransitionCss(
+            phase,
+            ZOOM_INDICATOR_FADE_IN_MS,
+            ZOOM_INDICATOR_FADE_OUT_MS,
+          ),
       pointerEvents: "none",
       zIndex: 9999,
     };

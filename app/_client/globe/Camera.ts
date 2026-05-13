@@ -3,6 +3,7 @@ import type { RefObject } from "react";
 
 import { Globe as GlobeConsts } from "../ComponentConstants";
 import * as Utils from "../Utils";
+import * as OrbitCam from "./pure/OrbitCamera";
 
 export type InstallOrbitCameraOptions = {
   Cesium: typeof import("cesium");
@@ -81,12 +82,14 @@ export function installOrbitCameraControls({
 
   // Orbital camera state (camera always looks at globe center).
   // theta: longitude-like angle around Z axis; phi: latitude-like angle from equator.
-  let theta = (initLong * Math.PI) / 180;
-  let phi = (initLat * Math.PI) / 180;
+  let theta = OrbitCam.degreesToRadians(initLong);
+  let phi = OrbitCam.degreesToRadians(initLat);
   let range = radius * 3.0;
 
-  const unitFromAngles = (t: number, p: number) =>
-    new Cesium.Cartesian3(Math.cos(p) * Math.cos(t), Math.cos(p) * Math.sin(t), Math.sin(p));
+  const unitFromAngles = (t: number, p: number) => {
+    const v = OrbitCam.orbitUnitDirectionFromAngles(t, p);
+    return new Cesium.Cartesian3(v.x, v.y, v.z);
+  };
 
   const computeUp = (dirFromCenter: CesiumTypes.Cartesian3) => {
     // Try to keep "up" roughly aligned with world +Z, projected onto the tangent plane.
@@ -155,10 +158,13 @@ export function installOrbitCameraControls({
     };
     const fovy = frustum.fovy ?? (60 * Math.PI) / 180;
     const aspect = frustum.aspectRatio ?? canvasEl.clientWidth / Math.max(1, canvasEl.clientHeight);
-    const fovx = 2 * Math.atan(Math.tan(fovy / 2) * aspect);
-    const lim = Math.max(fovx, fovy);
     const minCenter = radius + GlobeConsts.MIN_SURFACE_CLEARANCE_M;
-    const coverDistance = Math.max(minCenter, radius / Math.sin(lim / 2));
+    const coverDistance = OrbitCam.sphereCoverOrbitDistanceMeters({
+      sphereRadiusM: radius,
+      minCenterDistanceM: minCenter,
+      fovyRad: fovy,
+      aspect,
+    });
     zoomCurveReferenceRange = coverDistance;
     range = startAtInitTargetRange ? initTargetRange : coverDistance;
   } else {
@@ -175,12 +181,15 @@ export function installOrbitCameraControls({
   /** Normalized distance along zoom track (1 = cover framing, 0 = min orbit). Shared by zoom + orbit drag. */
   const zoomCurveFactor01 = () => {
     const minRange = getMinRange();
-    const denom = Math.max(1, zoomCurveReferenceRange - minRange);
-    return Utils.clamp((range - minRange) / denom, 0, 1);
+    return OrbitCam.zoomCurveFactor01(range, minRange, zoomCurveReferenceRange);
   };
 
   const zoomRateScale01 = () => {
-    return Math.max(GlobeConsts.ZOOM_MIN, zoomCurveFactor01() / GlobeConsts.ZOOM_DECAY_FACTOR);
+    return OrbitCam.zoomRateScale01(
+      zoomCurveFactor01(),
+      GlobeConsts.ZOOM_MIN,
+      GlobeConsts.ZOOM_DECAY_FACTOR,
+    );
   };
 
   /** Left-drag / touch orbit: same damping curve as wheel and right-drag zoom (via `zoomCurveReferenceRange`). */
@@ -272,12 +281,13 @@ export function installOrbitCameraControls({
   const beginZoomAim = (clientX: number, clientY: number) => {
     const dir = getSurfaceDirFromClientXY(clientX, clientY);
     if (!dir) return;
+    const tp = OrbitCam.sphericalDirToThetaPhi({ x: dir.x, y: dir.y, z: dir.z });
     zoomAim = {
       startTheta: theta,
       startPhi: phi,
       startRange: range,
-      targetTheta: Math.atan2(dir.y, dir.x),
-      targetPhi: Math.asin(Utils.clamp(dir.z, -1, 1)),
+      targetTheta: tp.theta,
+      targetPhi: tp.phi,
       clientX,
       clientY,
       panOffsetTheta: 0,
@@ -295,16 +305,17 @@ export function installOrbitCameraControls({
 
     const dx = clientX - zoomAim.clientX;
     const dy = clientY - zoomAim.clientY;
-    if (Math.hypot(dx, dy) < AIM_RELOCK_PX) return;
+    if (!OrbitCam.shouldRelockZoomAim(dx, dy, AIM_RELOCK_PX)) return;
 
     const dir = getSurfaceDirFromClientXY(clientX, clientY);
     if (!dir) return;
+    const tp2 = OrbitCam.sphericalDirToThetaPhi({ x: dir.x, y: dir.y, z: dir.z });
     zoomAim = {
       startTheta: theta,
       startPhi: phi,
       startRange: range,
-      targetTheta: Math.atan2(dir.y, dir.x),
-      targetPhi: Math.asin(Utils.clamp(dir.z, -1, 1)),
+      targetTheta: tp2.theta,
+      targetPhi: tp2.phi,
       clientX,
       clientY,
       panOffsetTheta: 0,
@@ -315,14 +326,11 @@ export function installOrbitCameraControls({
   const applyZoomAimIfActive = () => {
     if (!zoomAim) return;
     const minRange = getMinRange();
-    const denom = Math.max(1e-6, zoomAim.startRange - minRange);
-    const f = Utils.clamp((zoomAim.startRange - range) / denom, 0, 1);
-    const fs = f * f * (3 - 2 * f);
+    const fs = OrbitCam.zoomAimInterpolationFactor01(zoomAim.startRange, range, minRange);
     theta = Utils.lerpAngleRad(zoomAim.startTheta, zoomAim.targetTheta, fs) + zoomAim.panOffsetTheta;
-    phi = Utils.clamp(
+    phi = OrbitCam.clampOrbitLatitudeRad(
       Utils.lerp(zoomAim.startPhi, zoomAim.targetPhi, fs) + zoomAim.panOffsetPhi,
-      -Math.PI / 2 + EPS,
-      Math.PI / 2 - EPS,
+      EPS,
     );
   };
 
@@ -342,13 +350,16 @@ export function installOrbitCameraControls({
     const frustum = viewer.camera.frustum as unknown as { fovy?: number; aspectRatio?: number };
     const fovy = frustum.fovy ?? (60 * Math.PI) / 180;
     const aspect = frustum.aspectRatio ?? canvas.clientWidth / Math.max(1, canvas.clientHeight);
-    const fovx = 2 * Math.atan(Math.tan(fovy / 2) * aspect);
-    const w = Math.max(1, canvas.clientWidth);
-    const h = Math.max(1, canvas.clientHeight);
-    const fxPx = (w / 2) / Math.tan(fovx / 2);
-    const fyPx = (h / 2) / Math.tan(fovy / 2);
-    const dTheta = (dx * range) / (Math.max(1, fxPx) * radius);
-    const dPhi = (dy * range) / (Math.max(1, fyPx) * radius);
+    const { dTheta, dPhi } = OrbitCam.orbitPanDeltaRadians({
+      dxPx: dx,
+      dyPx: dy,
+      rangeM: range,
+      sphereRadiusM: radius,
+      canvasWidthPx: canvas.clientWidth,
+      canvasHeightPx: canvas.clientHeight,
+      fovyRad: fovy,
+      aspect,
+    });
     const mult = rotateSpeedMultiplier();
     target.panOffsetTheta -= dTheta * mult;
     target.panOffsetPhi += dPhi * mult;
@@ -370,7 +381,7 @@ export function installOrbitCameraControls({
   const cesiumGestureHandler = new Cesium.ScreenSpaceEventHandler(canvas);
   const canvasToClient = (p: { x: number; y: number }) => {
     const rect = canvas.getBoundingClientRect();
-    return { x: rect.left + p.x, y: rect.top + p.y };
+    return OrbitCam.canvasLocalToClientXY(rect, p.x, p.y);
   };
 
   // Simplified pinch state (modeled after common Cesium examples):
@@ -380,42 +391,17 @@ export function installOrbitCameraControls({
   let isPinching = false;
   let pinchLastDist: number | null = null;
 
-  const readCesiumPinchDelta = (ev: unknown): { dDist: number; distNow?: number } | null => {
-    const e = ev as {
-      distance?: {
-        startDistance?: number;
-        currentDistance?: number;
-        startPosition?: { x: number; y: number };
-        endPosition?: { x: number; y: number };
-      };
-    };
-
-    // Preferred: direct delta, as in the user's snippet.
-    if (typeof e.distance?.currentDistance === "number" && typeof e.distance?.startDistance === "number") {
-      return { dDist: e.distance.currentDistance - e.distance.startDistance, distNow: e.distance.currentDistance };
-    }
-
-    // Cesium ScreenSpaceEventHandler encodes distance deltas in the y component of MotionEvent positions.
-    const endY = e.distance?.endPosition?.y;
-    const startY = e.distance?.startPosition?.y;
-    if (typeof endY === "number" && typeof startY === "number") {
-      return { dDist: endY - startY, distNow: endY };
-    }
-
-    // Fallback: only a single distance value is available; caller will use lastDist.
-    if (typeof e.distance?.currentDistance === "number") return { dDist: 0, distNow: e.distance.currentDistance };
-    if (typeof e.distance?.endPosition?.y === "number") return { dDist: 0, distNow: e.distance.endPosition.y };
-    return null;
-  };
-
   cesiumGestureHandler.setInputAction(
     (e: { position1: { x: number; y: number }; position2: { x: number; y: number } }) => {
       notifyGlobeViewportInteraction();
       isPinching = true;
-      const mid = { x: (e.position1.x + e.position2.x) / 2, y: (e.position1.y + e.position2.y) / 2 };
+      const mid = OrbitCam.screenMidpoint2D(e.position1, e.position2);
       const midClient = canvasToClient(mid);
       // Cesium's internal pinch distance is scaled by 0.25 in many builds.
-      const dist = 0.25 * Math.max(0, Math.hypot(e.position1.x - e.position2.x, e.position1.y - e.position2.y));
+      const dist = OrbitCam.pinchCanvasDistanceScaled(
+        e.position1.x - e.position2.x,
+        e.position1.y - e.position2.y,
+      );
       pinchLastDist = dist;
 
       clearZoomAim();
@@ -442,7 +428,7 @@ export function installOrbitCameraControls({
     ((e: unknown) => {
       if (!isPinching || !zoomAim) return;
 
-      const delta = readCesiumPinchDelta(e);
+      const delta = OrbitCam.readCesiumPinchDistanceDelta(e);
       if (!delta) return;
 
       let dDist = delta.dDist;
@@ -458,7 +444,7 @@ export function installOrbitCameraControls({
       // Make pinch 9x as sensitive as wheel-equivalent input.
       const PINCH_SENS = 18.0;
       const z = zoomRateScale01();
-      const scale = Math.exp(-dDist * GlobeConsts.ZOOM_SENS * z * 0.15 * PINCH_SENS);
+      const scale = OrbitCam.exponentialZoomScalePinch(dDist, GlobeConsts.ZOOM_SENS, z, PINCH_SENS);
       if (scale < 1) pulseZoomIndicator(zoomAim.clientX, zoomAim.clientY);
       zoomBy(scale);
 
@@ -493,34 +479,34 @@ export function installOrbitCameraControls({
           const aYActive = absVyA > V_EPS && aRecent;
           const bYActive = absVyB > V_EPS && bRecent;
 
-          const oppositeX =
-            aXActive &&
-            bXActive &&
-            Math.sign(vxA) !== 0 &&
-            Math.sign(vxB) !== 0 &&
-            Math.sign(vxA) !== Math.sign(vxB);
-          const oppositeY =
-            aYActive &&
-            bYActive &&
-            Math.sign(vyA) !== 0 &&
-            Math.sign(vyB) !== 0 &&
-            Math.sign(vyA) !== Math.sign(vyB);
+          const opposite = OrbitCam.pinchOppositeAxisFlags({
+            vxA,
+            vxB,
+            vyA,
+            vyB,
+            aXActive,
+            bXActive,
+            aYActive,
+            bYActive,
+          });
 
           if (dtMs > 0) {
-            let vxUse = 0;
-            if (!oppositeX) {
-              // Use maximum magnitude when both contribute; otherwise accept the active finger.
-              if (aXActive && bXActive) vxUse = absVxA >= absVxB ? vxA : vxB;
-              else if (aXActive) vxUse = vxA;
-              else if (bXActive) vxUse = vxB;
-            }
-
-            let vyUse = 0;
-            if (!oppositeY) {
-              if (aYActive && bYActive) vyUse = absVyA >= absVyB ? vyA : vyB;
-              else if (aYActive) vyUse = vyA;
-              else if (bYActive) vyUse = vyB;
-            }
+            const { vx: vxUse, vy: vyUse } = OrbitCam.pinchPanVelocityUse(
+              vxA,
+              vxB,
+              vyA,
+              vyB,
+              absVxA,
+              absVxB,
+              absVyA,
+              absVyB,
+              aXActive,
+              bXActive,
+              aYActive,
+              bYActive,
+              opposite.oppositeX,
+              opposite.oppositeY,
+            );
 
             if (vxUse !== 0 || vyUse !== 0) {
               const dx = vxUse * dtMs;
@@ -571,12 +557,8 @@ export function installOrbitCameraControls({
     // A pending zoom-aim would re-target the camera mid-animation; clear it.
     clearZoomAim();
 
-    const targetTheta = (longDeg * Math.PI) / 180;
-    const targetPhi = Utils.clamp(
-      (latDeg * Math.PI) / 180,
-      -Math.PI / 2 + EPS,
-      Math.PI / 2 - EPS,
-    );
+    const targetTheta = OrbitCam.degreesToRadians(longDeg);
+    const targetPhi = OrbitCam.clampOrbitLatitudeRad(OrbitCam.degreesToRadians(latDeg), EPS);
     const startTheta = theta;
     const startPhi = phi;
     // Take the shortest way around the sphere (e.g. -179° → +179° rotates 2°, not 358°).
@@ -592,13 +574,9 @@ export function installOrbitCameraControls({
     const tick = (now: number) => {
       const u = Utils.clamp((now - startT) / dur, 0, 1);
       // smoothstep ease-in/out
-      const e = u * u * (3 - 2 * u);
+      const e = OrbitCam.smoothstep01(u);
       theta = startTheta + dTheta * e;
-      phi = Utils.clamp(
-        startPhi + dPhi * e,
-        -Math.PI / 2 + EPS,
-        Math.PI / 2 - EPS,
-      );
+      phi = OrbitCam.clampOrbitLatitudeRad(startPhi + dPhi * e, EPS);
       applyOrbit();
       if (u < 1) {
         rotateAnimRaf = requestAnimationFrame(tick);
@@ -612,12 +590,8 @@ export function installOrbitCameraControls({
   const snapTo = (latDeg: number, longDeg: number) => {
     cancelRotateAnim();
     clearZoomAim();
-    theta = (longDeg * Math.PI) / 180;
-    phi = Utils.clamp(
-      (latDeg * Math.PI) / 180,
-      -Math.PI / 2 + EPS,
-      Math.PI / 2 - EPS,
-    );
+    theta = OrbitCam.degreesToRadians(longDeg);
+    phi = OrbitCam.clampOrbitLatitudeRad(OrbitCam.degreesToRadians(latDeg), EPS);
     applyOrbit();
   };
 
@@ -637,7 +611,7 @@ export function installOrbitCameraControls({
         return;
       }
 
-      const alpha = 1 - Math.exp(-dt * wheelZoomLerpRate);
+      const alpha = OrbitCam.wheelZoomExponentialBlendAlpha(dt, wheelZoomLerpRate);
       const prevRange = range;
       const nextRange = Utils.lerp(range, wheelZoomTargetRange, alpha);
       setRange(nextRange);
@@ -725,8 +699,7 @@ export function installOrbitCameraControls({
     const dxRaw = e.clientX - prev.x;
     const dyRaw = e.clientY - prev.y;
     const dtForVel = Math.max(4, dt);
-    const vx = Utils.clamp(dxRaw / dtForVel, -3, 3);
-    const vy = Utils.clamp(dyRaw / dtForVel, -3, 3);
+    const { vx, vy } = OrbitCam.pointerVelocityClamped(dxRaw, dyRaw, dt, 4, 3);
     const next: PointerState = {
       x: e.clientX,
       y: e.clientY,
@@ -749,7 +722,7 @@ export function installOrbitCameraControls({
         const temp = { panOffsetTheta: 0, panOffsetPhi: 0 };
         applyDragRotate(dx, dy, temp);
         theta = Utils.wrapAngleRad(theta + temp.panOffsetTheta);
-        phi = Utils.clamp(phi + temp.panOffsetPhi, -Math.PI / 2 + EPS, Math.PI / 2 - EPS);
+        phi = OrbitCam.clampOrbitLatitudeRad(phi + temp.panOffsetPhi, EPS);
         applyOrbit();
       }
       e.preventDefault();
@@ -758,8 +731,7 @@ export function installOrbitCameraControls({
 
     if (mode === "zoomDrag") {
       const dy = next.y - prev.y;
-      const z = zoomRateScale01();
-      const scale = Math.exp(dy * GlobeConsts.ZOOM_SENS * z * 0.5);
+      const scale = OrbitCam.exponentialZoomScaleRightDrag(dy, GlobeConsts.ZOOM_SENS, zoomRateScale01());
       if (scale < 1) {
         // Lock the zoom target for the entire right-drag session (like wheel/pinch).
         // Do not re-lock to the moving cursor position.
@@ -793,8 +765,12 @@ export function installOrbitCameraControls({
       const isTouchTap = e.pointerType !== "mouse";
       const isClickCandidate =
         (isMouseLeftClick || isTouchTap) &&
-        dt < CLICK_MAX_MS &&
-        dist < CLICK_MAX_MOVE_PX &&
+        OrbitCam.isTapOrClickCandidate({
+          elapsedMs: dt,
+          distancePx: dist,
+          maxElapsedMs: CLICK_MAX_MS,
+          maxDistancePx: CLICK_MAX_MOVE_PX,
+        }) &&
         mode !== "pinchZoom" &&
         mode !== "zoomDrag";
 
@@ -878,18 +854,29 @@ export function installOrbitCameraControls({
 
     notifyGlobeViewportInteraction();
 
-    const z = zoomRateScale01();
-    // 5x faster mouse-wheel zoom.
-    const scale = Math.exp(e.deltaY * GlobeConsts.ZOOM_SENS * z * 0.55);
-    // Base the next target on the *current* camera range.
-    // If we compound off the previous target while a smooth-zoom RAF is still catching up,
-    // a small burst of wheel events (common on Windows mice / high-res wheels) can push the
-    // target far past the user's intent, and the RAF loop will keep zooming ("stuck" over-zoom).
-    wheelZoomTargetRange = clampRangeValue(range * scale);
+    const minRange = getMinRange();
+    const maxRange =
+      viewer.scene.screenSpaceCameraController.maximumZoomDistance ?? radius * 20.0;
+    const { targetRangeM, appliedScale } = OrbitCam.wheelOrbitCenterRangeTargetMidpointDampedWithScale({
+      sphereRadiusM: radius,
+      rangeM: range,
+      deltaY: e.deltaY,
+      minRangeM: minRange,
+      maxRangeM: maxRange,
+      zoomSens: GlobeConsts.ZOOM_SENS,
+      multiplier: 0.55,
+      zoomCurveReferenceRange: zoomCurveReferenceRange,
+      zoomMin: GlobeConsts.ZOOM_MIN,
+      decayFactor: GlobeConsts.ZOOM_DECAY_FACTOR,
+    });
+    // Midpoint-damped wheel zoom (see `wheelOrbitCenterRangeTargetMidpointDampedWithScale`):
+    // target is derived from the *current* camera `range`, not the in-flight lerp target, so wheel
+    // bursts do not compound against a stale `wheelZoomTargetRange`.
+    wheelZoomTargetRange = targetRangeM;
     wheelZoomLastClient = { x: e.clientX, y: e.clientY };
     pulseZoomIndicator(e.clientX, e.clientY);
     wheelZoomLastPulseT = performance.now();
-    if (scale < 1) {
+    if (appliedScale < 1) {
       ensureZoomAimForClientXY(e.clientX, e.clientY);
     }
     startWheelZoomLoop();
@@ -922,7 +909,7 @@ export function installOrbitCameraControls({
       if (typeof durationMs === "number" && Number.isFinite(durationMs) && durationMs > 0) {
         const durS = Math.max(0.001, durationMs / 1000);
         // remaining(T) = exp(-rate*T). Solve for remaining=0.01 at T=durS.
-        wheelZoomLerpRate = 4.605170186 / durS;
+        wheelZoomLerpRate = OrbitCam.wheelZoomLerpRateForApprox99PercentInDuration(durS);
       } else {
         wheelZoomLerpRate = 18;
       }

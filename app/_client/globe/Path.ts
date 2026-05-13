@@ -2,8 +2,19 @@ import type * as CesiumTypes from "cesium";
 
 import { Path as PathConsts } from "../ComponentConstants";
 import { Point } from "../../_shared/Utils";
+import {
+  dedupeConsecutiveLngLat,
+  filletBezierStepCount,
+  pathColorModeToUniform,
+  pathEdgeStart01,
+  pathGeometryWidthPixels,
+  pathScreenSegmentCollinearityDot,
+  quadraticBezierVector3,
+  resamplePolylineUniformIndices,
+  shouldKeepPathLodVertexAfterMerge,
+} from "./pure/PathGeometry";
 
-export type PathColorMode = "static" | "static-gradient" | "rolling-gradient";
+export type { PathColorMode } from "./pure/PathGeometry";
 export type PathHandle = {
   setPath: (points: Point[]) => void;
   clearPath: () => void;
@@ -56,29 +67,24 @@ type PathRibbonFabricJson = {
   source: string;
 };
 
-function pathColorModeToUniform(mode: PathColorMode): number {
-  return mode === "rolling-gradient" ? 2 : mode === "static-gradient" ? 1 : 0;
-}
-
 /**
  * Geometric ribbon width (in CSS pixels) handed to `PolylineGeometry`. The
  * visible stroke stays at `WIDTH_PIXELS`; the extra padding on each side hosts
  * the smoothstep AA fade so the antialiased pad never eats into the solid core.
  */
-const PATH_GEOMETRY_WIDTH_PIXELS =
-  PathConsts.WIDTH_PIXELS + 2 * Math.max(0, PathConsts.STROKE_EDGE_SOFT_PIXELS);
+const PATH_GEOMETRY_WIDTH_PIXELS = pathGeometryWidthPixels(
+  PathConsts.WIDTH_PIXELS,
+  PathConsts.STROKE_EDGE_SOFT_PIXELS,
+);
 
 /**
  * Threshold in `dCenter = abs(st.t - 0.5) * 2` space (0 = centerline,
  * 1 = geometric edge) at which alpha begins to fall off toward the antialiased
  * outer edge. Equals the ratio of the solid stroke to the padded geometry.
  */
-const PATH_EDGE_START = Math.min(
-  1,
-  Math.max(
-    0,
-    PathConsts.WIDTH_PIXELS / Math.max(1e-6, PATH_GEOMETRY_WIDTH_PIXELS),
-  ),
+const PATH_EDGE_START = pathEdgeStart01(
+  PathConsts.WIDTH_PIXELS,
+  PATH_GEOMETRY_WIDTH_PIXELS,
 );
 
 function buildPathRibbonFabric(
@@ -102,17 +108,6 @@ function buildPathRibbonFabric(
   };
 }
 
-function dedupeConsecutive(points: Point[]): Point[] {
-  if (points.length < 2) return points;
-  const out: Point[] = [points[0]];
-  for (let i = 1; i < points.length; i++) {
-    const p = points[i];
-    const prev = out[out.length - 1];
-    if (p.latitude !== prev.latitude || p.longitude !== prev.longitude) out.push(p);
-  }
-  return out;
-}
-
 function quadraticBezierCartesian3(
   Cesium: typeof CesiumTypes,
   p0: CesiumTypes.Cartesian3,
@@ -120,14 +115,13 @@ function quadraticBezierCartesian3(
   p2: CesiumTypes.Cartesian3,
   t: number,
 ): CesiumTypes.Cartesian3 {
-  const a = (1 - t) * (1 - t);
-  const b = 2 * (1 - t) * t;
-  const c = t * t;
-  return new Cesium.Cartesian3(
-    a * p0.x + b * p1.x + c * p2.x,
-    a * p0.y + b * p1.y + c * p2.y,
-    a * p0.z + b * p1.z + c * p2.z,
+  const v = quadraticBezierVector3(
+    { x: p0.x, y: p0.y, z: p0.z },
+    { x: p1.x, y: p1.y, z: p1.z },
+    { x: p2.x, y: p2.y, z: p2.z },
+    t,
   );
+  return new Cesium.Cartesian3(v.x, v.y, v.z);
 }
 
 function roundPolylineCorners(
@@ -187,10 +181,7 @@ function roundPolylineCorners(
       out.push(enter);
     }
 
-    const steps = Math.min(
-      8,
-      Math.max(2, Math.ceil(angle / Cesium.Math.toRadians(10))),
-    );
+    const steps = filletBezierStepCount(angle, Cesium.Math.toRadians(10));
     for (let s = 1; s < steps; s++) {
       const t = s / steps;
       out.push(quadraticBezierCartesian3(Cesium, enter, curr, exit, t));
@@ -239,24 +230,18 @@ function buildCapsuleSamples(
       merged.push(lod[i]);
       continue;
     }
-    const abx = b.x - a.x;
-    const aby = b.y - a.y;
-    const bcx = c.x - b.x;
-    const bcy = c.y - b.y;
-    const al = Math.hypot(abx, aby);
-    const bl = Math.hypot(bcx, bcy);
-    const dot = al > 0 && bl > 0 ? (abx * bcx + aby * bcy) / (al * bl) : -1;
-    if (dot < 0.999) merged.push(lod[i]);
+    const dot = pathScreenSegmentCollinearityDot(a.x, a.y, b.x, b.y, c.x, c.y);
+    if (shouldKeepPathLodVertexAfterMerge(dot)) merged.push(lod[i]);
   }
   merged.push(lod[lod.length - 1]);
   const rounded = roundPolylineCorners(Cesium, merged);
   if (rounded.length <= PathConsts.MAX_POLYLINE_SAMPLES) return rounded;
   const out: CesiumTypes.Cartesian3[] = [];
-  const denom = Math.max(1, PathConsts.MAX_POLYLINE_SAMPLES - 1);
-  for (let k = 0; k < PathConsts.MAX_POLYLINE_SAMPLES; k++) {
-    const t = k / denom;
-    out.push(rounded[Math.round(t * (rounded.length - 1))]);
-  }
+  const idx = resamplePolylineUniformIndices(
+    PathConsts.MAX_POLYLINE_SAMPLES,
+    rounded.length,
+  );
+  for (const i of idx) out.push(rounded[i]);
   return out;
 }
 
@@ -369,7 +354,7 @@ export function installPath(
 
   const setPath = (pointsIn: Point[]) => {
     teardown();
-    const points = dedupeConsecutive(pointsIn);
+    const points = dedupeConsecutiveLngLat(pointsIn);
     if (points.length < 2) {
       activePoints = null;
       scene.requestRender();

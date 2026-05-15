@@ -90,3 +90,25 @@ export const Path = {
     MIN_VERTEX_SEPARATION_PIXELS: 10,
     SURFACE_CLEARANCE_METERS: 10,
 } as const;
+
+// can't export this as const yet because `PULL_HANDLE_MARGIN_PX` relies
+// on `INACTIVE_HEIGHT_PX` and `PULL_HANDLE_HEIGHT_PX`
+const SwipeMenu0 = {
+    INACTIVE_HEIGHT_PX: 20,
+    BG_COLOR: "#FFFFFF",
+    /** Fraction of viewport height the menu can expand to when fully open. */
+    MAX_EXPAND_RATIO: 0.9,
+    /** Pull handle pill height in CSS pixels. */
+    PULL_HANDLE_HEIGHT_PX: 4,
+    // ensure it's always a pill
+    PULL_HANDLE_RADIUS_PX: Number.MAX_SAFE_INTEGER,
+    EXPAND_SNAP_THRESHOLD_RATIO: 0.35,
+    PULL_HANDLE_WIDTH_RATIO: 0.18,
+    PULL_HANDLE_BG_COLOR: "#888888",
+};
+const SwipeMenu1 = {
+    /** Inset from the menu shell edge to the pull-handle pill. */
+    PULL_HANDLE_MARGIN_PX: 
+        (SwipeMenu0.INACTIVE_HEIGHT_PX - SwipeMenu0.PULL_HANDLE_HEIGHT_PX) / 2,
+};
+export const SwipeMenu = { ...SwipeMenu0, ...SwipeMenu1 };

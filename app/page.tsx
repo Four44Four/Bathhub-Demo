@@ -9,6 +9,7 @@ import {
 } from "./_client/globe/GlobeViewport";
 import { CesiumAttribution } from "./_client/CesiumAttribution";
 import { ZoomIndicator } from "./_client/ZoomIndicator";
+import { MainMenu } from "./_client/swipeup/MainMenu";
 import { Globe as GlobeConsts } from "./_client/ComponentConstants";
 // import Image from "next/image";
 
@@ -118,6 +119,7 @@ async function onTestPathfindClick(globeRef: RefObject<GlobeViewportHandle | nul
 }
 
 export default function Home() {
+  const phoneFrameRef = useRef<HTMLDivElement | null>(null);
   const globeRootRef = useRef<HTMLDivElement | null>(null);
   const globeRef = useRef<GlobeViewportHandle | null>(null);
   const [zoomIndicator, setZoomIndicator] = useState<{ x: number; y: number; pulse: number }>({
@@ -343,7 +345,7 @@ export default function Home() {
 
   return (
     <main className="flex h-full min-h-0 flex-col">
-      <div className="relative flex min-h-0 flex-1 flex-col">
+      <div ref={phoneFrameRef} className="relative flex min-h-0 flex-1 flex-col">
         <div ref={globeRootRef} className="relative min-h-0 flex-1 overflow-hidden">
           <GlobeViewport
             ref={globeRef}
@@ -376,6 +378,9 @@ export default function Home() {
           <div className="pointer-events-auto">
             <CesiumAttribution />
           </div>
+        </div>
+        <div className="pointer-events-none absolute inset-0 z-40">
+          <MainMenu viewportRef={phoneFrameRef} />
         </div>
       </div>
     </main>

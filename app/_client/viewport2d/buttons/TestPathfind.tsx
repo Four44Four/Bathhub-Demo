@@ -6,7 +6,7 @@ import { Button } from "../Button";
 import * as ServerDebug from "../../../_server/Debug";
 import * as ServerPathfind from "../../../_server/Pathfind";
 import * as SharedUtils from "../../../_shared/Utils";
-import { type GlobeViewportHandle } from "../../globe/GlobeViewport";
+import { type GlobeViewportHandle, getStartPos } from "../../globe/GlobeViewport";
 
 export const BTN_STR = "Test pathfind";
 export const BTN_X = 16;
@@ -19,36 +19,6 @@ export type TestPathfindProps = {
     mapInitLong: number;
 };
 
-/** 
- * Current client location
- * OR
- * (if client disabled geolocation)
- * Surface point under the viewport center
- *    or last known map init if Cesium is not ready. 
- * */
-function getStartPos(
-    globe: GlobeViewportHandle | null,
-    isClientGeoGranted: boolean,
-    mapInitLat: number,
-    mapInitLong: number,
-): SharedUtils.Point {
-    if (!isClientGeoGranted) {
-      return (
-        globe?.getViewportCenterLatLon() ?? {
-          latitude: mapInitLat,
-          longitude: mapInitLong,
-        }
-      );
-    }
-  
-    // Coordinates from geolocation success callbacks (`applyInstantBootstrapPosition`,
-    // `applyGeolocationPosition`); kept in sync with `mapInitLat` / `mapInitLong`.
-    return {
-      latitude: mapInitLat,
-      longitude: mapInitLong,
-    };
-}
-  
 async function onTestPathfindClick(
     globeRef: RefObject<GlobeViewportHandle | null>,
     isClientGeoGranted: boolean,

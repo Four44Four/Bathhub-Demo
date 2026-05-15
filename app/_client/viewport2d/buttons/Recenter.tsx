@@ -3,8 +3,7 @@
 import { RefObject, useCallback, useLayoutEffect, useState } from "react";
 
 import { Button as ButtonConsts, SwipeMenu as SwipeMenuConsts, Globe as GlobeConsts } from "../../ComponentConstants";
-import { type GlobeViewportHandle } from "../../globe/GlobeViewport";
-import * as SharedUtils from "../../../_shared/Utils";
+import { type GlobeViewportHandle, getStartPos } from "../../globe/GlobeViewport";
 import { Button } from "../Button";
 
 export const BTN_IMG_SRC = "/crosshairs_center.svg";
@@ -48,34 +47,6 @@ export type RecenterProps = {
   btnOffsetPx?: number;
   btnImgSizePx?: number;
 };
-
-/**
- * Current client location
- * OR
- * (if client disabled geolocation)
- * Surface point under the viewport center
- *    or last known map init if Cesium is not ready.
- */
-function getStartPos(
-  globe: GlobeViewportHandle | null,
-  isClientGeoGranted: boolean,
-  mapInitLat: number,
-  mapInitLong: number,
-): SharedUtils.Point {
-  if (!isClientGeoGranted) {
-    return (
-      globe?.getViewportCenterLatLon() ?? {
-        latitude: mapInitLat,
-        longitude: mapInitLong,
-      }
-    );
-  }
-
-  return {
-    latitude: mapInitLat,
-    longitude: mapInitLong,
-  };
-}
 
 function onRecenterClick(
   globeRef: RefObject<GlobeViewportHandle | null>,

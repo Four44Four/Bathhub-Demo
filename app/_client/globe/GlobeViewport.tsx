@@ -117,6 +117,36 @@ export type GlobeViewportHandle = {
   clearPath: () => void;
 };
 
+/**
+ * Start position for pathfinding / recenter flows:
+ *
+ * Current client geolocation coordinates when permitted; otherwise the surface point under the
+ * viewport center, or fallback to map init coordinates if Cesium is not ready.
+ *
+ * With geolocation granted, coordinates come from successful callbacks (`applyInstantBootstrapPosition`,
+ * `applyGeolocationPosition`), kept in sync with `mapInitLat` / `mapInitLong` in callers.
+ */
+export function getStartPos(
+  globe: GlobeViewportHandle | null,
+  isClientGeoGranted: boolean,
+  mapInitLat: number,
+  mapInitLong: number,
+): Point {
+  if (!isClientGeoGranted) {
+    return (
+      globe?.getViewportCenterLatLon() ?? {
+        latitude: mapInitLat,
+        longitude: mapInitLong,
+      }
+    );
+  }
+
+  return {
+    latitude: mapInitLat,
+    longitude: mapInitLong,
+  };
+}
+
 type GlobeViewportProps = {
   initLat: number;
   initLong: number;

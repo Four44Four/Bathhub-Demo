@@ -9,8 +9,8 @@ import * as SharedUtils from "../../../_shared/Utils";
 import { type GlobeViewportHandle } from "../../globe/GlobeViewport";
 
 export const BTN_STR = "Test pathfind";
-export const BTN_WIDTH = 16;
-export const BTN_HEIGHT = 48;
+export const BTN_X = 16;
+export const BTN_Y = 48;
 
 export type TestPathfindProps = {
     globeRef: RefObject<GlobeViewportHandle | null>;
@@ -102,8 +102,8 @@ export function TestPathfind({
     <div className="pointer-events-none absolute inset-0 z-20">
         <Button
             text={BTN_STR}
-            x={BTN_WIDTH}
-            y={BTN_HEIGHT}
+            x={BTN_X}
+            y={BTN_Y}
             onClick={() =>
               onTestPathfindClick(
                 globeRef,

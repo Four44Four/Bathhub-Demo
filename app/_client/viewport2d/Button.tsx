@@ -23,6 +23,13 @@ export type ButtonProps = {
   imageTextOffset?: number;
   /** Icon square size when `imageSrc` is set (CSS px). Defaults to 24. */
   imageSizePx?: number;
+  /**
+   * Renders as a circular control sized to fit the icon (image-only; ignored when `text` is set).
+   * Uses symmetric `circularPaddingPx` and `borderRadius: "50%"` on a square `border-box`.
+   */
+  circular?: boolean;
+  /** Padding on every side when `circular` is true. Defaults to 0. */
+  circularPaddingPx?: number;
   onClick?: MouseEventHandler<HTMLButtonElement>;
 };
 
@@ -41,10 +48,13 @@ export function Button({
   imageLeftOfText = true,
   imageTextOffset = 0,
   imageSizePx = 24,
+  circular = false,
+  circularPaddingPx = 0,
   onClick,
 }: ButtonProps) {
   const hasText = text != null && text.length > 0;
   const hasImage = imageSrc != null && imageSrc.length > 0;
+  const useCircularLayout = circular && hasImage && !hasText;
 
   const rowStyle: CSSProperties = {
     display: "flex",
@@ -108,24 +118,46 @@ export function Button({
     inner = null;
   }
 
+  const outerSidePx = useCircularLayout
+    ? imageSizePx + 2 * circularPaddingPx + 2 * outlineThickness
+    : undefined;
+
+  const baseStyle: CSSProperties = {
+    position: "absolute",
+    left: x,
+    top: y,
+    zIndex,
+    margin: 0,
+    backgroundColor: fillColor,
+    border: `${outlineThickness}px solid ${outlineColor}`,
+    cursor: "pointer",
+    boxSizing: "border-box",
+  };
+
+  const layoutStyle: CSSProperties = useCircularLayout
+    ? {
+        ...baseStyle,
+        width: outerSidePx,
+        height: outerSidePx,
+        padding: circularPaddingPx,
+        borderRadius: "50%",
+        overflow: "hidden",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }
+    : {
+        ...baseStyle,
+        padding: "10px 16px",
+        borderRadius: cornerRadius,
+      };
+
   return (
     <button
       type="button"
       className="pointer-events-auto"
       onClick={onClick}
-      style={{
-        position: "absolute",
-        left: x,
-        top: y,
-        zIndex,
-        margin: 0,
-        padding: "10px 16px",
-        borderRadius: cornerRadius,
-        backgroundColor: fillColor,
-        border: `${outlineThickness}px solid ${outlineColor}`,
-        cursor: "pointer",
-        boxSizing: "border-box",
-      }}
+      style={layoutStyle}
     >
       {inner}
     </button>

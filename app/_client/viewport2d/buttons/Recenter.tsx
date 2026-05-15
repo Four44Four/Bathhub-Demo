@@ -9,18 +9,18 @@ import { Button } from "../Button";
 export const BTN_IMG_SRC = "/crosshairs_center.svg";
 export const BTN_OFFSET_PX = 15;
 export const BTN_IMG_SIZE_PX = 40;
+/** Padding inside the circular control on every side (`Button` circular mode). Uses 0 so the circle matches the image plus border. */
+export const BTN_CIRCULAR_PADDING_PX = 5;
 /** Distance from the left edge of the phone frame (matches `TestPathfind` `BTN_X`). */
 export const BTN_X = 16;
 
-/** Matches `padding` vertical axis in `../Button.tsx`. */
-const BTN_VERTICAL_PADDING_PX = 10;
-
-export function viewportButtonOuterHeightPx(
+/** Outer width/height of a circular `Button` (`border-box`, symmetric padding). */
+export function viewportCircularButtonOuterSidePx(
   imageSizePx: number,
-  verticalPaddingPx: number,
+  circularPaddingPx: number,
   outlineThicknessPx: number,
 ): number {
-  return verticalPaddingPx * 2 + imageSizePx + 2 * outlineThicknessPx;
+  return imageSizePx + 2 * circularPaddingPx + 2 * outlineThicknessPx;
 }
 
 /** `top` coordinate so the button sits `offsetAboveMenuPx` above the swipe menu collapsed top edge. */
@@ -99,9 +99,9 @@ export function Recenter({
   }, [measureViewport, viewportRef]);
 
   const outlineThicknessPx = ButtonConsts.LINE_THICKNESS;
-  const outerH = viewportButtonOuterHeightPx(
+  const outerSide = viewportCircularButtonOuterSidePx(
     btnImgSizePx,
-    BTN_VERTICAL_PADDING_PX,
+    BTN_CIRCULAR_PADDING_PX,
     outlineThicknessPx,
   );
 
@@ -113,7 +113,7 @@ export function Recenter({
           viewportSize.height,
           inactiveHeightPx,
           btnOffsetPx,
-          outerH,
+          outerSide,
         )
       : 0;
 
@@ -123,6 +123,8 @@ export function Recenter({
         <Button
           x={x}
           y={y}
+          circular
+          circularPaddingPx={BTN_CIRCULAR_PADDING_PX}
           imageSrc={BTN_IMG_SRC}
           imageSizePx={btnImgSizePx}
           onClick={() =>

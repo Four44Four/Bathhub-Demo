@@ -5,7 +5,7 @@ import { Shared as SharedConsts } from "./ComponentConstants";
 export function CesiumAttribution() {
   return (
     <div className={
-      SharedConsts.FONT_REGULAR_CLASS + " mt-3 text-[11px] leading-[1.2] opacity-80"
+      SharedConsts.FONT_REGULAR_CLASS + " max-w-full text-right text-[9px] leading-[1.2] opacity-80"
     }>
       <span>
         Powered by{" "}

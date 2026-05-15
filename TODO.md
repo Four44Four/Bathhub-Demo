@@ -1,5 +1,4 @@
 # Sprint 1 (frontend/UI)
- - Make map detail loading async
  - Recenter button on bottom left
  - Create error popup handler
     - Make attempting to find path to clicked location when there is no clicked location call the error popup handler

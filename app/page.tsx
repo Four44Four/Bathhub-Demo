@@ -1,8 +1,8 @@
 
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState, RefObject } from "react";
-import { Button } from "./_client/viewport2d/Button";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { TestPathfind } from "./_client/viewport2d/buttons/TestPathfind";
 import {
   GlobeViewport,
   type GlobeViewportHandle,
@@ -13,11 +13,6 @@ import { MainMenu } from "./_client/swipeup/MainMenu";
 import { FindNearestBathroom } from "./_client/swipeup/buttons/FindNearestBathroom";
 import { RegisterNewBathroom } from "./_client/swipeup/buttons/RegisterNewBathroom";
 import { Globe as GlobeConsts } from "./_client/ComponentConstants";
-// import Image from "next/image";
-
-import * as ServerDebug from "./_server/Debug";
-import * as ServerPathfind from "./_server/Pathfind";
-import * as SharedUtils from "./_shared/Utils";
 
 /** When set to `"100%"`, the globe mount fills the virtual phone frame (see `layout.tsx`) and the initial camera distance is chosen so the globe “covers” the view (no letterboxing; excess clips on the shorter axis). */
 const GLOBE_VIEWPORT_WIDTH = "100%";
@@ -62,64 +57,6 @@ function writeGeoCache(lat: number, lng: number) {
   }
 }
 
-/** 
- * Current client location
- * OR
- * (if client disabled geolocation)
- * Surface point under the viewport center
- *    or last known map init if Cesium is not ready. 
- * */
-function getStartPos(globe: GlobeViewportHandle | null): SharedUtils.Point {
-  if (!isClientGeoGranted) {
-    return (
-      globe?.getViewportCenterLatLon() ?? {
-        latitude: mapInitLat,
-        longitude: mapInitLong,
-      }
-    );
-  }
-
-  // Coordinates from geolocation success callbacks (`applyInstantBootstrapPosition`,
-  // `applyGeolocationPosition`); kept in sync with `mapInitLat` / `mapInitLong`.
-  return {
-    latitude: mapInitLat,
-    longitude: mapInitLong,
-  };
-}
-
-async function onTestPathfindClick(globeRef: RefObject<GlobeViewportHandle | null>) {
-  const startPos = getStartPos(globeRef.current);
-  const endPos = globeRef.current?.getClickedIndicatorLatLon();
-  if (endPos == null) {
-    // TODO: replace with error popup handler
-    alert("No point picked !!");
-    return;
-  }
-
-  const pathDataErrorable: SharedUtils.Errorable<ServerPathfind.PathData> 
-    = await ServerPathfind.getPathBetweenPoints({
-        profile: "foot-walking",
-        startLatitude: startPos.latitude,
-        startLongitude: startPos.longitude,
-        endLatitude: endPos.latitude,
-        endLongitude: endPos.longitude,
-      });
-
-  if (pathDataErrorable.errorMsg) {
-    // TODO: replace with error popup handler
-    alert(pathDataErrorable.errorMsg);
-  } 
-  else {
-    const pathDataStr = JSON.stringify(pathDataErrorable.val);
-    ServerDebug.log(pathDataStr);
-    console.log(pathDataStr);
-    const pts = pathDataErrorable.val?.points;
-    if (pts && pts.length >= 2) {
-      globeRef.current?.setPathFromLatLonPoints(pts);
-    }
-  }
-}
-
 export default function Home() {
   const phoneFrameRef = useRef<HTMLDivElement | null>(null);
   const globeRootRef = useRef<HTMLDivElement | null>(null);
@@ -129,6 +66,12 @@ export default function Home() {
     y: 0,
     pulse: 0,
   });
+  // Bumped when module-level `mapInitLat` / `mapInitLong` / `isClientGeoGranted`
+  // update without a `setGlobeInit` (e.g. geo animate-on-init) so consumers like
+  // `<TestPathfind>` re-render with fresh coordinates.
+  const [, setPathfindDepsEpoch] = useState(0);
+  const bumpPathfindDeps = () => setPathfindDepsEpoch((n) => n + 1);
+
   // Mirrors the module-level mapInitLat/mapInitLong. Updating this state
   // re-renders Home() and feeds new initLat/initLong props into <GlobeViewport>,
   // which causes its useEffect to tear down + re-init the Cesium viewer.
@@ -186,6 +129,7 @@ export default function Home() {
       isClientGeoGranted = true;
       mapInitLat = lat;
       mapInitLong = lng;
+      bumpPathfindDeps();
       writeGeoCache(lat, lng);
       // Push to MapMarker before any state change / animation so the billboard
       // is already in place if this triggers a viewer re-init below.
@@ -254,6 +198,7 @@ export default function Home() {
       isClientGeoGranted = true;
       mapInitLat = lat;
       mapInitLong = long;
+      bumpPathfindDeps();
       writeGeoCache(lat, long);
       // Switch MapMarker from the 2D static overlay to the 3D billboard FIRST,
       // so the swap is visible from the very first frame of the
@@ -335,16 +280,6 @@ export default function Home() {
     };
   }, []);
 
-/* <div className="p-6">
-        <Image src="/bathhub_logo_no_bg.svg" alt="Bathhub Logo"
-               width={48} height={48}
-               style={{ display: "inline-block" }} />
-        <h1 className="text-2xl font-semibold" style={{ display: "inline-block" }} >Bathhub</h1>
-        <p className="mt-2 text-sm opacity-80">
-          Interactive globe centered on ({globeInit.lat}, {globeInit.long})
-        </p>
-      </div> */
-
   return (
     <main className="flex h-full min-h-0 flex-col">
       <div ref={phoneFrameRef} className="relative flex min-h-0 flex-1 flex-col">
@@ -367,14 +302,12 @@ export default function Home() {
             pulse={zoomIndicator.pulse}
             hidden={zoomIndicator.pulse === 0}
           />
-          <div className="pointer-events-none absolute inset-0 z-20">
-            <Button
-              text="Test pathfind"
-              x={16}
-              y={48}
-              onClick={() => onTestPathfindClick(globeRef)}
-            />
-          </div>
+          <TestPathfind
+            globeRef={globeRef}
+            isClientGeoGranted={isClientGeoGranted}
+            mapInitLat={mapInitLat}
+            mapInitLong={mapInitLong}
+          />
         </div>
         <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex justify-end pt-1 pr-1">
           <div className="pointer-events-auto max-w-[50%] text-right">

@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { Recenter } from "./_client/viewport2d/buttons/Recenter";
 import { TestPathfind } from "./_client/viewport2d/buttons/TestPathfind";
 import {
   GlobeViewport,
@@ -61,6 +62,11 @@ export default function Home() {
   const phoneFrameRef = useRef<HTMLDivElement | null>(null);
   const globeRootRef = useRef<HTMLDivElement | null>(null);
   const globeRef = useRef<GlobeViewportHandle | null>(null);
+  /**
+   * Recenter mounts only when geolocation permission is `granted` (Permissions API),
+   * or once a live fix arrives where the Permissions API is unavailable (e.g. Safari).
+   */
+  const [showRecenterButton, setShowRecenterButton] = useState(false);
   const [zoomIndicator, setZoomIndicator] = useState<{ x: number; y: number; pulse: number }>({
     x: 0,
     y: 0,
@@ -100,6 +106,35 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
+    if (typeof navigator === "undefined" || !navigator.permissions?.query) return;
+
+    let cancelled = false;
+    let geoPermStatus: PermissionStatus | null = null;
+
+    const onPermissionChange = () => {
+      if (cancelled || !geoPermStatus) return;
+      setShowRecenterButton(geoPermStatus.state === "granted");
+    };
+
+    navigator.permissions
+      .query({ name: "geolocation" })
+      .then((status) => {
+        if (cancelled) return;
+        geoPermStatus = status;
+        setShowRecenterButton(status.state === "granted");
+        status.addEventListener("change", onPermissionChange);
+      })
+      .catch(() => {
+        /* Unsupported or restricted — rely on first successful geolocation callback. */
+      });
+
+    return () => {
+      cancelled = true;
+      geoPermStatus?.removeEventListener("change", onPermissionChange);
+    };
+  }, []);
+
+  useEffect(() => {
     if (typeof navigator === "undefined" || !navigator.geolocation) return;
 
     let cancelled = false;
@@ -127,6 +162,7 @@ export default function Home() {
      */
     const applyInstantBootstrapPosition = (lat: number, lng: number) => {
       isClientGeoGranted = true;
+      setShowRecenterButton(true);
       mapInitLat = lat;
       mapInitLong = lng;
       bumpPathfindDeps();
@@ -196,6 +232,7 @@ export default function Home() {
       const lat = pos.coords.latitude;
       const long = pos.coords.longitude;
       isClientGeoGranted = true;
+      setShowRecenterButton(true);
       mapInitLat = lat;
       mapInitLong = long;
       bumpPathfindDeps();
@@ -314,6 +351,15 @@ export default function Home() {
             <CesiumAttribution />
           </div>
         </div>
+        {showRecenterButton ? (
+          <Recenter
+            globeRef={globeRef}
+            viewportRef={phoneFrameRef}
+            isClientGeoGranted={isClientGeoGranted}
+            mapInitLat={mapInitLat}
+            mapInitLong={mapInitLong}
+          />
+        ) : null}
         <div className="pointer-events-none absolute inset-0 z-40">
           <MainMenu viewportRef={phoneFrameRef}>
             <FindNearestBathroom />

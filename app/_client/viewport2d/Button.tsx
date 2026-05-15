@@ -21,6 +21,8 @@ export type ButtonProps = {
   imageLeftOfText?: boolean;
   /** Space between image and text when both are present. Defaults to 0. */
   imageTextOffset?: number;
+  /** Icon square size when `imageSrc` is set (CSS px). Defaults to 24. */
+  imageSizePx?: number;
   onClick?: MouseEventHandler<HTMLButtonElement>;
 };
 
@@ -38,6 +40,7 @@ export function Button({
   imageSrc,
   imageLeftOfText = true,
   imageTextOffset = 0,
+  imageSizePx = 24,
   onClick,
 }: ButtonProps) {
   const hasText = text != null && text.length > 0;
@@ -56,7 +59,13 @@ export function Button({
       src={imageSrc}
       alt=""
       draggable={false}
-      style={{ height: 24, width: "auto", display: "block", flexShrink: 0 }}
+      style={{
+        height: imageSizePx,
+        width: imageSizePx,
+        display: "block",
+        flexShrink: 0,
+        objectFit: "contain",
+      }}
     />
   ) : null;
 

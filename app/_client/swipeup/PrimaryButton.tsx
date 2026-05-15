@@ -3,12 +3,9 @@
 import type { CSSProperties, MouseEventHandler } from "react";
 
 import { TextWeight } from "../Utils";
-import {
-  SWIPE_MENU_PRIMARY_BTN_BG_COLOR,
-  SWIPE_MENU_PRIMARY_BTN_FONT_SIZE,
-  swipeMenuPrimaryButtonHeightPx,
-  SWIPE_MENU_PRIMARY_BTN_FONT_COLOR,
-} from "./MainMenu";
+import { swipeMenuPrimaryButtonHeightPx } from "./MainMenu";
+
+import { SwipeMenu as SwipeMenuConsts } from "../ComponentConstants";
 
 export type PrimaryButtonProps = {
   label: string;
@@ -39,15 +36,15 @@ export function PrimaryButton({
     boxSizing: "border-box",
     border: "none",
     borderRadius: 8,
-    backgroundColor: SWIPE_MENU_PRIMARY_BTN_BG_COLOR,
+    backgroundColor: SwipeMenuConsts.PRIMARY_BTN_BG_COLOR,
     cursor: onClick ? "pointer" : "default",
     overflow: "hidden",
   };
 
   const labelStyle: CSSProperties = {
     flexShrink: 0,
-    color: SWIPE_MENU_PRIMARY_BTN_FONT_COLOR,
-    fontSize: SWIPE_MENU_PRIMARY_BTN_FONT_SIZE,
+    color: SwipeMenuConsts.PRIMARY_BTN_FONT_COLOR,
+    fontSize: SwipeMenuConsts.PRIMARY_BTN_FONT_SIZE,
     lineHeight: 1.2,
     textAlign: "center",
   };

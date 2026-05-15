@@ -28,18 +28,12 @@ import {
 
 import { SwipeMenu as SwipeMenuConsts } from "../ComponentConstants";
 
-export const SWIPE_MENU_SIDE_PADDING_PX = 10;
-export const SWIPE_MENU_PRIMARY_BTN_BG_COLOR = "#171769";
-export const SWIPE_MENU_PRIMARY_BTN_HEIGHT_PERCENTAGE = "25%";
-export const SWIPE_MENU_PRIMARY_BTN_FONT_SIZE = 10;
-export const SWIPE_MENU_PRIMARY_BTN_FONT_COLOR = "#FFFFFF";
-
 export function swipeMenuPrimaryButtonWidthPx(viewportWidthPx: number): number {
-  return Math.max(0, viewportWidthPx - 2 * SWIPE_MENU_SIDE_PADDING_PX);
+  return Math.max(0, viewportWidthPx - 2 * SwipeMenuConsts.SIDE_PADDING_PX);
 }
 
 export function swipeMenuPrimaryButtonHeightPx(viewportHeightPx: number): number {
-  const pct = Number.parseFloat(SWIPE_MENU_PRIMARY_BTN_HEIGHT_PERCENTAGE);
+  const pct = SwipeMenuConsts.PRIMARY_BTN_HEIGHT_PERCENTAGE;
   if (!Number.isFinite(pct)) return 0;
   return Math.max(0, (viewportHeightPx * pct) / 100);
 }

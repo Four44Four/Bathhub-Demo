@@ -105,6 +105,11 @@ const SwipeMenu0 = {
     EXPAND_SNAP_THRESHOLD_RATIO: 0.35,
     PULL_HANDLE_WIDTH_RATIO: 0.18,
     PULL_HANDLE_BG_COLOR: "#888888",
+    SIDE_PADDING_PX: 10,
+    PRIMARY_BTN_BG_COLOR: "#171769",
+    PRIMARY_BTN_HEIGHT_PERCENTAGE: 25,
+    PRIMARY_BTN_FONT_SIZE: 10,
+    PRIMARY_BTN_FONT_COLOR: "#FFFFFF",
 };
 const SwipeMenu1 = {
     /** Inset from the menu shell edge to the pull-handle pill. */

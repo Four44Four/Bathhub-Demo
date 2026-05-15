@@ -20,17 +20,8 @@ import { installDebugCrosshair } from "./DebugCrosshair";
 import { installMapMarker } from "./MapMarker";
 import { installPath, type PathHandle } from "./Path";
 import { installOrbitCameraControls, type InstalledOrbitCameraControls } from "./Camera";
-import {
-  classifyMapPixelAsWater,
-  twoToneLandOutputHsl,
-  twoToneWaterOutputHsl,
-} from "../pure/TwoToneMapTile";
-import {
-  detailLayerAlphaFromCameraHeightM,
-  fxaaEnabledFromCameraHeightM,
-  globeMaximumScreenSpaceErrorFromHeightM,
-  streetLayerAlphaFromCameraHeightM,
-} from "../pure/GlobeLayerLod";
+import { globeLodVisualStateFromCameraHeightM } from "../pure/GlobeLayerLod";
+import { TwoToneTileProcessor } from "./TwoToneTileProcessor";
 import { dimensionCss } from "../pure/GlobeViewportCss";
 import * as GeoArrival from "../pure/GeoArrivalCameraLock";
 
@@ -151,66 +142,6 @@ type GlobeViewportProps = {
    */
   ref?: Ref<GlobeViewportHandle | null>;
 };
-
-async function recolorTileToTwoTone(
-  image: ImageBitmap | HTMLImageElement,
-  water: { r: number; g: number; b: number },
-  land: { r: number; g: number; b: number },
-) {
-  const width = image.width;
-  const height = image.height;
-
-  const landHsl = Utils.rgbToHsl(land.r, land.g, land.b) as Utils.Hsl;
-  const waterHsl = Utils.rgbToHsl(water.r, water.g, water.b) as Utils.Hsl;
-
-  const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
-  const ctx = canvas.getContext("2d", { willReadFrequently: true });
-  if (!ctx) return undefined;
-
-  ctx.drawImage(image, 0, 0, width, height);
-  const imgData = ctx.getImageData(0, 0, width, height);
-  const d = imgData.data;
-
-  for (let i = 0; i < d.length; i += 4) {
-    const r = d[i + 0];
-    const g = d[i + 1];
-    const b = d[i + 2];
-    const isWater = classifyMapPixelAsWater(r, g, b);
-
-    // Preserve map detail (roads/labels/features) by using the original pixel's lightness
-    // while forcing the hue to match the requested land/water colors.
-    const srcHsl = Utils.rgbToHsl(r, g, b) as Utils.Hsl;
-
-    if (isWater) {
-      const hsl = twoToneWaterOutputHsl(srcHsl.l, waterHsl);
-      const out = Utils.hslToRgb(hsl.h, hsl.s, hsl.l);
-      d[i + 0] = out.r;
-      d[i + 1] = out.g;
-      d[i + 2] = out.b;
-    } else {
-      // Boost contrast on land so streets + features are easier to see.
-      const hsl = twoToneLandOutputHsl(srcHsl, landHsl);
-      const out = Utils.hslToRgb(hsl.h, hsl.s, hsl.l);
-      d[i + 0] = out.r;
-      d[i + 1] = out.g;
-      d[i + 2] = out.b;
-    }
-
-    d[i + 3] = 255;
-  }
-
-  ctx.putImageData(imgData, 0, 0);
-
-  // Cesium accepts ImageBitmap as a texture source in most runtimes.
-  if (typeof createImageBitmap === "function") {
-    return await createImageBitmap(canvas);
-  }
-
-  // Fallback: return the canvas itself.
-  return canvas;
-}
 
 export function GlobeViewport({
   initLat,
@@ -350,11 +281,13 @@ export function GlobeViewport({
         await new Promise<void>((r) => requestAnimationFrame(() => r()));
       }
 
+      const tileProcessor = new TwoToneTileProcessor(
+        Utils.hexToRgb(GlobeConsts.WATER_COLOR),
+        Utils.hexToRgb(GlobeConsts.LAND_COLOR),
+      );
+
       // Create a custom provider that recolors tiles into the requested two solid colors.
       class SolidColorImageryProvider extends Cesium.UrlTemplateImageryProvider {
-        private water = Utils.hexToRgb(GlobeConsts.WATER_COLOR);
-        private land = Utils.hexToRgb(GlobeConsts.LAND_COLOR);
-
         requestImage(
           x: number,
           y: number,
@@ -370,14 +303,11 @@ export function GlobeViewport({
           const basePromise = super.requestImage(x, y, level, request);
           if (!basePromise) return undefined;
 
-          const water = this.water;
-          const land = this.land;
-
           return basePromise.then(async (baseImage) => {
             const img = baseImage as unknown as ImageBitmap | HTMLImageElement;
             try {
-              const recolored = await recolorTileToTwoTone(img, water, land);
-              if (recolored) return recolored as CesiumTypes.ImageryTypes;
+              const recolored = await tileProcessor.recolor(img);
+              return recolored as CesiumTypes.ImageryTypes;
             } catch {
               // If pixel readback fails (CORS taint, OOM, etc), fall through to
               // the un-recolored tile rather than to a purple placeholder.
@@ -735,36 +665,42 @@ export function GlobeViewport({
       armIdleDetection();
       viewer.camera.changed.addEventListener(samplerKickOnCameraChanged);
 
-      // Fade the high-zoom detail layer in well before the base layer's coarse
-      // tiles become visibly chunky. The base layer's max level (9) means tiles
-      // are ~78km wide at the equator; any altitude near or below that produces
-      // visible "chunks", so we want the detail layer fully opaque well above it.
-      const updateDetail = () => {
+      // Fade layers + globe SSE from altitude. Coalesce via rAF so rapid camera
+      // changes during pan/zoom don't synchronously thrash imagery layer state.
+      let lodRafId: number | null = null;
+      let pendingLodHeightM: number | null = null;
+
+      const applyLodVisualState = (heightM: number) => {
         if (!viewer) return;
-        const h = viewer?.camera.positionCartographic.height ?? 8_000_000;
-        const detailAlpha = detailLayerAlphaFromCameraHeightM(h);
-        detailLayer.alpha = detailAlpha;
+        const lod = globeLodVisualStateFromCameraHeightM(heightM);
+        detailLayer.alpha = lod.detailAlpha;
         // Hide entirely (skip tile fetches) while fully transparent so the
         // base layer gets the full network/CPU budget — otherwise zoomed-out
         // views can show unloaded dark-purple chunks because all three layers
         // are competing for OSM/CARTO request slots.
-        detailLayer.show = detailAlpha > 0;
-
-        // "Street view" fade: only when super close so labels/buildings are readable and stable.
-        const streetAlpha = streetLayerAlphaFromCameraHeightM(h);
-        streetLayer.alpha = streetAlpha;
-        streetLayer.show = streetAlpha > 0;
-
-        // Drive Cesium's tile-loading aggressiveness with altitude. Lower values
-        // load finer tiles earlier, eliminating the "chunky LOD" look at medium
-        // zooms without the cost of forcing max detail at far-out views.
+        detailLayer.show = lod.detailShow;
+        streetLayer.alpha = lod.streetAlpha;
+        streetLayer.show = lod.streetShow;
+        viewer.scene.globe.maximumScreenSpaceError = lod.maximumScreenSpaceError;
         const fxaa = viewer.scene.postProcessStages.fxaa;
-        if (fxaa) fxaa.enabled = !fxaaEnabledFromCameraHeightM(h);
-
+        if (fxaa) fxaa.enabled = lod.fxaaEnabled;
         viewer.scene.requestRender();
       };
-      updateDetail();
-      viewer.camera.changed.addEventListener(updateDetail);
+
+      const scheduleLodUpdate = () => {
+        if (!viewer) return;
+        pendingLodHeightM = viewer.camera.positionCartographic.height ?? 8_000_000;
+        if (lodRafId !== null) return;
+        lodRafId = requestAnimationFrame(() => {
+          lodRafId = null;
+          const h = pendingLodHeightM ?? 8_000_000;
+          pendingLodHeightM = null;
+          applyLodVisualState(h);
+        });
+      };
+
+      applyLodVisualState(viewer.camera.positionCartographic.height ?? 8_000_000);
+      viewer.camera.changed.addEventListener(scheduleLodUpdate);
 
       const rebuildPathOnCameraMoveEnd = () => {
         pathHandle.rebuildActivePath();
@@ -782,7 +718,15 @@ export function GlobeViewport({
       // Store for cleanup via closure below.
       return {
         ro,
-        onCameraChanged: updateDetail,
+        onCameraChanged: scheduleLodUpdate,
+        cancelLodRaf: () => {
+          if (lodRafId !== null) {
+            cancelAnimationFrame(lodRafId);
+            lodRafId = null;
+          }
+          pendingLodHeightM = null;
+        },
+        tileProcessor,
         onSamplerCameraChanged: samplerKickOnCameraChanged,
         onCameraMoveEnd: rebuildPathOnCameraMoveEnd,
         camera: viewer.camera,
@@ -802,8 +746,10 @@ export function GlobeViewport({
       | {
           ro: ResizeObserver;
           onCameraChanged: () => void;
+          cancelLodRaf: () => void;
           onSamplerCameraChanged: () => void;
           onCameraMoveEnd: () => void;
+          tileProcessor: TwoToneTileProcessor;
           camera: CesiumTypes.Camera;
           clickedIndicator: { destroy: () => void };
           pathHandle: PathHandle;
@@ -828,10 +774,12 @@ export function GlobeViewport({
     return () => {
       cancelled = true;
       cleanup?.stopViewportSampler();
+      cleanup?.cancelLodRaf();
       if (cleanup) {
         cleanup.camera.changed.removeEventListener(cleanup.onSamplerCameraChanged);
       }
       cleanup?.camera.changed.removeEventListener(cleanup.onCameraChanged);
+      cleanup?.tileProcessor.destroy();
       cleanup?.camera.moveEnd.removeEventListener(cleanup.onCameraMoveEnd);
       cleanup?.removeInputListeners();
       cleanup?.clickedIndicator.destroy();

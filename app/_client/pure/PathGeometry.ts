@@ -39,7 +39,7 @@ export function dedupeConsecutiveLngLat(points: Point[]): Point[] {
   return out;
 }
 
-export function quadraticBezierVector3(p0: Utils.Vec3, p1: Utils.Vec3, p2: Utils.Vec3, t: number): Vec3 {
+export function quadraticBezierVector3(p0: Utils.Vec3, p1: Utils.Vec3, p2: Utils.Vec3, t: number): Utils.Vec3 {
   const a = (1 - t) * (1 - t);
   const b = 2 * (1 - t) * t;
   const c = t * t;

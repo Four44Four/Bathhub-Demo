@@ -1,9 +1,12 @@
 import {
     detailLayerAlphaFromCameraHeightM,
     fxaaEnabledFromCameraHeightM,
+    globeLodVisualStateFromCameraHeightM,
     globeMaximumScreenSpaceErrorFromHeightM,
     streetLayerAlphaFromCameraHeightM,
 } from "../app/_client/pure/GlobeLayerLod";
+
+import { recolorRgbaInPlace, twoTonePaletteFromRgb } from "../app/_client/pure/TwoToneTileRecolor";
 
 import {
     classifyMapPixelAsWater,
@@ -32,6 +35,19 @@ describe("globeLayerLodMath", () => {
     test("fxaaEnabledFromCameraHeightM", () => {
       expect(fxaaEnabledFromCameraHeightM(40_000)).toBe(true);
       expect(fxaaEnabledFromCameraHeightM(30_000)).toBe(false);
+    });
+
+    test("globeLodVisualStateFromCameraHeightM bundles layer + globe SSE", () => {
+      const far = globeLodVisualStateFromCameraHeightM(9_000_000);
+      expect(far.detailAlpha).toBeCloseTo(0, 6);
+      expect(far.detailShow).toBe(false);
+      expect(far.maximumScreenSpaceError).toBe(2.0);
+      expect(far.fxaaEnabled).toBe(false);
+
+      const close = globeLodVisualStateFromCameraHeightM(500);
+      expect(close.streetShow).toBe(true);
+      expect(close.maximumScreenSpaceError).toBe(0.35);
+      expect(close.fxaaEnabled).toBe(true);
     });
 });
 
@@ -62,6 +78,22 @@ describe("twoToneMapTileMath", () => {
       );
       expect(out.h).toBe(120);
     });
+});
+
+describe("twoToneTileRecolor", () => {
+  test("recolorRgbaInPlace forces full alpha", () => {
+    const palette = twoTonePaletteFromRgb(
+      { r: 65, g: 69, b: 126 },
+      { r: 50, g: 50, b: 85 },
+    );
+    const data = new Uint8ClampedArray([
+      20, 30, 100, 128,
+      200, 200, 50, 64,
+    ]);
+    recolorRgbaInPlace(data, 2, 1, palette);
+    expect(data[3]).toBe(255);
+    expect(data[7]).toBe(255);
+  });
 });
 
 describe("globeViewportCssMath", () => {

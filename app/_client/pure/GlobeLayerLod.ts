@@ -56,3 +56,29 @@ export function fxaaEnabledFromCameraHeightM(
 ): boolean {
   return heightM >= streetFadeStartM;
 }
+
+export type GlobeLodVisualState = {
+  detailAlpha: number;
+  detailShow: boolean;
+  streetAlpha: number;
+  streetShow: boolean;
+  maximumScreenSpaceError: number;
+  fxaaEnabled: boolean;
+};
+
+/** Pure LOD snapshot from camera altitude — safe to compute off the hot path and apply later. */
+export function globeLodVisualStateFromCameraHeightM(
+  heightM: number,
+  thresholds: GlobeLodThresholds = DEFAULT_THRESHOLDS,
+): GlobeLodVisualState {
+  const detailAlpha = detailLayerAlphaFromCameraHeightM(heightM, thresholds);
+  const streetAlpha = streetLayerAlphaFromCameraHeightM(heightM, thresholds);
+  return {
+    detailAlpha,
+    detailShow: detailAlpha > 0,
+    streetAlpha,
+    streetShow: streetAlpha > 0,
+    maximumScreenSpaceError: globeMaximumScreenSpaceErrorFromHeightM(heightM, thresholds),
+    fxaaEnabled: !fxaaEnabledFromCameraHeightM(heightM, thresholds.streetFadeStartM),
+  };
+}

@@ -1,8 +1,17 @@
 "use client";
 
+import { Shared as SharedConsts } from "./ComponentConstants";
+
 export type Vec3 = { x: number; y: number; z: number };
 
 export type Hsl = { h: number; s: number; l: number };
+
+export const TextWeight = {
+  REGULAR: SharedConsts.FONT_REGULAR_CLASS, 
+  BOLD: SharedConsts.FONT_BOLD_CLASS, 
+  LIGHT: SharedConsts.FONT_LIGHT_CLASS
+} as const;
+export type TextWeight = (typeof TextWeight)[keyof typeof TextWeight];
 
 export function hexToRgb(hex: string): { r: number; g: number; b: number } {
     const normalized = hex.replace("#", "").trim();

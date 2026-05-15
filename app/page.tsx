@@ -10,6 +10,8 @@ import {
 import { CesiumAttribution } from "./_client/CesiumAttribution";
 import { ZoomIndicator } from "./_client/ZoomIndicator";
 import { MainMenu } from "./_client/swipeup/MainMenu";
+import { FindNearestBathroom } from "./_client/swipeup/buttons/FindNearestBathroom";
+import { RegisterNewBathroom } from "./_client/swipeup/buttons/RegisterNewBathroom";
 import { Globe as GlobeConsts } from "./_client/ComponentConstants";
 // import Image from "next/image";
 
@@ -380,7 +382,10 @@ export default function Home() {
           </div>
         </div>
         <div className="pointer-events-none absolute inset-0 z-40">
-          <MainMenu viewportRef={phoneFrameRef} />
+          <MainMenu viewportRef={phoneFrameRef}>
+            <FindNearestBathroom />
+            <RegisterNewBathroom globeRef={globeRef} />
+          </MainMenu>
         </div>
       </div>
     </main>

@@ -111,3 +111,16 @@ export function swipeMenuSnapHeightPx(
 ): number {
   return target === "expanded" ? maxHeightPx : inactiveHeightPx;
 }
+
+const SWIPE_MENU_INTERACTIVE_SELECTOR =
+  "button, a, input, textarea, select, [role='button']";
+
+/** True when a pointer event target should receive clicks instead of starting a menu drag. */
+export function swipeMenuPointerTargetIsInteractive(
+  target: EventTarget | null,
+): boolean {
+  if (typeof Element === "undefined" || !(target instanceof Element)) {
+    return false;
+  }
+  return target.closest(SWIPE_MENU_INTERACTIVE_SELECTOR) != null;
+}

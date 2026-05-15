@@ -1,7 +1,9 @@
 "use client";
 
 import {
+  createContext,
   useCallback,
+  useContext,
   useLayoutEffect,
   useRef,
   useState,
@@ -16,11 +18,42 @@ import {
   swipeMenuHeightAfterPointerDelta,
   swipeMenuMaxHeightPx,
   swipeMenuPullIndicatorWidthCss,
+  swipeMenuPointerTargetIsInteractive,
   swipeMenuSnapHeightPx,
   swipeMenuSnapTarget,
 } from "../pure/SwipeMenu";
 
 import { SwipeMenu as SwipeMenuConsts } from "../ComponentConstants";
+
+export const SWIPE_MENU_SIDE_PADDING_PX = 10;
+export const SWIPE_MENU_PRIMARY_BTN_BG_COLOR = "#171769";
+export const SWIPE_MENU_PRIMARY_BTN_HEIGHT_PERCENTAGE = "25%";
+export const SWIPE_MENU_PRIMARY_BTN_FONT_SIZE = 10;
+export const SWIPE_MENU_PRIMARY_BTN_FONT_COLOR = "#FFFFFF";
+
+export function swipeMenuPrimaryButtonWidthPx(viewportWidthPx: number): number {
+  return Math.max(0, viewportWidthPx - 2 * SWIPE_MENU_SIDE_PADDING_PX);
+}
+
+export function swipeMenuPrimaryButtonHeightPx(viewportHeightPx: number): number {
+  const pct = Number.parseFloat(SWIPE_MENU_PRIMARY_BTN_HEIGHT_PERCENTAGE);
+  if (!Number.isFinite(pct)) return 0;
+  return Math.max(0, (viewportHeightPx * pct) / 100);
+}
+
+export type SwipeMenuViewport = {
+  widthPx: number;
+  heightPx: number;
+};
+
+export const SwipeMenuViewportContext = createContext<SwipeMenuViewport>({
+  widthPx: 0,
+  heightPx: 0,
+});
+
+export function useSwipeMenuViewport(): SwipeMenuViewport {
+  return useContext(SwipeMenuViewportContext);
+}
 
 export type MainMenuProps = {
   /** Virtual phone frame; used for sizing and max expand height. */
@@ -78,6 +111,7 @@ export function MainMenu({ viewportRef, children, className }: MainMenuProps) {
 
   const onPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
     if (e.button !== 0) return;
+    if (swipeMenuPointerTargetIsInteractive(e.target)) return;
     measureViewport();
     dragRef.current = {
       pointerId: e.pointerId,
@@ -175,17 +209,35 @@ export function MainMenu({ viewportRef, children, className }: MainMenuProps) {
         <div style={pullIndicatorStyle} />
       </div>
       {children != null && contentHeightPx > 0 ? (
+        <SwipeMenuViewportContext.Provider
+          value={{ widthPx: viewportSize.width, heightPx: viewportSize.height }}
+        >
         <div
           style={{
             height: contentHeightPx,
             minHeight: 0,
             overflow: "auto",
-            padding: "8px 12px 12px",
+            padding: "8px 0 12px",
+            display: "flex",
+            justifyContent: "center",
             boxSizing: "border-box",
           }}
         >
-          {children}
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "row",
+              alignItems: "stretch",
+              gap: 8,
+              width: swipeMenuPrimaryButtonWidthPx(viewportSize.width),
+              maxWidth: "100%",
+              boxSizing: "border-box",
+            }}
+          >
+            {children}
+          </div>
         </div>
+        </SwipeMenuViewportContext.Provider>
       ) : null}
     </div>
   );

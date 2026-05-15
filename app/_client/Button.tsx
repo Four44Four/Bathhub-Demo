@@ -2,14 +2,8 @@
 
 import type { CSSProperties, MouseEventHandler, ReactNode } from "react";
 
-import { Button as ButtonConsts, Shared as SharedConsts } from "./ComponentConstants";
-
-export const TextWeight = {
-  REGULAR: SharedConsts.FONT_REGULAR_CLASS, 
-  BOLD: SharedConsts.FONT_BOLD_CLASS, 
-  LIGHT: SharedConsts.FONT_LIGHT_CLASS
-} as const;
-export type TextWeight = (typeof TextWeight)[keyof typeof TextWeight];
+import { Button as ButtonConsts } from "./ComponentConstants";
+import { TextWeight } from "./Utils";
 
 export type ButtonProps = {
   cornerRadius?: number;

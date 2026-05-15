@@ -2,13 +2,13 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState, RefObject } from "react";
-import { Button } from "./_client/Button";
+import { Button } from "./_client/viewport2d/Button";
 import {
   GlobeViewport,
   type GlobeViewportHandle,
 } from "./_client/globe/GlobeViewport";
-import { CesiumAttribution } from "./_client/CesiumAttribution";
-import { ZoomIndicator } from "./_client/ZoomIndicator";
+import { CesiumAttribution } from "./_client/viewport2d/CesiumAttribution";
+import { ZoomIndicator } from "./_client/viewport2d/ZoomIndicator";
 import { MainMenu } from "./_client/swipeup/MainMenu";
 import { FindNearestBathroom } from "./_client/swipeup/buttons/FindNearestBathroom";
 import { RegisterNewBathroom } from "./_client/swipeup/buttons/RegisterNewBathroom";

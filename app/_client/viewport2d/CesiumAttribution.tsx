@@ -1,6 +1,6 @@
 "use client";
 
-import { Shared as SharedConsts } from "./ComponentConstants";
+import { Shared as SharedConsts } from "../ComponentConstants";
 
 export function CesiumAttribution() {
   return (

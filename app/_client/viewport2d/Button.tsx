@@ -2,8 +2,8 @@
 
 import type { CSSProperties, MouseEventHandler, ReactNode } from "react";
 
-import { Button as ButtonConsts } from "./ComponentConstants";
-import { TextWeight } from "./Utils";
+import { Button as ButtonConsts } from "../ComponentConstants";
+import { TextWeight } from "../Utils";
 
 export type ButtonProps = {
   cornerRadius?: number;

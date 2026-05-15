@@ -14,10 +14,13 @@ import {
 } from "react";
 
 import {
+  SWIPE_MENU_HANDLE_ATTR,
   swipeMenuContentHeightPx,
+  swipeMenuHeightAfterHandlePointerUp,
   swipeMenuHeightAfterPointerDelta,
   swipeMenuMaxHeightPx,
   swipeMenuPullIndicatorWidthCss,
+  swipeMenuPointerTargetIsHandle,
   swipeMenuPointerTargetIsInteractive,
   swipeMenuSnapHeightPx,
   swipeMenuSnapTarget,
@@ -67,6 +70,8 @@ export function MainMenu({ viewportRef, children, className }: MainMenuProps) {
   const dragRef = useRef<{
     pointerId: number;
     lastClientY: number;
+    startClientY: number;
+    startedOnHandle: boolean;
   } | null>(null);
 
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
@@ -116,6 +121,8 @@ export function MainMenu({ viewportRef, children, className }: MainMenuProps) {
     dragRef.current = {
       pointerId: e.pointerId,
       lastClientY: e.clientY,
+      startClientY: e.clientY,
+      startedOnHandle: swipeMenuPointerTargetIsHandle(e.target),
     };
     e.currentTarget.setPointerCapture(e.pointerId);
     e.preventDefault();
@@ -145,7 +152,17 @@ export function MainMenu({ viewportRef, children, className }: MainMenuProps) {
       e.currentTarget.releasePointerCapture(e.pointerId);
     }
     const dragMaxHeightPx = resolveMaxHeightPx();
+    const pointerDeltaY = e.clientY - drag.startClientY;
     setHeightPx((current) => {
+      const afterHandleTap = swipeMenuHeightAfterHandlePointerUp(
+        drag.startedOnHandle,
+        pointerDeltaY,
+        current,
+        inactiveHeightPx,
+        dragMaxHeightPx,
+      );
+      if (afterHandleTap !== current) return afterHandleTap;
+
       const target = swipeMenuSnapTarget(
         current,
         inactiveHeightPx,
@@ -205,7 +222,11 @@ export function MainMenu({ viewportRef, children, className }: MainMenuProps) {
       onPointerUp={endDrag}
       onPointerCancel={endDrag}
     >
-      <div aria-hidden="true" style={handleStripStyle}>
+      <div
+        aria-hidden="true"
+        style={handleStripStyle}
+        {...{ [SWIPE_MENU_HANDLE_ATTR]: "" }}
+      >
         <div style={pullIndicatorStyle} />
       </div>
       {children != null && contentHeightPx > 0 ? (

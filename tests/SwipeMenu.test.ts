@@ -1,8 +1,12 @@
 import {
   swipeMenuContentHeightPx,
   swipeMenuExpandRangePx,
+  swipeMenuHeightAfterHandlePointerUp,
+  swipeMenuHeightAfterHandleToggle,
   swipeMenuHeightAfterPointerDelta,
   swipeMenuIsExpandable,
+  swipeMenuIsFullyExpanded,
+  swipeMenuIsTapGesture,
   swipeMenuMaxHeightPx,
   swipeMenuPullIndicatorWidthCss,
   swipeMenuPullIndicatorWidthPx,
@@ -123,5 +127,62 @@ describe("SwipeMenu", () => {
   test("swipeMenuSnapHeightPx", () => {
     expect(swipeMenuSnapHeightPx("collapsed", inactive, max)).toBe(inactive);
     expect(swipeMenuSnapHeightPx("expanded", inactive, max)).toBe(max);
+  });
+
+  test("swipeMenuIsFullyExpanded", () => {
+    expect(swipeMenuIsFullyExpanded(inactive, inactive, max)).toBe(false);
+    expect(swipeMenuIsFullyExpanded(120, inactive, max)).toBe(false);
+    expect(swipeMenuIsFullyExpanded(max, inactive, max)).toBe(true);
+    expect(swipeMenuIsFullyExpanded(max + 10, inactive, max)).toBe(true);
+    expect(swipeMenuIsFullyExpanded(max, inactive, inactive)).toBe(false);
+  });
+
+  test("swipeMenuHeightAfterHandleToggle", () => {
+    expect(swipeMenuHeightAfterHandleToggle(inactive, inactive, max)).toBe(max);
+    expect(swipeMenuHeightAfterHandleToggle(120, inactive, max)).toBe(max);
+    expect(swipeMenuHeightAfterHandleToggle(max, inactive, max)).toBe(inactive);
+    expect(swipeMenuHeightAfterHandleToggle(120, inactive, inactive)).toBe(120);
+  });
+
+  test("swipeMenuIsTapGesture", () => {
+    expect(swipeMenuIsTapGesture(0)).toBe(true);
+    expect(swipeMenuIsTapGesture(8)).toBe(true);
+    expect(swipeMenuIsTapGesture(-8)).toBe(true);
+    expect(swipeMenuIsTapGesture(9)).toBe(false);
+    expect(swipeMenuIsTapGesture(-9)).toBe(false);
+  });
+
+  test("swipeMenuHeightAfterHandlePointerUp expands on handle tap when collapsed", () => {
+    expect(
+      swipeMenuHeightAfterHandlePointerUp(true, 0, inactive, inactive, max),
+    ).toBe(max);
+    expect(
+      swipeMenuHeightAfterHandlePointerUp(true, 0, 120, inactive, max),
+    ).toBe(max);
+  });
+
+  test("swipeMenuHeightAfterHandlePointerUp collapses on handle tap when expanded", () => {
+    expect(
+      swipeMenuHeightAfterHandlePointerUp(true, 0, max, inactive, max),
+    ).toBe(inactive);
+  });
+
+  test("swipeMenuHeightAfterHandlePointerUp ignores drags and non-handle taps", () => {
+    const partial = 120;
+    expect(
+      swipeMenuHeightAfterHandlePointerUp(true, 20, partial, inactive, max),
+    ).toBe(partial);
+    expect(
+      swipeMenuHeightAfterHandlePointerUp(false, 0, inactive, inactive, max),
+    ).toBe(inactive);
+    expect(
+      swipeMenuHeightAfterHandlePointerUp(
+        true,
+        0,
+        inactive,
+        inactive,
+        inactive,
+      ),
+    ).toBe(inactive);
   });
 });

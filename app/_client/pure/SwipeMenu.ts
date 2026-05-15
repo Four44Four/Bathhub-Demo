@@ -112,6 +112,74 @@ export function swipeMenuSnapHeightPx(
   return target === "expanded" ? maxHeightPx : inactiveHeightPx;
 }
 
+/** `data-*` attribute marking the pull-handle strip (tap toggles expand/collapse). */
+export const SWIPE_MENU_HANDLE_ATTR = "data-swipe-menu-handle";
+
+/** Max pointer travel (px) still treated as a tap on the handle. */
+export const SWIPE_MENU_TAP_MAX_MOVEMENT_PX = 8;
+
+/** True when the menu is at its fully expanded height. */
+export function swipeMenuIsFullyExpanded(
+  heightPx: number,
+  inactiveHeightPx: number,
+  maxHeightPx: number,
+): boolean {
+  if (!swipeMenuIsExpandable(inactiveHeightPx, maxHeightPx)) {
+    return false;
+  }
+  return heightPx >= maxHeightPx;
+}
+
+/**
+ * Height after the user taps/clicks the pull handle: expand to max when not
+ * fully open, collapse when already at max.
+ */
+export function swipeMenuHeightAfterHandleToggle(
+  currentHeightPx: number,
+  inactiveHeightPx: number,
+  maxHeightPx: number,
+): number {
+  if (!swipeMenuIsExpandable(inactiveHeightPx, maxHeightPx)) {
+    return currentHeightPx;
+  }
+  if (swipeMenuIsFullyExpanded(currentHeightPx, inactiveHeightPx, maxHeightPx)) {
+    return swipeMenuSnapHeightPx("collapsed", inactiveHeightPx, maxHeightPx);
+  }
+  return swipeMenuSnapHeightPx("expanded", inactiveHeightPx, maxHeightPx);
+}
+
+/** True when pointer movement from down to up is small enough to count as a tap. */
+export function swipeMenuIsTapGesture(
+  pointerDeltaYPx: number,
+  maxMovementPx: number = SWIPE_MENU_TAP_MAX_MOVEMENT_PX,
+): boolean {
+  if (!Number.isFinite(maxMovementPx) || maxMovementPx < 0) return false;
+  return Math.abs(pointerDeltaYPx) <= maxMovementPx;
+}
+
+/**
+ * On pointer release, toggle expand/collapse when the gesture started on the
+ * handle and did not move enough to count as a drag. Otherwise returns
+ * `currentHeightPx`.
+ */
+export function swipeMenuHeightAfterHandlePointerUp(
+  startedOnHandle: boolean,
+  pointerDeltaYPx: number,
+  currentHeightPx: number,
+  inactiveHeightPx: number,
+  maxHeightPx: number,
+  tapMaxMovementPx: number = SWIPE_MENU_TAP_MAX_MOVEMENT_PX,
+): number {
+  if (!startedOnHandle || !swipeMenuIsTapGesture(pointerDeltaYPx, tapMaxMovementPx)) {
+    return currentHeightPx;
+  }
+  return swipeMenuHeightAfterHandleToggle(
+    currentHeightPx,
+    inactiveHeightPx,
+    maxHeightPx,
+  );
+}
+
 const SWIPE_MENU_INTERACTIVE_SELECTOR =
   "button, a, input, textarea, select, [role='button']";
 
@@ -123,4 +191,14 @@ export function swipeMenuPointerTargetIsInteractive(
     return false;
   }
   return target.closest(SWIPE_MENU_INTERACTIVE_SELECTOR) != null;
+}
+
+/** True when a pointer event target is on the pull-handle strip. */
+export function swipeMenuPointerTargetIsHandle(
+  target: EventTarget | null,
+): boolean {
+  if (typeof Element === "undefined" || !(target instanceof Element)) {
+    return false;
+  }
+  return target.closest(`[${SWIPE_MENU_HANDLE_ATTR}]`) != null;
 }

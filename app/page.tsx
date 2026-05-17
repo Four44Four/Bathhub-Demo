@@ -13,6 +13,7 @@ import { ZoomIndicator } from "./_client/viewport2d/ZoomIndicator";
 import { MainMenu } from "./_client/swipeup/MainMenu";
 import { FindNearestBathroom } from "./_client/swipeup/buttons/FindNearestBathroom";
 import { RegisterNewBathroom } from "./_client/swipeup/buttons/RegisterNewBathroom";
+import { AlertSystemProvider } from "./_client/viewport2d/AlertSystem";
 import { Globe as GlobeConsts } from "./_client/ComponentConstants";
 
 /** When set to `"100%"`, the globe mount fills the virtual phone frame (see `layout.tsx`) and the initial camera distance is chosen so the globe “covers” the view (no letterboxing; excess clips on the shorter axis). */
@@ -318,6 +319,7 @@ export default function Home() {
   }, []);
 
   return (
+    <AlertSystemProvider phoneViewportRef={phoneFrameRef}>
     <main className="flex h-full min-h-0 flex-col">
       <div ref={phoneFrameRef} className="relative flex min-h-0 flex-1 flex-col">
         <div ref={globeRootRef} className="relative min-h-0 flex-1 overflow-hidden">
@@ -368,5 +370,6 @@ export default function Home() {
         </div>
       </div>
     </main>
+    </AlertSystemProvider>
   );
 }

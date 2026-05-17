@@ -117,3 +117,8 @@ const SwipeMenu1 = {
         (SwipeMenu0.INACTIVE_HEIGHT_PX - SwipeMenu0.PULL_HANDLE_HEIGHT_PX) / 2,
 };
 export const SwipeMenu = { ...SwipeMenu0, ...SwipeMenu1 };
+
+export const Alerts = {
+    ACCENT_COLOR: "#EC3968",
+    TEXT_COLOR: "#ffffff",
+} as const;

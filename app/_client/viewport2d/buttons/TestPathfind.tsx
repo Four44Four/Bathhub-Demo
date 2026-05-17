@@ -3,6 +3,7 @@
 import { RefObject } from "react";
 
 import { Button } from "../Button";
+import { type AlertSystemApi, useAlertSystem } from "../AlertSystem";
 import * as ServerDebug from "../../../_server/Debug";
 import * as ServerPathfind from "../../../_server/Pathfind";
 import * as SharedUtils from "../../../_shared/Utils";
@@ -24,6 +25,9 @@ async function onTestPathfindClick(
     isClientGeoGranted: boolean,
     mapInitLat: number,
     mapInitLong: number,
+    anchorElement: HTMLElement,
+    showImportantAlert: AlertSystemApi["showImportantAlert"],
+    showPositionalAlert: AlertSystemApi["showPositionalAlert"],
 ) {
     const startPos = getStartPos(
       globeRef.current,
@@ -33,8 +37,11 @@ async function onTestPathfindClick(
     );
     const endPos = globeRef.current?.getClickedIndicatorLatLon();
     if (endPos == null) {
-      // TODO: replace with error popup handler
-      alert("No point picked !!");
+      showPositionalAlert({
+        anchorElement,
+        message: "No point picked !!",
+        side: "down",
+      });
       return;
     }
   
@@ -48,8 +55,7 @@ async function onTestPathfindClick(
         });
   
     if (pathDataErrorable.errorMsg) {
-      // TODO: replace with error popup handler
-      alert(pathDataErrorable.errorMsg);
+      showImportantAlert({ message: pathDataErrorable.errorMsg });
     } 
     else {
       const pathDataStr = JSON.stringify(pathDataErrorable.val);
@@ -68,18 +74,22 @@ export function TestPathfind({
   mapInitLat,
   mapInitLong,
 }: TestPathfindProps) {
+  const { showImportantAlert, showPositionalAlert } = useAlertSystem();
   return (
     <div className="pointer-events-none absolute inset-0 z-20">
         <Button
             text={BTN_STR}
             x={BTN_X}
             y={BTN_Y}
-            onClick={() =>
+            onClick={(event) =>
               onTestPathfindClick(
                 globeRef,
                 isClientGeoGranted,
                 mapInitLat,
                 mapInitLong,
+                event.currentTarget,
+                showImportantAlert,
+                showPositionalAlert,
               )
             }
         />

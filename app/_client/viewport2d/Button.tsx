@@ -15,6 +15,8 @@ export type ButtonProps = {
   textWeight?: TextWeight;
   x: number;
   y: number;
+  /** When set, applied as the button's CSS `width` (e.g. `"100%"` or a pixel value). */
+  width?: number | string;
   zIndex?: number;
   imageSrc?: string;
   /** When both text and `imageSrc` are set, places the image on the left (`true`) or right (`false`) of the text. Defaults to left. */
@@ -43,6 +45,7 @@ export function Button({
   text,
   x,
   y,
+  width,
   zIndex = 0,
   imageSrc,
   imageLeftOfText = true,
@@ -150,6 +153,7 @@ export function Button({
         ...baseStyle,
         padding: "10px 16px",
         borderRadius: cornerRadius,
+        ...(width != null ? { width } : {}),
       };
 
   return (

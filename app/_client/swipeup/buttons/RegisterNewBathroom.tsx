@@ -4,6 +4,7 @@ import type { RefObject } from "react";
 import { PrimaryButton } from "../PrimaryButton";
 import { useSwipeMenuViewport } from "../MainMenu";
 import type { GlobeViewportHandle } from "../../globe/GlobeViewport";
+import { useAlertSystem } from "../../viewport2d/AlertSystem";
 import * as ServerDebug from "../../../_server/Debug";
 
 export const REGISTER_NEW_BR_BTN_STR = "Register new bathroom";
@@ -15,16 +16,20 @@ export type RegisterNewBathroomProps = {
 
 export function RegisterNewBathroom({ globeRef }: RegisterNewBathroomProps) {
   const { heightPx } = useSwipeMenuViewport();
+  const { showPositionalAlert } = useAlertSystem();
   return (
     <PrimaryButton
       label={REGISTER_NEW_BR_BTN_STR}
       imagePath={REGISTER_NEW_BR_BTN_IMAGE_PATH}
       viewportHeightPx={heightPx}
-      onClick={() => {
+      onClick={(event) => {
         const latLon = globeRef.current?.getClickedIndicatorLatLon();
         if (!latLon) {
-          // TODO: replace with error popup handler
-          alert("No point picked !!");
+          showPositionalAlert({
+            anchorElement: event.currentTarget,
+            message: "No point picked !!",
+            side: "up",
+          });
           return;
         }
         const debugStr = JSON.stringify(latLon);

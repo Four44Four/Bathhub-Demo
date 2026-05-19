@@ -88,7 +88,14 @@ export const Path = {
     STROKE_EDGE_SOFT_PIXELS: 1.25,
     MAX_POLYLINE_SAMPLES: 128,
     MIN_VERTEX_SEPARATION_PIXELS: 10,
+    /** Base ellipsoid height (m) for path vertices at low camera altitudes. */
     SURFACE_CLEARANCE_METERS: 10,
+    /**
+     * Extra clearance per meter of camera altitude above the ellipsoid. Scales path height
+     * when zoomed out so the ribbon stays above the globe depth buffer without visibly
+     * lifting off the map at street-level zoom.
+     */
+    SURFACE_CLEARANCE_RAISE_FACTOR: 2e-4,
 } as const;
 
 // can't export this as const yet because `PULL_HANDLE_MARGIN_PX` relies

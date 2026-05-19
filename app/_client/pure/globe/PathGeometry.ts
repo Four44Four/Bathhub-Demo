@@ -100,3 +100,16 @@ export function filletBezierStepCount(
 ): number {
   return Math.min(maxSteps, Math.max(minSteps, Math.ceil(cornerAngleRad / radiansPerStep)));
 }
+
+/**
+ * Ellipsoid height (m) for path vertices. Grows with camera altitude so the geodesic ribbon
+ * stays in front of the globe mesh when depth precision is coarse at far zoom.
+ */
+export function pathSurfaceClearanceMeters(
+  cameraHeightM: number,
+  baseClearanceM: number,
+  raiseFactor: number,
+): number {
+  const h = Math.max(0, cameraHeightM);
+  return baseClearanceM + h * raiseFactor;
+}

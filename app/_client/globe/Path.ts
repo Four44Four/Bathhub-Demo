@@ -9,6 +9,7 @@ import {
   pathEdgeStart01,
   pathGeometryWidthPixels,
   pathScreenSegmentCollinearityDot,
+  pathSurfaceClearanceMeters,
   quadraticBezierVector3,
   resamplePolylineUniformIndices,
   shouldKeepPathLodVertexAfterMerge,
@@ -198,9 +199,14 @@ function buildCapsuleSamples(
   scene: CesiumTypes.Scene,
   ellipsoid: CesiumTypes.Ellipsoid,
   points: Point[],
+  cameraHeightM: number,
 ): CesiumTypes.Cartesian3[] {
-  // Match GlobeImage.ts default marker/click-indicator height above ellipsoid.
-  const clearance = PathConsts.SURFACE_CLEARANCE_METERS;
+  // Match GlobeImage.ts base marker height; raise with camera altitude to avoid globe clipping.
+  const clearance = pathSurfaceClearanceMeters(
+    cameraHeightM,
+    PathConsts.SURFACE_CLEARANCE_METERS,
+    PathConsts.SURFACE_CLEARANCE_RAISE_FACTOR,
+  );
   const raw = points.map((p) =>
     Cesium.Cartesian3.fromDegrees(p.longitude, p.latitude, clearance, ellipsoid),
   );
@@ -324,7 +330,8 @@ export function installPath(
   };
 
   const build = (points: Point[]) => {
-    const samples = buildCapsuleSamples(Cesium, scene, ellipsoid, points);
+    const cameraHeightM = viewer.camera.positionCartographic.height ?? 0;
+    const samples = buildCapsuleSamples(Cesium, scene, ellipsoid, points, cameraHeightM);
     if (samples.length < 2) return;
     const fabric = buildPathRibbonFabric(
       Cesium,

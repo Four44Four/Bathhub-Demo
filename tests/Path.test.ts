@@ -28,4 +28,10 @@ describe("pathGeometryMath", () => {
     test("resamplePolylineUniformIndices", () => {
       expect(PathGeom.resamplePolylineUniformIndices(3, 5)).toEqual([0, 2, 4]);
     });
+
+    test("pathSurfaceClearanceMeters: base at ground level, scales with camera height", () => {
+      expect(PathGeom.pathSurfaceClearanceMeters(0, 10, 2e-5)).toBe(10);
+      expect(PathGeom.pathSurfaceClearanceMeters(1_500_000, 10, 2e-5)).toBeCloseTo(40, 5);
+      expect(PathGeom.pathSurfaceClearanceMeters(8_000_000, 10, 2e-5)).toBeCloseTo(170, 5);
+    });
 });

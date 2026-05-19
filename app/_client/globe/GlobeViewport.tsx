@@ -485,6 +485,9 @@ export function GlobeViewport({
 
       const pathHandle = installPath(Cesium, viewer, ellipsoid);
       pathHandleRef.current = pathHandle;
+      const rebuildPathOnCameraMoveEnd = () => {
+        pathHandle.rebuildActivePath();
+      };
 
       // Ensure Cesium never handles double-click / double-tap camera actions.
       // We keep our own pointer-based interaction, but remove the default input actions
@@ -560,6 +563,7 @@ export function GlobeViewport({
           tickGeoArrivalLock();
           return GeoArrival.isGlobeOrbitUserInputAllowed(geoArrivalLockStateRef.current);
         },
+        onOrbitRotateAnimationEnd: rebuildPathOnCameraMoveEnd,
       });
 
       // Publish the controls for the imperative `animateTo` handle. If the
@@ -732,9 +736,6 @@ export function GlobeViewport({
       applyLodVisualState(viewer.camera.positionCartographic.height ?? 8_000_000);
       viewer.camera.changed.addEventListener(scheduleLodUpdate);
 
-      const rebuildPathOnCameraMoveEnd = () => {
-        pathHandle.rebuildActivePath();
-      };
       viewer.camera.moveEnd.addEventListener(rebuildPathOnCameraMoveEnd);
 
       const ro = new ResizeObserver(() => {

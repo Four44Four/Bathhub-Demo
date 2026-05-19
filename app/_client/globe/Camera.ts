@@ -29,6 +29,12 @@ export type InstallOrbitCameraOptions = {
    * Used while post-geolocation camera animations run.
    */
   isUserGlobeOrbitInputAllowed?: () => boolean;
+  /**
+   * Fired when a programmatic `animateTo` rotation finishes (including the no-op case where
+   * the camera is already at the target). Used to rebuild screen-space path geometry that
+   * does not receive `camera.moveEnd` while a concurrent zoom animation is still running.
+   */
+  onOrbitRotateAnimationEnd?: () => void;
 };
 
 export type InstalledOrbitCameraControls = {
@@ -72,6 +78,7 @@ export function installOrbitCameraControls({
   onClickLatLonDegrees,
   onGlobeViewportInteraction,
   isUserGlobeOrbitInputAllowed,
+  onOrbitRotateAnimationEnd,
 }: InstallOrbitCameraOptions): InstalledOrbitCameraControls {
   const EPS = 1e-3;
 
@@ -591,7 +598,10 @@ export function installOrbitCameraControls({
     const dTheta = OrbitCam.orbitShortestDeltaLongitudeRad(startTheta, targetTheta);
     const dPhi = targetPhi - startPhi;
 
-    if (Math.abs(dTheta) < 1e-6 && Math.abs(dPhi) < 1e-6) return;
+    if (Math.abs(dTheta) < 1e-6 && Math.abs(dPhi) < 1e-6) {
+      onOrbitRotateAnimationEnd?.();
+      return;
+    }
 
     const startT =
       typeof performance !== "undefined" ? performance.now() : Date.now();
@@ -614,6 +624,7 @@ export function installOrbitCameraControls({
         rotateAnimRaf = requestAnimationFrame(tick);
       } else {
         rotateAnimRaf = null;
+        onOrbitRotateAnimationEnd?.();
       }
     };
     rotateAnimRaf = requestAnimationFrame(tick);

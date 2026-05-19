@@ -1,7 +1,3 @@
-# Sprint 1 (frontend/UI)
- - Write down specification for Alert system
- - Write Sprint 1 reflection
-
 # Sprint 2 (basic backend)
  - Add dummy backend
  - Add buttons on home page trigger dummy backend

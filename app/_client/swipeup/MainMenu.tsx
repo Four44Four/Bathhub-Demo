@@ -16,6 +16,8 @@ import {
 
 import {
   SWIPE_MENU_HANDLE_ATTR,
+  swipeMenuBackdropOpacity,
+  swipeMenuBackdropOpacityLerp,
   swipeMenuContentHeightPx,
   swipeMenuHeightAfterHandlePointerUp,
   swipeMenuHeightAfterOutsideTap,
@@ -86,6 +88,57 @@ export function MainMenu({
 
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
   const [heightPx, setHeightPx] = useState(inactiveHeightPx);
+  const [backdropOpacity, setBackdropOpacity] = useState(0);
+  const backdropOpacityRef = useRef(0);
+  const backdropAnimFrameRef = useRef<number | null>(null);
+
+  const cancelBackdropAnimation = useCallback(() => {
+    if (backdropAnimFrameRef.current !== null) {
+      cancelAnimationFrame(backdropAnimFrameRef.current);
+      backdropAnimFrameRef.current = null;
+    }
+  }, []);
+
+  const setBackdropOpacityImmediate = useCallback(
+    (opacity: number) => {
+      cancelBackdropAnimation();
+      const clamped = Math.min(1, Math.max(0, opacity));
+      backdropOpacityRef.current = clamped;
+      setBackdropOpacity(clamped);
+    },
+    [cancelBackdropAnimation],
+  );
+
+  const animateBackdropOpacityTo = useCallback(
+    (targetOpacity: number) => {
+      cancelBackdropAnimation();
+      const from = backdropOpacityRef.current;
+      const to = Math.min(1, Math.max(0, targetOpacity));
+      if (from === to) {
+        setBackdropOpacityImmediate(to);
+        return;
+      }
+      const durationMs = SwipeMenuConsts.BACKDROP_INTERP_TOGGLE_MS;
+      const startMs =
+        typeof performance !== "undefined" ? performance.now() : Date.now();
+
+      const tick = (nowMs: number) => {
+        const elapsed = nowMs - startMs;
+        const t = durationMs > 0 ? Math.min(1, elapsed / durationMs) : 1;
+        const next = swipeMenuBackdropOpacityLerp(from, to, t);
+        backdropOpacityRef.current = next;
+        setBackdropOpacity(next);
+        if (t < 1) {
+          backdropAnimFrameRef.current = requestAnimationFrame(tick);
+        } else {
+          backdropAnimFrameRef.current = null;
+        }
+      };
+
+      backdropAnimFrameRef.current = requestAnimationFrame(tick);
+    },
+    [cancelBackdropAnimation, setBackdropOpacityImmediate],
+  );
 
   const resolveMaxHeightPx = useCallback(() => {
     const measuredHeight =
@@ -131,13 +184,17 @@ export function MainMenu({
   const collapseIfOpenAboveCollapsedRef = useRef<() => void>(() => {});
   collapseIfOpenAboveCollapsedRef.current = () => {
     const dragMaxHeightPx = resolveMaxHeightPx();
-    setHeightPx((current) =>
-      swipeMenuHeightAfterOutsideTap(
+    setHeightPx((current) => {
+      const next = swipeMenuHeightAfterOutsideTap(
         current,
         inactiveHeightPx,
         dragMaxHeightPx,
-      ),
-    );
+      );
+      setBackdropOpacityImmediate(
+        swipeMenuBackdropOpacity(next, inactiveHeightPx, dragMaxHeightPx),
+      );
+      return next;
+    });
   };
 
   useEffect(() => {
@@ -158,8 +215,11 @@ export function MainMenu({
   useEffect(() => {
     onInteractionChange?.({
       blocksViewportPointer: isOpenAboveCollapsed,
+      backdropOpacity,
     });
-  }, [isOpenAboveCollapsed, onInteractionChange]);
+  }, [isOpenAboveCollapsed, backdropOpacity, onInteractionChange]);
+
+  useEffect(() => () => cancelBackdropAnimation(), [cancelBackdropAnimation]);
 
   const onPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
     if (e.button !== 0) return;
@@ -181,14 +241,18 @@ export function MainMenu({
     const deltaY = e.clientY - drag.lastClientY;
     drag.lastClientY = e.clientY;
     const dragMaxHeightPx = resolveMaxHeightPx();
-    setHeightPx((current) =>
-      swipeMenuHeightAfterPointerDelta(
+    setHeightPx((current) => {
+      const next = swipeMenuHeightAfterPointerDelta(
         current,
         deltaY,
         inactiveHeightPx,
         dragMaxHeightPx,
-      ),
-    );
+      );
+      setBackdropOpacityImmediate(
+        swipeMenuBackdropOpacity(next, inactiveHeightPx, dragMaxHeightPx),
+      );
+      return next;
+    });
   };
 
   const endDrag = (e: ReactPointerEvent<HTMLDivElement>) => {
@@ -208,7 +272,16 @@ export function MainMenu({
         inactiveHeightPx,
         dragMaxHeightPx,
       );
-      if (afterHandleTap !== current) return afterHandleTap;
+      if (afterHandleTap !== current) {
+        animateBackdropOpacityTo(
+          swipeMenuBackdropOpacity(
+            afterHandleTap,
+            inactiveHeightPx,
+            dragMaxHeightPx,
+          ),
+        );
+        return afterHandleTap;
+      }
 
       const target = swipeMenuSnapTarget(
         current,
@@ -216,7 +289,15 @@ export function MainMenu({
         dragMaxHeightPx,
         SwipeMenuConsts.EXPAND_SNAP_THRESHOLD_RATIO,
       );
-      return swipeMenuSnapHeightPx(target, inactiveHeightPx, dragMaxHeightPx);
+      const snapped = swipeMenuSnapHeightPx(
+        target,
+        inactiveHeightPx,
+        dragMaxHeightPx,
+      );
+      setBackdropOpacityImmediate(
+        swipeMenuBackdropOpacity(snapped, inactiveHeightPx, dragMaxHeightPx),
+      );
+      return snapped;
     });
   };
 

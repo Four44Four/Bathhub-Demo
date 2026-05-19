@@ -5,10 +5,13 @@ import { createContext, useContext } from "react";
 export type SwipeMenuInteraction = {
   /** True while the swipe-up menu is taller than its collapsed handle strip. */
   blocksViewportPointer: boolean;
+  /** 0–1 opacity multiplier for the globe dim backdrop (see {@link SWIPE_UP_BACKDROP_COLOR}). */
+  backdropOpacity: number;
 };
 
 export const SwipeMenuInteractionContext = createContext<SwipeMenuInteraction>({
   blocksViewportPointer: false,
+  backdropOpacity: 0,
 });
 
 let viewportClickSuppressedUntilMs = 0;
@@ -26,4 +29,8 @@ export function areViewportClicksSuppressed(): boolean {
 
 export function useSwipeMenuBlocksViewport(): boolean {
   return useContext(SwipeMenuInteractionContext).blocksViewportPointer;
+}
+
+export function useSwipeMenuBackdropOpacity(): number {
+  return useContext(SwipeMenuInteractionContext).backdropOpacity;
 }

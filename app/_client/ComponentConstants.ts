@@ -117,6 +117,10 @@ const SwipeMenu0 = {
     PRIMARY_BTN_HEIGHT_PERCENTAGE: 25,
     PRIMARY_BTN_FONT_SIZE: 10,
     PRIMARY_BTN_FONT_COLOR: "#FFFFFF",
+    /** Milliseconds to fade the globe backdrop when the swipe-up handle is tapped to toggle. */
+    BACKDROP_INTERP_TOGGLE_MS: 100,
+    /** Globe dim overlay color while the swipe-up menu is open (CSS rgba). */
+    BACKDROP_COLOR: "rgba(12, 13, 18, 0.62)",
 };
 const SwipeMenu1 = {
     /** Inset from the menu shell edge to the pull-handle pill. */

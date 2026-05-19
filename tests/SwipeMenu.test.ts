@@ -1,5 +1,8 @@
 import {
+  swipeMenuBackdropOpacity,
+  swipeMenuBackdropOpacityLerp,
   swipeMenuContentHeightPx,
+  swipeMenuExpandProgress,
   swipeMenuExpandRangePx,
   swipeMenuHeightAfterHandlePointerUp,
   swipeMenuHeightAfterHandleToggle,
@@ -24,6 +27,22 @@ describe("SwipeMenu", () => {
   test("swipeMenuContentHeightPx", () => {
     expect(swipeMenuContentHeightPx(20, inactive)).toBe(0);
     expect(swipeMenuContentHeightPx(120, inactive)).toBe(100);
+  });
+
+  test("swipeMenuExpandProgress and backdrop opacity", () => {
+    expect(swipeMenuExpandProgress(inactive, inactive, max)).toBe(0);
+    expect(swipeMenuExpandProgress(max, inactive, max)).toBe(1);
+    const mid = inactive + (max - inactive) * 0.5;
+    expect(swipeMenuExpandProgress(mid, inactive, max)).toBeCloseTo(0.5, 5);
+    expect(swipeMenuBackdropOpacity(mid, inactive, max)).toBeCloseTo(0.5, 5);
+    expect(swipeMenuExpandProgress(inactive, inactive, inactive)).toBe(0);
+  });
+
+  test("swipeMenuBackdropOpacityLerp", () => {
+    expect(swipeMenuBackdropOpacityLerp(0, 1, 0)).toBe(0);
+    expect(swipeMenuBackdropOpacityLerp(0, 1, 1)).toBe(1);
+    expect(swipeMenuBackdropOpacityLerp(0.2, 0.8, 0.5)).toBeCloseTo(0.5, 5);
+    expect(swipeMenuBackdropOpacityLerp(0, 1, 2)).toBe(1);
   });
 
   test("swipeMenuPullIndicatorWidthCss", () => {

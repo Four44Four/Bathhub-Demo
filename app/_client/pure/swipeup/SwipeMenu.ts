@@ -50,6 +50,39 @@ export function swipeMenuExpandRangePx(
   return Math.max(0, maxHeightPx - inactiveHeightPx);
 }
 
+/**
+ * Normalized open amount of the swipe-up menu (0 = collapsed handle strip, 1 = fully expanded).
+ */
+export function swipeMenuExpandProgress(
+  heightPx: number,
+  inactiveHeightPx: number,
+  maxHeightPx: number,
+): number {
+  const range = swipeMenuExpandRangePx(inactiveHeightPx, maxHeightPx);
+  if (range <= 0) return 0;
+  const t = (heightPx - inactiveHeightPx) / range;
+  return Utils.clamp01(t);
+}
+
+/** Backdrop opacity over the globe while the menu opens (matches {@link swipeMenuExpandProgress}). */
+export function swipeMenuBackdropOpacity(
+  heightPx: number,
+  inactiveHeightPx: number,
+  maxHeightPx: number,
+): number {
+  return swipeMenuExpandProgress(heightPx, inactiveHeightPx, maxHeightPx);
+}
+
+/** Linearly interpolate backdrop opacity for handle-toggle animations. */
+export function swipeMenuBackdropOpacityLerp(
+  fromOpacity: number,
+  toOpacity: number,
+  progress01: number,
+): number {
+  const t = Utils.clamp01(progress01);
+  return fromOpacity + (toOpacity - fromOpacity) * t;
+}
+
 /** True when the menu can be dragged above its collapsed height. */
 export function swipeMenuIsExpandable(
   inactiveHeightPx: number,

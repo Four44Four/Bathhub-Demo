@@ -11,6 +11,7 @@ import {
 import { CesiumAttribution } from "./_client/viewport2d/CesiumAttribution";
 import { ZoomIndicator } from "./_client/viewport2d/ZoomIndicator";
 import { MainMenu } from "./_client/swipeup/MainMenu";
+import { SwipeMenuBackdrop } from "./_client/swipeup/SwipeMenuBackdrop";
 import {
   SwipeMenuInteractionContext,
   type SwipeMenuInteraction,
@@ -78,7 +79,10 @@ export default function Home() {
     pulse: 0,
   });
   const [swipeMenuInteraction, setSwipeMenuInteraction] =
-    useState<SwipeMenuInteraction>({ blocksViewportPointer: false });
+    useState<SwipeMenuInteraction>({
+      blocksViewportPointer: false,
+      backdropOpacity: 0,
+    });
   // Bumped when module-level `mapInitLat` / `mapInitLong` / `isClientGeoGranted`
   // update without a `setGlobeInit` (e.g. geo animate-on-init) so consumers like
   // `<TestPathfind>` re-render with fresh coordinates.
@@ -349,6 +353,7 @@ export default function Home() {
               setZoomIndicator((z) => ({ x, y, pulse: z.pulse + 1 }));
             }}
           />
+          <SwipeMenuBackdrop />
           <ZoomIndicator
             x={zoomIndicator.x}
             y={zoomIndicator.y}

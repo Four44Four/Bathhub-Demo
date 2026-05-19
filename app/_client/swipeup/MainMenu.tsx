@@ -4,6 +4,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useLayoutEffect,
   useRef,
   useState,
@@ -17,7 +18,9 @@ import {
   SWIPE_MENU_HANDLE_ATTR,
   swipeMenuContentHeightPx,
   swipeMenuHeightAfterHandlePointerUp,
+  swipeMenuHeightAfterOutsideTap,
   swipeMenuHeightAfterPointerDelta,
+  swipeMenuIsOpenAboveCollapsed,
   swipeMenuMaxHeightPx,
   swipeMenuPullIndicatorWidthCss,
   swipeMenuPointerTargetIsHandle,
@@ -26,7 +29,12 @@ import {
   swipeMenuSnapTarget,
 } from "../pure/swipeup/SwipeMenu";
 
+import { subscribeOnTap, TAP_MAX_MOVEMENT_PX } from "../NonDragTapDetector";
 import { SwipeMenu as SwipeMenuConsts } from "../ComponentConstants";
+import {
+  suppressViewportClicksBriefly,
+  type SwipeMenuInteraction,
+} from "./SwipeMenuInteraction";
 
 export function swipeMenuPrimaryButtonWidthPx(viewportWidthPx: number): number {
   return Math.max(0, viewportWidthPx - 2 * SwipeMenuConsts.SIDE_PADDING_PX);
@@ -57,9 +65,16 @@ export type MainMenuProps = {
   viewportRef: RefObject<HTMLElement | null>;
   children?: ReactNode;
   className?: string;
+  /** Fired when open/expanded state changes (controls viewport pointer blocking). */
+  onInteractionChange?: (interaction: SwipeMenuInteraction) => void;
 };
 
-export function MainMenu({ viewportRef, children, className }: MainMenuProps) {
+export function MainMenu({
+  viewportRef,
+  children,
+  className,
+  onInteractionChange,
+}: MainMenuProps) {
   const inactiveHeightPx = SwipeMenuConsts.INACTIVE_HEIGHT_PX;
   const dragRef = useRef<{
     pointerId: number;
@@ -67,6 +82,7 @@ export function MainMenu({ viewportRef, children, className }: MainMenuProps) {
     startClientY: number;
     startedOnHandle: boolean;
   } | null>(null);
+  const outsideDismissRef = useRef<HTMLDivElement>(null);
 
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
   const [heightPx, setHeightPx] = useState(inactiveHeightPx);
@@ -82,6 +98,10 @@ export function MainMenu({ viewportRef, children, className }: MainMenuProps) {
   }, [viewportRef, viewportSize.height, inactiveHeightPx]);
 
   const maxHeightPx = resolveMaxHeightPx();
+  const isOpenAboveCollapsed = swipeMenuIsOpenAboveCollapsed(
+    heightPx,
+    inactiveHeightPx,
+  );
 
   const contentHeightPx = swipeMenuContentHeightPx(heightPx, inactiveHeightPx);
 
@@ -107,6 +127,39 @@ export function MainMenu({ viewportRef, children, className }: MainMenuProps) {
   useLayoutEffect(() => {
     setHeightPx((h) => Math.min(Math.max(h, inactiveHeightPx), maxHeightPx));
   }, [inactiveHeightPx, maxHeightPx]);
+
+  const collapseIfOpenAboveCollapsedRef = useRef<() => void>(() => {});
+  collapseIfOpenAboveCollapsedRef.current = () => {
+    const dragMaxHeightPx = resolveMaxHeightPx();
+    setHeightPx((current) =>
+      swipeMenuHeightAfterOutsideTap(
+        current,
+        inactiveHeightPx,
+        dragMaxHeightPx,
+      ),
+    );
+  };
+
+  useEffect(() => {
+    if (!isOpenAboveCollapsed) return;
+    const el = outsideDismissRef.current;
+    if (!el) return;
+    return subscribeOnTap(
+      () => {
+        suppressViewportClicksBriefly();
+        collapseIfOpenAboveCollapsedRef.current();
+      },
+      el,
+      TAP_MAX_MOVEMENT_PX,
+      true,
+    );
+  }, [isOpenAboveCollapsed]);
+
+  useEffect(() => {
+    onInteractionChange?.({
+      blocksViewportPointer: isOpenAboveCollapsed,
+    });
+  }, [isOpenAboveCollapsed, onInteractionChange]);
 
   const onPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
     if (e.button !== 0) return;
@@ -183,6 +236,15 @@ export function MainMenu({ viewportRef, children, className }: MainMenuProps) {
     overflow: "hidden",
     display: "flex",
     flexDirection: "column",
+    zIndex: 1,
+  };
+
+  const outsideDismissStyle: CSSProperties = {
+    position: "absolute",
+    inset: 0,
+    pointerEvents: "auto",
+    touchAction: "none",
+    zIndex: 0,
   };
 
   const handleStripStyle: CSSProperties = {
@@ -208,6 +270,18 @@ export function MainMenu({ viewportRef, children, className }: MainMenuProps) {
   };
 
   return (
+    <>
+      {isOpenAboveCollapsed ? (
+        <div
+          ref={outsideDismissRef}
+          aria-hidden="true"
+          style={outsideDismissStyle}
+          onPointerDown={(e) => {
+            if (e.button !== 0) return;
+            e.preventDefault();
+          }}
+        />
+      ) : null}
     <div
       className={className}
       style={shellStyle}
@@ -255,5 +329,6 @@ export function MainMenu({ viewportRef, children, className }: MainMenuProps) {
         </SwipeMenuViewportContext.Provider>
       ) : null}
     </div>
+    </>
   );
 }

@@ -125,13 +125,16 @@ type ListenerTarget = {
 };
 
 /**
- * Observes pointer gestures on `target` (capture phase) without blocking them.
+ * Observes pointer gestures on `target` (capture phase).
  * Invokes `onTap` when a tap/click completes; drags do not trigger.
+ * When `consumePointerEvent` is true, default actions (including the synthetic
+ * `click`) are suppressed for recognized taps.
  */
 export function subscribeOnTap(
   onTap: () => void,
   target: ListenerTarget = document,
   maxMovementPx: number = TAP_MAX_MOVEMENT_PX,
+  consumePointerEvent = false,
 ): () => void {
   let gesture = INITIAL_POINTER_GESTURE;
   const captureOpts: AddEventListenerOptions = { capture: true };
@@ -157,7 +160,12 @@ export function subscribeOnTap(
       maxMovementPx,
     );
     gesture = INITIAL_POINTER_GESTURE;
-    if (nonDragTapped) onTap();
+    if (!nonDragTapped) return;
+    if (consumePointerEvent) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    onTap();
   };
 
   target.addEventListener("pointerdown", onPointerDown, captureOpts);

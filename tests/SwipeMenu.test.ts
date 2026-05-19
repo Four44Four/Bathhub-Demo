@@ -3,9 +3,11 @@ import {
   swipeMenuExpandRangePx,
   swipeMenuHeightAfterHandlePointerUp,
   swipeMenuHeightAfterHandleToggle,
+  swipeMenuHeightAfterOutsideTap,
   swipeMenuHeightAfterPointerDelta,
   swipeMenuIsExpandable,
   swipeMenuIsFullyExpanded,
+  swipeMenuIsOpenAboveCollapsed,
   swipeMenuIsTapGesture,
   swipeMenuMaxHeightPx,
   swipeMenuPullIndicatorWidthCss,
@@ -165,6 +167,20 @@ describe("SwipeMenu", () => {
     expect(
       swipeMenuHeightAfterHandlePointerUp(true, 0, max, inactive, max),
     ).toBe(inactive);
+  });
+
+  test("swipeMenuIsOpenAboveCollapsed", () => {
+    expect(swipeMenuIsOpenAboveCollapsed(inactive, inactive)).toBe(false);
+    expect(swipeMenuIsOpenAboveCollapsed(inactive + 1, inactive)).toBe(true);
+    expect(swipeMenuIsOpenAboveCollapsed(max, inactive)).toBe(true);
+  });
+
+  test("swipeMenuHeightAfterOutsideTap collapses when open", () => {
+    expect(swipeMenuHeightAfterOutsideTap(max, inactive, max)).toBe(inactive);
+    expect(swipeMenuHeightAfterOutsideTap(120, inactive, max)).toBe(inactive);
+    expect(swipeMenuHeightAfterOutsideTap(inactive, inactive, max)).toBe(
+      inactive,
+    );
   });
 
   test("swipeMenuHeightAfterHandlePointerUp ignores drags and non-handle taps", () => {

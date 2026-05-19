@@ -11,6 +11,10 @@ import {
 import { CesiumAttribution } from "./_client/viewport2d/CesiumAttribution";
 import { ZoomIndicator } from "./_client/viewport2d/ZoomIndicator";
 import { MainMenu } from "./_client/swipeup/MainMenu";
+import {
+  SwipeMenuInteractionContext,
+  type SwipeMenuInteraction,
+} from "./_client/swipeup/SwipeMenuInteraction";
 import { FindNearestBathroom } from "./_client/swipeup/buttons/FindNearestBathroom";
 import { RegisterNewBathroom } from "./_client/swipeup/buttons/RegisterNewBathroom";
 import { AlertSystemProvider } from "./_client/viewport2d/AlertSystem";
@@ -73,6 +77,8 @@ export default function Home() {
     y: 0,
     pulse: 0,
   });
+  const [swipeMenuInteraction, setSwipeMenuInteraction] =
+    useState<SwipeMenuInteraction>({ blocksViewportPointer: false });
   // Bumped when module-level `mapInitLat` / `mapInitLong` / `isClientGeoGranted`
   // update without a `setGlobeInit` (e.g. geo animate-on-init) so consumers like
   // `<TestPathfind>` re-render with fresh coordinates.
@@ -320,9 +326,17 @@ export default function Home() {
 
   return (
     <AlertSystemProvider phoneViewportRef={phoneFrameRef}>
+    <SwipeMenuInteractionContext.Provider value={swipeMenuInteraction}>
     <main className="flex h-full min-h-0 flex-col">
       <div ref={phoneFrameRef} className="relative flex min-h-0 flex-1 flex-col">
-        <div ref={globeRootRef} className="relative min-h-0 flex-1 overflow-hidden">
+        <div
+          ref={globeRootRef}
+          className={
+            swipeMenuInteraction.blocksViewportPointer
+              ? "relative min-h-0 flex-1 overflow-hidden pointer-events-none touch-none"
+              : "relative min-h-0 flex-1 overflow-hidden"
+          }
+        >
           <GlobeViewport
             ref={globeRef}
             initLat={globeInit.lat}
@@ -349,7 +363,13 @@ export default function Home() {
           />
         </div>
         <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex justify-end pt-1 pr-1">
-          <div className="pointer-events-auto max-w-[50%] text-right">
+          <div
+            className={
+              swipeMenuInteraction.blocksViewportPointer
+                ? "pointer-events-none max-w-[50%] text-right"
+                : "pointer-events-auto max-w-[50%] text-right"
+            }
+          >
             <CesiumAttribution />
           </div>
         </div>
@@ -363,13 +383,17 @@ export default function Home() {
           />
         ) : null}
         <div className="pointer-events-none absolute inset-0 z-40">
-          <MainMenu viewportRef={phoneFrameRef}>
+          <MainMenu
+            viewportRef={phoneFrameRef}
+            onInteractionChange={setSwipeMenuInteraction}
+          >
             <FindNearestBathroom />
             <RegisterNewBathroom globeRef={globeRef} />
           </MainMenu>
         </div>
       </div>
     </main>
+    </SwipeMenuInteractionContext.Provider>
     </AlertSystemProvider>
   );
 }

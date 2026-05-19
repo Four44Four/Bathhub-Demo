@@ -19,7 +19,7 @@ import {
   positionalAlertIdsWithDetachedAnchors,
   subscribePositionalAlertClipRect,
 } from "../pure/viewport2d/PositionalAlertAnchor";
-import { subscribeOnTap } from "./NonDragTapDetector";
+import { subscribeOnTap } from "../NonDragTapDetector";
 
 import {
   alertSystemDismissAllPositional,

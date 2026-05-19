@@ -24,6 +24,7 @@ import { globeLodVisualStateFromCameraHeightM } from "../pure/globe/GlobeLayerLo
 import { TwoToneTileProcessor } from "./TwoToneTileProcessor";
 import { dimensionCss } from "../pure/globe/GlobeViewportCss";
 import * as GeoArrival from "../pure/globe/GeoArrivalCameraLock";
+import { useSwipeMenuBlocksViewport } from "../swipeup/SwipeMenuInteraction";
 
 /** Set to true once `GLOBE_VIEWPORT_DETECT_IDLE_MS` elapses without move/zoom activity; cleared when activity resumes. */
 let isClientIdle = false;
@@ -185,6 +186,9 @@ export function GlobeViewport({
 }: GlobeViewportProps) {
   const mountRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const blocksViewportPointer = useSwipeMenuBlocksViewport();
+  const blocksViewportPointerRef = useRef(blocksViewportPointer);
+  blocksViewportPointerRef.current = blocksViewportPointer;
   // The orbit camera controls are created inside an async init() below; until
   // they exist, queue the most recent `animateTo` request and replay it once
   // the viewer is ready.
@@ -560,6 +564,7 @@ export function GlobeViewport({
           clickedIndicator.setLatLonDegrees(lat, lon);
         },
         isUserGlobeOrbitInputAllowed: () => {
+          if (blocksViewportPointerRef.current) return false;
           tickGeoArrivalLock();
           return GeoArrival.isGlobeOrbitUserInputAllowed(geoArrivalLockStateRef.current);
         },

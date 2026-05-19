@@ -1,8 +1,16 @@
 "use client";
 
-import type { CSSProperties, MouseEventHandler, ReactNode } from "react";
+import type {
+  CSSProperties,
+  MouseEventHandler,
+  ReactNode,
+} from "react";
 
 import { Button as ButtonConsts } from "../ComponentConstants";
+import {
+  areViewportClicksSuppressed,
+  useSwipeMenuBlocksViewport,
+} from "../swipeup/SwipeMenuInteraction";
 import { TextWeight } from "../Utils";
 
 export type ButtonProps = {
@@ -55,6 +63,7 @@ export function Button({
   circularPaddingPx = 0,
   onClick,
 }: ButtonProps) {
+  const viewportPointerBlocked = useSwipeMenuBlocksViewport();
   const hasText = text != null && text.length > 0;
   const hasImage = imageSrc != null && imageSrc.length > 0;
   const useCircularLayout = circular && hasImage && !hasText;
@@ -156,11 +165,21 @@ export function Button({
         ...(width != null ? { width } : {}),
       };
 
+  const handleClick: MouseEventHandler<HTMLButtonElement> = (event) => {
+    if (viewportPointerBlocked || areViewportClicksSuppressed()) {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+    onClick?.(event);
+  };
+
   return (
     <button
       type="button"
-      className="pointer-events-auto"
-      onClick={onClick}
+      className={viewportPointerBlocked ? "pointer-events-none" : "pointer-events-auto"}
+      disabled={viewportPointerBlocked}
+      onClick={handleClick}
       style={layoutStyle}
     >
       {inner}

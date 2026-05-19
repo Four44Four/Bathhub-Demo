@@ -157,6 +157,14 @@ export function swipeMenuIsTapGesture(
   return Math.abs(pointerDeltaYPx) <= maxMovementPx;
 }
 
+/** True when the menu panel is taller than its collapsed handle strip. */
+export function swipeMenuIsOpenAboveCollapsed(
+  heightPx: number,
+  inactiveHeightPx: number,
+): boolean {
+  return heightPx > inactiveHeightPx;
+}
+
 /**
  * On pointer release, toggle expand/collapse when the gesture started on the
  * handle and did not move enough to count as a drag. Otherwise returns
@@ -178,6 +186,18 @@ export function swipeMenuHeightAfterHandlePointerUp(
     inactiveHeightPx,
     maxHeightPx,
   );
+}
+
+/** Collapse to the handle strip when the menu is open above collapsed height. */
+export function swipeMenuHeightAfterOutsideTap(
+  currentHeightPx: number,
+  inactiveHeightPx: number,
+  maxHeightPx: number,
+): number {
+  if (!swipeMenuIsOpenAboveCollapsed(currentHeightPx, inactiveHeightPx)) {
+    return currentHeightPx;
+  }
+  return swipeMenuSnapHeightPx("collapsed", inactiveHeightPx, maxHeightPx);
 }
 
 const SWIPE_MENU_INTERACTIVE_SELECTOR =

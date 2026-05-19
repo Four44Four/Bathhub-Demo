@@ -9,7 +9,7 @@ import {
   hasNonDragTappedHelper,
   wasDraggingAfterPointerMove,
   subscribeOnTap,
-} from "../app/_client/viewport2d/NonDragTapDetector";
+} from "../app/_client/NonDragTapDetector";
 
 describe("NonDragTapDetector", () => {
   test("isTapGesture", () => {
@@ -111,5 +111,43 @@ describe("NonDragTapDetector", () => {
     unsubscribe();
     expect(listeners.size).toBe(0);
     expect(triggerCount).toBe(1);
+  });
+
+  test("subscribeOnTap can consume pointer events on tap", () => {
+    const listeners = new Map<
+      string,
+      { listener: (event: PointerEvent) => void; options?: AddEventListenerOptions }
+    >();
+    const target = {
+      addEventListener: (
+        type: string,
+        listener: (event: PointerEvent) => void,
+        options?: boolean | AddEventListenerOptions,
+      ) => {
+        listeners.set(type, {
+          listener,
+          options: typeof options === "object" ? options : undefined,
+        });
+      },
+      removeEventListener: () => {},
+    };
+
+    subscribeOnTap(() => {}, target, TAP_MAX_MOVEMENT_PX, true);
+
+    const down = listeners.get("pointerdown")!.listener;
+    const up = listeners.get("pointerup")!.listener;
+    const preventDefault = jest.fn();
+    const stopPropagation = jest.fn();
+
+    down({ clientX: 0, clientY: 0 } as PointerEvent);
+    up({
+      clientX: 0,
+      clientY: 0,
+      preventDefault,
+      stopPropagation,
+    } as unknown as PointerEvent);
+
+    expect(preventDefault).toHaveBeenCalled();
+    expect(stopPropagation).toHaveBeenCalled();
   });
 });

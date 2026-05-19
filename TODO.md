@@ -1,5 +1,4 @@
 # Sprint 1 (frontend/UI)
- - Make interacting with any element outside of swipe-up menu while it is up cause it to collapse
  - Write down specification for Alert system
  - Write Sprint 1 reflection
 

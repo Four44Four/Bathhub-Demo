@@ -1,0 +1,9 @@
+ - Minor alerts should trigger the positional alert indicator
+    - A positional alert indicator consists of a body with a rectangle with text detailing the error, and a triangular tail pointing towards the element that triggered the alert
+    - It must point above or below a specified element, using that element's bounding box to calculate a top or bottom edge and positioning its triangular tail to be some specific amount of pixels away from that edge
+    - Positional alerts are cleared when the client taps or clicks on the interface without dragging
+       - For example, they should be preserved when the client is dragging to pan or zoom on the Globe, but the moment the client taps on a location without dragging, the positional alerts will all disappear
+ - Major alerts should trigger the important alert indicator
+    - Alerts are considered major if they warrant stopping the client from making further inputs until they acknowledge and dismiss the alert
+    - Important alerts consists of a popup window with text detailing the alert and a large Ok button for dismissing the alert 
+       - It also darkens the background and blocks input on the Globe viewport until it is dismissed

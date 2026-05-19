@@ -9,9 +9,9 @@ import {
   type RefObject,
 } from "react";
 import type * as CesiumTypes from "cesium";
-import "cesium/Build/Cesium/Widgets/widgets.css";
 
 import { Globe as GlobeConsts, MapMarker as MapMarkerConsts } from "../ComponentConstants";
+import { loadCesium } from "./loadCesium";
 import * as Utils from "../Utils";
 import * as ServerDebug from "../../_server/Debug";
 import { type Point } from "../../_shared/Utils";
@@ -289,11 +289,6 @@ export function GlobeViewport({
     const mount = mountRef.current;
     if (!mount) return;
 
-    // Ensure Cesium can load its Workers/Assets/Widgets from a known base URL.
-    // This avoids needing a webpack copy step in Next.js.
-    const w = window as unknown as { CESIUM_BASE_URL?: string };
-    w.CESIUM_BASE_URL = "https://cdn.jsdelivr.net/npm/cesium@1.141.0/Build/Cesium";
-
     // Clear any previous content (e.g. from an earlier init).
     mount.textContent = "";
 
@@ -301,7 +296,7 @@ export function GlobeViewport({
     let cancelled = false;
 
     const init = async () => {
-      const Cesium = await import("cesium");
+      const Cesium = await loadCesium();
       cesiumNsRef.current = Cesium;
 
       if (cancelled) return;
@@ -374,6 +369,8 @@ export function GlobeViewport({
         // Start with no imagery; we add our recolored Google-tile layer next.
       });
       viewerRef.current = viewer;
+      viewer.resize();
+      viewer.forceResize?.();
 
       // Hide Cesium credit text (requested). Note: this may violate attribution requirements.
       try {

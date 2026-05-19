@@ -24,7 +24,7 @@ import {
   swipeMenuPointerTargetIsInteractive,
   swipeMenuSnapHeightPx,
   swipeMenuSnapTarget,
-} from "../pure/SwipeMenu";
+} from "../pure/swipeup/SwipeMenu";
 
 import { SwipeMenu as SwipeMenuConsts } from "../ComponentConstants";
 

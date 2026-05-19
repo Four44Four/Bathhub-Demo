@@ -12,7 +12,7 @@ import {
   swipeMenuPullIndicatorWidthPx,
   swipeMenuSnapHeightPx,
   swipeMenuSnapTarget,
-} from "../app/_client/pure/SwipeMenu";
+} from "../app/_client/pure/swipeup/SwipeMenu";
 
 describe("SwipeMenu", () => {
   const inactive = 20;

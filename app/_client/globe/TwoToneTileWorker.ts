@@ -1,4 +1,4 @@
-import { recolorRgbaInPlace, type TwoTonePalette } from "../pure/TwoToneTileRecolor";
+import { recolorRgbaInPlace, type TwoTonePalette } from "../pure/globe/TwoToneTileRecolor";
 
 type RecolorRequest = {
   id: number;

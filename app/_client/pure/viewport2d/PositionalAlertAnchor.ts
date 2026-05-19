@@ -4,7 +4,7 @@ import {
   rectPxFromDomRect,
   rectPxInsetByBorder
 } from "./PositionalAlertLayout";
-import { type Rect } from "../Utils";
+import { type Rect } from "../../Utils";
 
 export function positionalAlertAnchorIsAttached(
   anchor: HTMLElement,

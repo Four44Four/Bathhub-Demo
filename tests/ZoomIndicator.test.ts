@@ -1,7 +1,7 @@
 import {
     zoomIndicatorOpacityTransitionCss,
     zoomIndicatorSquareTopLeftCss,
-} from "../app/_client/pure/ZoomIndicator";
+} from "../app/_client/pure/viewport2d/ZoomIndicator";
 
 describe("zoomIndicatorMath", () => {
     test("zoomIndicatorSquareTopLeftCss", () => {

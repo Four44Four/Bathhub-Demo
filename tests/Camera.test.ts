@@ -1,4 +1,4 @@
-import * as OrbitCam from "../app/_client/pure/OrbitCamera";
+import * as OrbitCam from "../app/_client/pure/globe/OrbitCamera";
 import * as Utils from "../app/_client/Utils";
 
 describe("orbitCameraMath", () => {

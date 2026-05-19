@@ -1,5 +1,4 @@
 # Sprint 1 (frontend/UI)
- - Clean up all files related to Alert system
  - Organize ./app/_client/pure/ into different sub-directories 
  - Write down specification for Alert system
  - Make interacting with any element outside of swipe-up menu while it is up cause it to collapse

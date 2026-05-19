@@ -10,8 +10,8 @@ import {
   positionalAlertZIndexForAnchor,
   SWIPE_MENU_LAYER_Z_INDEX,
   subscribePositionalAlertAnchorLayout,
-} from "../app/_client/pure/PositionalAlertAnchor";
-import { alertSystemShowPositional, EMPTY_ALERT_SYSTEM_STATE } from "../app/_client/pure/AlertSystemState";
+} from "../app/_client/pure/viewport2d/PositionalAlertAnchor";
+import { alertSystemShowPositional, EMPTY_ALERT_SYSTEM_STATE } from "../app/_client/pure/viewport2d/AlertSystemState";
 
 function mockStyleMap(
   entries: ReadonlyMap<Element, Partial<{ zIndex: string }>>,

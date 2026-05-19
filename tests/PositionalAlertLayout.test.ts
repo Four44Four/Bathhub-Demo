@@ -6,7 +6,7 @@ import {
   positionalAlertVisualBounds,
   rectPxInsetByBorder,
   POSITIONAL_ALERT_TAIL_SIZE_PX,
-} from "../app/_client/pure/PositionalAlertLayout";
+} from "../app/_client/pure/viewport2d/PositionalAlertLayout";
 
 describe("PositionalAlertLayout", () => {
   const clipRect = { left: 0, top: 0, width: 400, height: 800 };

@@ -1,4 +1,4 @@
-import { positionalAlertIdsWithDetachedAnchors } from "../app/_client/pure/PositionalAlertAnchor";
+import { positionalAlertIdsWithDetachedAnchors } from "../app/_client/pure/viewport2d/PositionalAlertAnchor";
 import {
   alertSystemDismissAllPositional,
   alertSystemDismissImportant,
@@ -6,7 +6,7 @@ import {
   alertSystemShowImportant,
   alertSystemShowPositional,
   EMPTY_ALERT_SYSTEM_STATE,
-} from "../app/_client/pure/AlertSystemState";
+} from "../app/_client/pure/viewport2d/AlertSystemState";
 
 describe("AlertSystemState", () => {
   test("show and dismiss positional alerts", () => {

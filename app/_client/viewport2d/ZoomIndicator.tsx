@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   zoomIndicatorOpacityTransitionCss,
   zoomIndicatorSquareTopLeftCss,
-} from "../pure/ZoomIndicator";
+} from "../pure/viewport2d/ZoomIndicator";
 
 export const ZOOM_INDICATOR_COLOR = "#000";
 export const ZOOM_INDICATOR_FADE_IN_MS = 150;

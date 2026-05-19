@@ -1,5 +1,5 @@
-import { PositionalAlertSide } from "../viewport2d/AlertSystem";
-import { type Rect, type RectBorderWidths } from "../Utils";
+import { PositionalAlertSide } from "../../viewport2d/AlertSystem";
+import { type Rect, type RectBorderWidths } from "../../Utils";
 
 export function rectPxFromDomRect(rect: DOMRect): Rect {
   return {

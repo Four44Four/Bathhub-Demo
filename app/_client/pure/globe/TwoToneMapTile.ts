@@ -1,4 +1,4 @@
-import * as Utils from "../Utils";
+import * as Utils from "../../Utils";
 
 /** Heuristic: classify “blue-ish” map-tile pixels as water (see GlobeViewport). */
 export function classifyMapPixelAsWater(r: number, g: number, b: number): boolean {

@@ -2,7 +2,7 @@ import {
   recolorRgbaInPlace,
   twoTonePaletteFromRgb,
   type TwoTonePalette,
-} from "../pure/TwoToneTileRecolor";
+} from "../pure/globe/TwoToneTileRecolor";
 
 /** Rows processed per main-thread chunk before yielding (keeps pan/zoom responsive). */
 const MAIN_THREAD_ROWS_PER_CHUNK = 8;

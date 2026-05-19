@@ -14,14 +14,14 @@ import {
   positionalAlertAnchorIsAttached,
   positionalAlertZIndexForAnchor,
   subscribePositionalAlertAnchorLayout,
-} from "../../pure/PositionalAlertAnchor";
+} from "../../pure/viewport2d/PositionalAlertAnchor";
 import {
   positionalAlertClipPathInset,
   positionalAlertPlacement,
   positionalAlertTailBox,
   positionalAlertVisualBounds,
   POSITIONAL_ALERT_TAIL_SIZE_PX,
-} from "../../pure/PositionalAlertLayout";
+} from "../../pure/viewport2d/PositionalAlertLayout";
 import { TextWeight, type Rect } from "../../Utils";
 import { PositionalAlertSide } from "../AlertSystem";
 

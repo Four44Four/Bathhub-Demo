@@ -20,10 +20,10 @@ import { installDebugCrosshair } from "./DebugCrosshair";
 import { installMapMarker } from "./MapMarker";
 import { installPath, type PathHandle } from "./Path";
 import { installOrbitCameraControls, type InstalledOrbitCameraControls } from "./Camera";
-import { globeLodVisualStateFromCameraHeightM } from "../pure/GlobeLayerLod";
+import { globeLodVisualStateFromCameraHeightM } from "../pure/globe/GlobeLayerLod";
 import { TwoToneTileProcessor } from "./TwoToneTileProcessor";
-import { dimensionCss } from "../pure/GlobeViewportCss";
-import * as GeoArrival from "../pure/GeoArrivalCameraLock";
+import { dimensionCss } from "../pure/globe/GlobeViewportCss";
+import * as GeoArrival from "../pure/globe/GeoArrivalCameraLock";
 
 /** Set to true once `GLOBE_VIEWPORT_DETECT_IDLE_MS` elapses without move/zoom activity; cleared when activity resumes. */
 let isClientIdle = false;

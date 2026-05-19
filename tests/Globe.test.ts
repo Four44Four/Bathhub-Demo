@@ -4,18 +4,18 @@ import {
     globeLodVisualStateFromCameraHeightM,
     globeMaximumScreenSpaceErrorFromHeightM,
     streetLayerAlphaFromCameraHeightM,
-} from "../app/_client/pure/GlobeLayerLod";
+} from "../app/_client/pure/globe/GlobeLayerLod";
 
-import { recolorRgbaInPlace, twoTonePaletteFromRgb } from "../app/_client/pure/TwoToneTileRecolor";
+import { recolorRgbaInPlace, twoTonePaletteFromRgb } from "../app/_client/pure/globe/TwoToneTileRecolor";
 
 import {
     classifyMapPixelAsWater,
     twoToneLandOutputHsl,
     twoToneWaterOutputHsl,
-} from "../app/_client/pure/TwoToneMapTile";
+} from "../app/_client/pure/globe/TwoToneMapTile";
 
-import { dimensionCss } from "../app/_client/pure/GlobeViewportCss";
-import * as GeoArrival from "../app/_client/pure/GeoArrivalCameraLock";
+import { dimensionCss } from "../app/_client/pure/globe/GlobeViewportCss";
+import * as GeoArrival from "../app/_client/pure/globe/GeoArrivalCameraLock";
 import { Globe as GlobeConsts } from "../app/_client/ComponentConstants";
 
 describe("globeLayerLodMath", () => {

@@ -1,4 +1,4 @@
-import * as Utils from "../Utils";
+import * as Utils from "../../Utils";
 
 /** Center-distance orbit radius clamped to `[sphereRadius + minSurfaceClearance, maxOrbitCenterDistance]`. */
 export function clampOrbitCenterDistanceMeters(args: {

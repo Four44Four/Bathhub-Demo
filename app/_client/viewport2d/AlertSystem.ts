@@ -18,7 +18,7 @@ import {
 import {
   positionalAlertIdsWithDetachedAnchors,
   subscribePositionalAlertClipRect,
-} from "../pure/PositionalAlertAnchor";
+} from "../pure/viewport2d/PositionalAlertAnchor";
 import { subscribeOnTap } from "./NonDragTapDetector";
 
 import {
@@ -31,7 +31,7 @@ import {
   type AlertSystemState,
   type ImportantAlertRecord,
   type PositionalAlertRecord,
-} from "../pure/AlertSystemState";
+} from "../pure/viewport2d/AlertSystemState";
 import { ImportantAlert } from "./alerts/ImportantAlert";
 import { PositionalAlert } from "./alerts/PositionalAlert";
 import { type Rect } from "../Utils";

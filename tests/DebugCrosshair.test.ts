@@ -1,4 +1,4 @@
-import { debugCrosshairOpacityFromFadeProgress } from "../app/_client/pure/DebugCrosshair";
+import { debugCrosshairOpacityFromFadeProgress } from "../app/_client/pure/viewport2d/DebugCrosshair";
 
 describe("debugCrosshairMath", () => {
   test("debugCrosshairOpacityFromFadeProgress", () => {

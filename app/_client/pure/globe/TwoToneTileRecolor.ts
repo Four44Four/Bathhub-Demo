@@ -1,5 +1,5 @@
-import type { Hsl } from "../Utils";
-import * as Utils from "../Utils";
+import type { Hsl } from "../../Utils";
+import * as Utils from "../../Utils";
 import {
   classifyMapPixelAsWater,
   twoToneLandOutputHsl,

@@ -6,13 +6,13 @@ import { Alerts as AlertConsts } from "../../ComponentConstants";
 import { Button } from "../Button";
 import { TextWeight } from "../../Utils";
 
-export const IMPORTANT_ALERT_BACKDROP_COLOR = "rgba(12, 13, 18, 0.62)";
-export const IMPORTANT_ALERT_PANEL_BG_COLOR = "#ffffff";
-export const IMPORTANT_ALERT_TEXT_COLOR = "#0E0F11";
-export const IMPORTANT_ALERT_OK_FILL_COLOR = AlertConsts.ACCENT_COLOR;
-export const IMPORTANT_ALERT_OK_TEXT_COLOR = AlertConsts.TEXT_COLOR;
+const IMPORTANT_ALERT_BACKDROP_COLOR = "rgba(12, 13, 18, 0.62)";
+const IMPORTANT_ALERT_PANEL_BG_COLOR = "#ffffff";
+const IMPORTANT_ALERT_TEXT_COLOR = "#0E0F11";
+const IMPORTANT_ALERT_OK_FILL_COLOR = AlertConsts.ACCENT_COLOR;
+const IMPORTANT_ALERT_OK_TEXT_COLOR = AlertConsts.TEXT_COLOR;
 /** Ok button width as a percentage of the alert panel background width (edge to edge). */
-export const IMPORTANT_ALERT_OK_BUTTON_WIDTH_PERCENTAGE = 90;
+const IMPORTANT_ALERT_OK_BUTTON_WIDTH_PERCENTAGE = 90;
 
 export type ImportantAlertProps = {
   message: string;

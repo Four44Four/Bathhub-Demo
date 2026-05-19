@@ -2,9 +2,9 @@ import type { PositionalAlertRecord } from "./AlertSystemState";
 import {
   parseCssBorderWidthPx,
   rectPxFromDomRect,
-  rectPxInsetByBorder,
-  type RectPx,
+  rectPxInsetByBorder
 } from "./PositionalAlertLayout";
+import { type Rect } from "../Utils";
 
 export function positionalAlertAnchorIsAttached(
   anchor: HTMLElement,
@@ -129,7 +129,7 @@ function defaultReadBorderStyle(element: Element): Pick<
 export function anchorBoundingRectPx(
   anchor: HTMLElement,
   readBorderStyle: CssBorderStyleReader = defaultReadBorderStyle,
-): RectPx {
+): Rect {
   const borderBox = rectPxFromDomRect(anchor.getBoundingClientRect());
   const style = readBorderStyle(anchor);
   return rectPxInsetByBorder(borderBox, {
@@ -140,7 +140,7 @@ export function anchorBoundingRectPx(
   });
 }
 
-export function anchorClientRectChanged(prev: RectPx | null, next: RectPx): boolean {
+export function anchorClientRectChanged(prev: Rect | null, next: Rect): boolean {
   if (prev == null) return true;
   return (
     prev.left !== next.left ||
@@ -271,7 +271,7 @@ export function subscribePositionalAlertAnchorLayout(
     scrollable.addEventListener("scroll", notify, captureOpts);
   }
 
-  let lastRect: RectPx | null = null;
+  let lastRect: Rect | null = null;
   let rafId = 0;
   const tick = () => {
     if (!positionalAlertAnchorIsAttached(anchorElement)) {
@@ -305,7 +305,7 @@ type ClipRectTrackingDeps = PositionalAlertAnchorLayoutDeps;
  */
 export function subscribePositionalAlertClipRect(
   clipElement: HTMLElement,
-  onClipRectChange: (clipRect: RectPx) => void,
+  onClipRectChange: (clipRect: Rect) => void,
   deps?: ClipRectTrackingDeps,
 ): () => void {
   const resolvedDeps = deps ?? defaultAnchorLayoutDeps();
@@ -321,7 +321,7 @@ export function subscribePositionalAlertClipRect(
   layoutListenerTarget.addEventListener("scroll", notify, captureOpts);
   layoutListenerTarget.addEventListener("resize", notify);
 
-  let lastRect: RectPx | null = null;
+  let lastRect: Rect | null = null;
   let rafId = 0;
   const tick = () => {
     const nextRect = rectPxFromDomRect(clipElement.getBoundingClientRect());

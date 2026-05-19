@@ -1,6 +1,8 @@
 # Sprint 1 (frontend/UI)
- - Create error popup handler
-    - Make attempting to find path to clicked location when there is no clicked location call the error popup handler
+ - Clean up all files related to Alert system
+ - Organize ./app/_client/pure/ into different sub-directories 
+ - Write down specification for Alert system
+ - Make interacting with any element outside of swipe-up menu while it is up cause it to collapse
  - Write Sprint 1 reflection
 
 # Sprint 2 (basic backend)

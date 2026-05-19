@@ -1,11 +1,11 @@
-/** Max pointer travel (px) still treated as a tap for dismissing a positional alert. */
-export const POSITIONAL_ALERT_TAP_MAX_MOVEMENT_PX = 8;
+/** Max pointer travel (px) still treated as a tap. */
+export const TAP_MAX_MOVEMENT_PX = 8;
 
 /** True when pointer movement from down to up is small enough to count as a tap. */
-export function positionalAlertIsTapGesture(
+export function isTapGesture(
   deltaXPx: number,
   deltaYPx: number,
-  maxMovementPx: number = POSITIONAL_ALERT_TAP_MAX_MOVEMENT_PX,
+  maxMovementPx: number = TAP_MAX_MOVEMENT_PX,
 ): boolean {
   if (!Number.isFinite(maxMovementPx) || maxMovementPx < 0) return false;
   const dx = Number.isFinite(deltaXPx) ? deltaXPx : 0;
@@ -14,47 +14,32 @@ export function positionalAlertIsTapGesture(
 }
 
 /** True when the pointer moved enough during the gesture to count as a drag. */
-export function positionalAlertPointerCountsAsDrag(
+export function pointerCountsAsDrag(
   deltaXPx: number,
   deltaYPx: number,
-  maxMovementPx: number = POSITIONAL_ALERT_TAP_MAX_MOVEMENT_PX,
+  maxMovementPx: number = TAP_MAX_MOVEMENT_PX,
 ): boolean {
-  return !positionalAlertIsTapGesture(deltaXPx, deltaYPx, maxMovementPx);
-}
-
-/**
- * On pointer release over the dismiss capture layer, dismiss when the gesture
- * was a tap (not a drag). Ignores release when `pointerWasDown` is false.
- */
-export function positionalAlertShouldDismissOnPointerUp(
-  pointerWasDown: boolean,
-  wasDragging: boolean,
-  deltaXPx: number,
-  deltaYPx: number,
-  maxMovementPx: number = POSITIONAL_ALERT_TAP_MAX_MOVEMENT_PX,
-): boolean {
-  if (!pointerWasDown || wasDragging) return false;
-  return positionalAlertIsTapGesture(deltaXPx, deltaYPx, maxMovementPx);
+  return !isTapGesture(deltaXPx, deltaYPx, maxMovementPx);
 }
 
 /** Next drag flag after a pointer move from the down position. */
-export function positionalAlertWasDraggingAfterPointerMove(
+export function wasDraggingAfterPointerMove(
   wasDragging: boolean,
   deltaXPx: number,
   deltaYPx: number,
-  maxMovementPx: number = POSITIONAL_ALERT_TAP_MAX_MOVEMENT_PX,
+  maxMovementPx: number = TAP_MAX_MOVEMENT_PX,
 ): boolean {
-  return wasDragging || positionalAlertPointerCountsAsDrag(deltaXPx, deltaYPx, maxMovementPx);
+  return wasDragging || pointerCountsAsDrag(deltaXPx, deltaYPx, maxMovementPx);
 }
 
-export type PositionalAlertPointerGesture = {
+export type Gesture = {
   pointerDown: boolean;
   wasDragging: boolean;
   startXPx: number;
   startYPx: number;
 };
 
-export const INITIAL_POSITIONAL_ALERT_POINTER_GESTURE: PositionalAlertPointerGesture =
+export const INITIAL_POINTER_GESTURE: Gesture =
   {
     pointerDown: false,
     wasDragging: false,
@@ -62,10 +47,10 @@ export const INITIAL_POSITIONAL_ALERT_POINTER_GESTURE: PositionalAlertPointerGes
     startYPx: 0,
   };
 
-export function positionalAlertPointerGestureOnDown(
+export function gestureOnDown(
   clientXPx: number,
   clientYPx: number,
-): PositionalAlertPointerGesture {
+): Gesture {
   return {
     pointerDown: true,
     wasDragging: false,
@@ -74,18 +59,18 @@ export function positionalAlertPointerGestureOnDown(
   };
 }
 
-export function positionalAlertPointerGestureOnMove(
-  gesture: PositionalAlertPointerGesture,
+export function gestureOnMove(
+  gesture: Gesture,
   clientXPx: number,
   clientYPx: number,
-  maxMovementPx: number = POSITIONAL_ALERT_TAP_MAX_MOVEMENT_PX,
-): PositionalAlertPointerGesture {
+  maxMovementPx: number = TAP_MAX_MOVEMENT_PX,
+): Gesture {
   if (!gesture.pointerDown) return gesture;
   const dx = clientXPx - gesture.startXPx;
   const dy = clientYPx - gesture.startYPx;
   return {
     ...gesture,
-    wasDragging: positionalAlertWasDraggingAfterPointerMove(
+    wasDragging: wasDraggingAfterPointerMove(
       gesture.wasDragging,
       dx,
       dy,
@@ -94,15 +79,30 @@ export function positionalAlertPointerGestureOnMove(
   };
 }
 
-export function positionalAlertShouldDismissGesture(
-  gesture: PositionalAlertPointerGesture,
+/**
+ * On pointer release over the trigger capture layer, trigger when the gesture
+ * was a tap (not a drag). Ignores release when `pointerWasDown` is false.
+ */
+export function hasNonDragTappedHelper(
+  pointerWasDown: boolean,
+  wasDragging: boolean,
+  deltaXPx: number,
+  deltaYPx: number,
+  maxMovementPx: number = TAP_MAX_MOVEMENT_PX,
+): boolean {
+  if (!pointerWasDown || wasDragging) return false;
+  return isTapGesture(deltaXPx, deltaYPx, maxMovementPx);
+}
+
+export function hasNonDragTapped(
+  gesture: Gesture,
   clientXPx: number,
   clientYPx: number,
-  maxMovementPx: number = POSITIONAL_ALERT_TAP_MAX_MOVEMENT_PX,
+  maxMovementPx: number = TAP_MAX_MOVEMENT_PX,
 ): boolean {
   const dx = clientXPx - gesture.startXPx;
   const dy = clientYPx - gesture.startYPx;
-  return positionalAlertShouldDismissOnPointerUp(
+  return hasNonDragTappedHelper(
     gesture.pointerDown,
     gesture.wasDragging,
     dx,
@@ -111,7 +111,7 @@ export function positionalAlertShouldDismissGesture(
   );
 }
 
-type PositionalAlertDismissListenerTarget = {
+type ListenerTarget = {
   addEventListener: (
     type: string,
     listener: (event: PointerEvent) => void,
@@ -126,22 +126,22 @@ type PositionalAlertDismissListenerTarget = {
 
 /**
  * Observes pointer gestures on `target` (capture phase) without blocking them.
- * Invokes `onDismissAll` when a tap/click completes; drags do not dismiss.
+ * Invokes `onTap` when a tap/click completes; drags do not trigger.
  */
-export function subscribePositionalAlertDismissOnTap(
-  onDismissAll: () => void,
-  target: PositionalAlertDismissListenerTarget = document,
-  maxMovementPx: number = POSITIONAL_ALERT_TAP_MAX_MOVEMENT_PX,
+export function subscribeOnTap(
+  onTap: () => void,
+  target: ListenerTarget = document,
+  maxMovementPx: number = TAP_MAX_MOVEMENT_PX,
 ): () => void {
-  let gesture = INITIAL_POSITIONAL_ALERT_POINTER_GESTURE;
+  let gesture = INITIAL_POINTER_GESTURE;
   const captureOpts: AddEventListenerOptions = { capture: true };
 
   const onPointerDown = (event: PointerEvent) => {
-    gesture = positionalAlertPointerGestureOnDown(event.clientX, event.clientY);
+    gesture = gestureOnDown(event.clientX, event.clientY);
   };
 
   const onPointerMove = (event: PointerEvent) => {
-    gesture = positionalAlertPointerGestureOnMove(
+    gesture = gestureOnMove(
       gesture,
       event.clientX,
       event.clientY,
@@ -150,14 +150,14 @@ export function subscribePositionalAlertDismissOnTap(
   };
 
   const onPointerUp = (event: PointerEvent) => {
-    const shouldDismiss = positionalAlertShouldDismissGesture(
+    const nonDragTapped = hasNonDragTapped(
       gesture,
       event.clientX,
       event.clientY,
       maxMovementPx,
     );
-    gesture = INITIAL_POSITIONAL_ALERT_POINTER_GESTURE;
-    if (shouldDismiss) onDismissAll();
+    gesture = INITIAL_POINTER_GESTURE;
+    if (nonDragTapped) onTap();
   };
 
   target.addEventListener("pointerdown", onPointerDown, captureOpts);

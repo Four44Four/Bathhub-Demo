@@ -13,6 +13,22 @@ export const TextWeight = {
 } as const;
 export type TextWeight = (typeof TextWeight)[keyof typeof TextWeight];
 
+// metrics in CSS pixels
+export type Rect = {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+};
+
+// metrics in CSS pixels
+export type RectBorderWidths = {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+};
+
 export function hexToRgb(hex: string): { r: number; g: number; b: number } {
     const normalized = hex.replace("#", "").trim();
     const full = normalized.length === 3 ? normalized.split("").map((c) => c + c).join("") : normalized;

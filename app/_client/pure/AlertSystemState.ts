@@ -1,4 +1,4 @@
-export type PositionalAlertSide = "up" | "down";
+import { PositionalAlertSide } from "../viewport2d/AlertSystem";
 
 export type PositionalAlertRecord = {
   id: string;

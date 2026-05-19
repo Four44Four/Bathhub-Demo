@@ -1,16 +1,7 @@
-export type RectPx = {
-  left: number;
-  top: number;
-  width: number;
-  height: number;
-};
+import { PositionalAlertSide } from "../viewport2d/AlertSystem";
+import { type Rect, type RectBorderWidths } from "../Utils";
 
-export type PositionalAlertTailDirection = "up" | "down";
-
-/** Bubble placement relative to the anchor (`"up"` = above anchor, `"down"` = below). */
-export type PositionalAlertSide = PositionalAlertTailDirection;
-
-export function rectPxFromDomRect(rect: DOMRect): RectPx {
+export function rectPxFromDomRect(rect: DOMRect): Rect {
   return {
     left: rect.left,
     top: rect.top,
@@ -18,13 +9,6 @@ export function rectPxFromDomRect(rect: DOMRect): RectPx {
     height: rect.height,
   };
 }
-
-export type BorderWidthsPx = {
-  top: number;
-  right: number;
-  bottom: number;
-  left: number;
-};
 
 /** Parses a computed border width string (e.g. `"1px"`) to a finite px value. */
 export function parseCssBorderWidthPx(value: string): number {
@@ -34,9 +18,9 @@ export function parseCssBorderWidthPx(value: string): number {
 
 /** Insets a border-box rect inward by CSS border widths (background/padding edge). */
 export function rectPxInsetByBorder(
-  rect: RectPx,
-  borders: BorderWidthsPx,
-): RectPx {
+  rect: Rect,
+  borders: RectBorderWidths,
+): Rect {
   return {
     left: rect.left + borders.left,
     top: rect.top + borders.top,
@@ -48,7 +32,7 @@ export function rectPxInsetByBorder(
 export type PositionalAlertPlacement = {
   left: number;
   top: number;
-  tailDirection: PositionalAlertTailDirection;
+  tailDirection: PositionalAlertSide;
   /** Horizontal offset of the tail apex from the bubble's left edge (px). */
   tailOffsetPx: number;
 };
@@ -57,7 +41,7 @@ export const POSITIONAL_ALERT_TAIL_SIZE_PX = 10;
 export const POSITIONAL_ALERT_DEFAULT_GAP_PX = 8;
 export const POSITIONAL_ALERT_VIEWPORT_MARGIN_PX = 8;
 
-function anchorCenter(anchor: RectPx): { x: number; y: number } {
+function anchorCenter(anchor: Rect): { x: number; y: number } {
   return {
     x: anchor.left + anchor.width / 2,
     y: anchor.top + anchor.height / 2,
@@ -67,7 +51,7 @@ function anchorCenter(anchor: RectPx): { x: number; y: number } {
 function clampBubbleLeftInClip(
   centerX: number,
   bubbleWidth: number,
-  clipRect: RectPx,
+  clipRect: Rect,
   marginPx: number,
 ): number {
   const half = bubbleWidth / 2;
@@ -81,8 +65,8 @@ function clampBubbleLeftInClip(
  * Returns undefined when `bounds` is fully inside `clipRect`.
  */
 export function positionalAlertClipPathInset(
-  bounds: RectPx,
-  clipRect: RectPx,
+  bounds: Rect,
+  clipRect: Rect,
 ): string | undefined {
   const boundsRight = bounds.left + bounds.width;
   const boundsBottom = bounds.top + bounds.height;
@@ -106,7 +90,7 @@ export function positionalAlertVisualBounds(
   bubbleWidth: number,
   bubbleHeight: number,
   tailSizePx: number = POSITIONAL_ALERT_TAIL_SIZE_PX,
-): RectPx {
+): Rect {
   const tailExtendsBelow = placement.tailDirection === "down";
   const tailExtendsAbove = placement.tailDirection === "up";
   return {
@@ -128,10 +112,10 @@ export function positionalAlertVisualBounds(
  * position follows the anchor center.
  */
 export function positionalAlertPlacement(
-  anchor: RectPx,
+  anchor: Rect,
   bubbleWidth: number,
   bubbleHeight: number,
-  clipRect: RectPx,
+  clipRect: Rect,
   side: PositionalAlertSide,
   tailSizePx: number = POSITIONAL_ALERT_TAIL_SIZE_PX,
   parentEdgeOffsetPx: number = POSITIONAL_ALERT_DEFAULT_GAP_PX,

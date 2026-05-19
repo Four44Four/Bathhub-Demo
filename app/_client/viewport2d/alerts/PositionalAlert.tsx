@@ -21,17 +21,14 @@ import {
   positionalAlertTailBox,
   positionalAlertVisualBounds,
   POSITIONAL_ALERT_TAIL_SIZE_PX,
-  type RectPx,
 } from "../../pure/PositionalAlertLayout";
-import { TextWeight } from "../../Utils";
+import { TextWeight, type Rect } from "../../Utils";
+import { PositionalAlertSide } from "../AlertSystem";
 
 import { Alerts as AlertConsts } from "../../ComponentConstants";
 
 /** Gap from the anchor's top/bottom edge to the tail face pointing at the anchor (px). */
 export const POS_ALERT_MARGIN_PX = 2;
-
-/** Places the bubble above (`"up"`) or below (`"down"`) the anchor element. */
-export type PositionalAlertIndicatorSide = "up" | "down";
 
 const BUBBLE_PADDING_X_PX = 14;
 const BUBBLE_PADDING_Y_PX = 10;
@@ -45,8 +42,8 @@ const BUBBLE_LINE_HEIGHT_PX = BUBBLE_FONT_SIZE_PX * BUBBLE_LINE_HEIGHT_RATIO;
 export type PositionalAlertProps = {
   anchorElement: HTMLElement;
   message: string;
-  side: PositionalAlertIndicatorSide;
-  clipRect: RectPx | null;
+  side: PositionalAlertSide;
+  clipRect: Rect | null;
   onDismiss: () => void;
 };
 
@@ -76,7 +73,7 @@ export function PositionalAlert({
 }: PositionalAlertProps) {
   const bubbleSize = useMemo(() => measureBubbleSize(message), [message]);
   const bubbleRef = useRef<HTMLDivElement>(null);
-  const [anchorRect, setAnchorRect] = useState<RectPx | null>(null);
+  const [anchorRect, setAnchorRect] = useState<Rect | null>(null);
   const [stackZIndex, setStackZIndex] = useState(0);
   const [renderedBubbleHeightPx, setRenderedBubbleHeightPx] = useState(bubbleSize.height);
 

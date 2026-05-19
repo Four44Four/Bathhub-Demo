@@ -19,8 +19,7 @@ import {
   positionalAlertIdsWithDetachedAnchors,
   subscribePositionalAlertClipRect,
 } from "../pure/PositionalAlertAnchor";
-import type { RectPx } from "../pure/PositionalAlertLayout";
-import { subscribePositionalAlertDismissOnTap } from "../pure/PositionalAlertDismiss";
+import { subscribeOnTap } from "./NonDragTapDetector";
 
 import {
   alertSystemDismissAllPositional,
@@ -34,15 +33,15 @@ import {
   type PositionalAlertRecord,
 } from "../pure/AlertSystemState";
 import { ImportantAlert } from "./alerts/ImportantAlert";
-import {
-  PositionalAlert,
-  type PositionalAlertIndicatorSide,
-} from "./alerts/PositionalAlert";
+import { PositionalAlert } from "./alerts/PositionalAlert";
+import { type Rect } from "../Utils";
+
+export type PositionalAlertSide = "up" | "down";
 
 export type ShowPositionalAlertOptions = {
   anchorElement: HTMLElement;
   message: string;
-  side: PositionalAlertIndicatorSide;
+  side: PositionalAlertSide;
 };
 
 export type ShowImportantAlertOptions = {
@@ -89,7 +88,7 @@ function AlertSystemOverlay({
 }: {
   positional: PositionalAlertRuntime[];
   important: ImportantAlertRecord | null;
-  clipRect: RectPx | null;
+  clipRect: Rect | null;
   onDismissPositional: (id: string) => void;
   onDismissImportant: () => void;
 }) {
@@ -128,7 +127,7 @@ export function AlertSystemProvider({
   phoneViewportRef,
 }: AlertSystemProviderProps) {
   const [state, setState] = useState<AlertSystemState>(EMPTY_ALERT_SYSTEM_STATE);
-  const [clipRect, setClipRect] = useState<RectPx | null>(null);
+  const [clipRect, setClipRect] = useState<Rect | null>(null);
   const anchorsRef = useRef<Map<string, HTMLElement>>(new Map());
 
   useLayoutEffect(() => {
@@ -165,7 +164,7 @@ export function AlertSystemProvider({
 
   useEffect(() => {
     if (state.positional.length === 0) return;
-    return subscribePositionalAlertDismissOnTap(() => {
+    return subscribeOnTap(() => {
       dismissAllPositionalAlertsRef.current();
     });
   }, [state.positional.length]);

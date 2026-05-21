@@ -3,7 +3,12 @@ node_modules
 .git
 .next
 .swc
+.gitignore
 README.md
 TODO.md
+RUN.md
+AGENTS.md
+CLAUDE.md
 specifications/
 tests/
+reflections/

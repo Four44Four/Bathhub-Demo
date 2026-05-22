@@ -1,3 +1,8 @@
+# Environment Variables
+## Required
+ - OPEN_ROUTE_SERVICE_API_KEY
+## Optional
+
 # Test/Dev
  - Create a .env file with environment variables outlined in README.md
  - `npm install`

@@ -48,6 +48,3 @@
     - Route path calculation
  - Jest
     - Testing library
-
-# Required API keys (in env vars)
- - OPEN_ROUTE_SERVICE_API_KEY

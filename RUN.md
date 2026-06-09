@@ -6,7 +6,7 @@
 ## Optional
 
 # Test/Dev
- - Create a .env file with environment variables outlined in README.md
+ - Create a .env file with environment variables outlined in [Custom foo description](#environment-variables)
  - `npm install`
  - `npm run dev`
  - Go to http://localhost:3000

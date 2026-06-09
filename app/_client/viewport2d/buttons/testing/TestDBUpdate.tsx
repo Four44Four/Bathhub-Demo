@@ -1,7 +1,8 @@
 "use client";
 
-import { Button } from "../Button";
-import * as ClientTestTable from "../../TestTable";
+import { Button as ButtonConsts } from "../../../ComponentConstants";
+import { Button } from "../../Button";
+import * as ClientTestTable from "../../../TestTable";
 import { BTN_ROW_OFFSET_PX } from "./TestDBCreate";
 import { BTN_X as TEST_PATHFIND_BTN_X, BTN_Y as TEST_PATHFIND_BTN_Y } from "./TestPathfind";
 
@@ -21,7 +22,15 @@ async function onTestDbUpdateClick() {
 export function TestDBUpdate() {
   return (
     <div className="pointer-events-none absolute inset-0 z-20">
-      <Button text={BTN_STR} x={BTN_X} y={BTN_Y} onClick={() => onTestDbUpdateClick()} />
+      <Button
+        text={BTN_STR}
+        x={BTN_X}
+        y={BTN_Y}
+        fillColor={ButtonConsts.TEXT_COLOR}
+        outlineColor={ButtonConsts.DEFAULT_FILL_COLOR}
+        textColor={ButtonConsts.DEFAULT_LINE_COLOR}
+        onClick={() => onTestDbUpdateClick()}
+      />
     </div>
   );
 }

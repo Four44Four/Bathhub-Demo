@@ -3,11 +3,11 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Recenter } from "./_client/viewport2d/buttons/Recenter";
-import { TestDBCreate } from "./_client/viewport2d/buttons/TestDBCreate";
-import { TestDBRead } from "./_client/viewport2d/buttons/TestDBRead";
-import { TestDBRemove } from "./_client/viewport2d/buttons/TestDBRemove";
-import { TestDBUpdate } from "./_client/viewport2d/buttons/TestDBUpdate";
-import { TestPathfind } from "./_client/viewport2d/buttons/TestPathfind";
+import { TestDBCreate } from "./_client/viewport2d/buttons/testing/TestDBCreate";
+import { TestDBRead } from "./_client/viewport2d/buttons/testing/TestDBRead";
+import { TestDBRemove } from "./_client/viewport2d/buttons/testing/TestDBRemove";
+import { TestDBUpdate } from "./_client/viewport2d/buttons/testing/TestDBUpdate";
+import { TestPathfind } from "./_client/viewport2d/buttons/testing/TestPathfind";
 import {
   GlobeViewport,
   type GlobeViewportHandle,

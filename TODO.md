@@ -1,5 +1,4 @@
 # Sprint 2 (basic backend)
- - Configure Supabase
  - Disable tapping on globe triggering anything
  - Add a button to enter "Mark a new bathroom" mode
     - Add a Globe viewport mode that is activated when that button is tapped

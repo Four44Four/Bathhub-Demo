@@ -2,12 +2,12 @@
 
 import { RefObject } from "react";
 
-import { Button } from "../Button";
-import { type AlertSystemApi, useAlertSystem } from "../AlertSystem";
-import * as ServerDebug from "../../../_server/Debug";
-import * as ServerPathfind from "../../../_server/Pathfind";
-import * as SharedUtils from "../../../_shared/Utils";
-import { type GlobeViewportHandle, getStartPos } from "../../globe/GlobeViewport";
+import { Button } from "../../Button";
+import { type AlertSystemApi, useAlertSystem } from "../../AlertSystem";
+import * as ServerDebug from "../../../../_server/Debug";
+import * as ServerPathfind from "../../../../_server/Pathfind";
+import * as SharedUtils from "../../../../_shared/Utils";
+import { type GlobeViewportHandle, getStartPos } from "../../../globe/GlobeViewport";
 
 export const BTN_STR = "Test pathfind";
 export const BTN_X = 16;

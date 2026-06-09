@@ -1,5 +1,6 @@
 # Sprint 2 (basic backend)
  - Disable tapping on globe triggering anything
+    - (for all Bathroom CRUD) Have rate limits on all Bathroom DB operations
  - Add a button to enter "Mark a new bathroom" mode
     - Add a Globe viewport mode that is activated when that button is tapped
        - Mostly identical to normal Globe viewport mode
@@ -7,10 +8,11 @@
        - And add a new, salient button for marking the center as a new bathroom
           - When this button is tapped:
              - Trigger a request to the remote DB to make a new "Pending" bathroom
-                - Apply debounce to making new bathroom
              - Tell user that a new bathroom was marked
              - Return to normal Globe viewport mode
              - Refresh the Globe viewport
+ - Cache the Bathroom locations that are found in a local SQLite DB so that repeated zooming in and out doesn't DOS the DB
+    - Use GeoPackage ?
  - When zooming close enough to the Globe:
     - Automatically start querying for bathrooms in viewport
     - Render them as they are received by the client
@@ -23,19 +25,10 @@
  - Setup S3 for Supabase
  - Add media upload system on bathrooms
 
-~~~
-# Sprint 2 (basic backend)
- - Add dummy backend
- - Add buttons on home page trigger dummy backend
- - Add creating new Bathroom entries to frontend and backend
- - Replace Find path to clocked location button with Find nearest bathroom button
- - Update path at regular intervals
-    - Move the map center whenever it 
- - Make settings that affect which bathrooms Find nearest bathroom returns
- - Write Sprint reflection
-~~~
+# Sprint 3 (accounts)
+ - Restrict destructive Bathroom DB operations to authenticated users
 
-# Sprint 3 (offline caching)
+# Sprint 4 (offline caching)
  - Add way to save map data and all bathrooms visible in viewport
  - Add page to view and run path finding on saved map data
  - Add way to/button to enable automatically caching data about:

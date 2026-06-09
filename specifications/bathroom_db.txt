@@ -1,0 +1,8 @@
+ - Use PostGIS extension
+ - Custom types:
+    - `Verify_Status` -> enum of 'pending' and 'verified'
+ - SCHEMA:
+    - location as type `geography`
+    - verify_status as type `Verify_Status`
+    - temp_data as type `TEXT` with restrictions -> length of exactly 64
+ - Must be able to query all Bathroom entries efficiently given a rectangular area bounded by 2 latlong locations (opposing corners)

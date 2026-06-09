@@ -3,6 +3,10 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Recenter } from "./_client/viewport2d/buttons/Recenter";
+import { TestDBCreate } from "./_client/viewport2d/buttons/TestDBCreate";
+import { TestDBRead } from "./_client/viewport2d/buttons/TestDBRead";
+import { TestDBRemove } from "./_client/viewport2d/buttons/TestDBRemove";
+import { TestDBUpdate } from "./_client/viewport2d/buttons/TestDBUpdate";
 import { TestPathfind } from "./_client/viewport2d/buttons/TestPathfind";
 import {
   GlobeViewport,
@@ -366,6 +370,10 @@ export default function Home() {
             mapInitLat={mapInitLat}
             mapInitLong={mapInitLong}
           />
+          <TestDBCreate />
+          <TestDBUpdate />
+          <TestDBRemove />
+          <TestDBRead />
         </div>
         <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex justify-end pt-1 pr-1">
           <div

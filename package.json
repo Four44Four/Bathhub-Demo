@@ -10,6 +10,7 @@
     "test": "jest --verbose ./tests"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.107.0",
     "cesium": "^1.141.0",
     "next": "^16.2.6",
     "openrouteservice-js": "^0.4.1",

@@ -1,5 +1,4 @@
 # Sprint 2 (basic backend)
- - Disable tapping on globe triggering anything
     - (for all Bathroom CRUD) Have rate limits on all Bathroom DB operations
  - Add a button to enter "Mark a new bathroom" mode
     - Add a Globe viewport mode that is activated when that button is tapped
@@ -17,7 +16,8 @@
     - Automatically start querying for bathrooms in viewport
     - Render them as they are received by the client
     - Indicate whether they are "Pending" or "Verified"
-    - When tapped on:
+    - Change behavior of tapping on Globe to not move GlobeImage to that point if there is a Bathroom marker on that spot and the zoom is close enough
+    - When a visible Bathroom marker is tapped on:
        - Open up its bathroom page from the slide up menu
        - Show some dummy info on each bathroom that is unique for now
  - Add rating system on bathrooms (stars 1-5)

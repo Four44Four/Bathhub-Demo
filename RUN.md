@@ -6,16 +6,15 @@
 ## Optional
 
 # Test/Dev
- - Create a .env file with environment variables outlined in [Custom foo description](#environment-variables)
+ - Create a .env file with environment variables outlined [above](#environment-variables)
  - `npm install`
  - `npm run dev`
  - Go to http://localhost:3000
 
 # Production/Deploy
- - If `.env.production.vault` doesn't exist: create a .env.production file and encrypt a it file into `.env.production.vault`
-    - The source file must be named .env.production to ensure the correct env vars are generated
-    - `npx dotenvx encrypt --stdout -f .env.production > .env.production.vault`
-    - Delete the original .env.production
+ - If `.env.production.vault` doesn't exist: create a .env.production.vault file and encrypt it
+    - The source file must be named .env.production.vault to ensure the correct env vars are generated
+    - `npx dotenvx encrypt -f .env.production.vault`
     - Store the produced .env.keys file/the decryption key inside of it somewhere secure
     - Delete the .env.keys file
  - Build the docker image

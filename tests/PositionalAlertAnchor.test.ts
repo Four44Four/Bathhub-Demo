@@ -36,17 +36,17 @@ describe("PositionalAlertAnchor", () => {
     expect(positionalAlertIsUnderSwipeMenuLayer(anchor, getComputedStyle)).toBe(false);
   });
 
-  test("positionalAlertZIndexForAnchor caps recenter-tier anchors below swipe menu", () => {
+  test("positionalAlertZIndexForAnchor caps recenter-tier anchors below swipe backdrop", () => {
     const recenterLayer = { parentElement: null } as HTMLElement;
     const anchor = { parentElement: recenterLayer } as HTMLElement;
     const getComputedStyle = mockStyleMap(
       new Map([
         [anchor, { zIndex: "0" }],
-        [recenterLayer, { zIndex: "39" }],
+        [recenterLayer, { zIndex: "38" }],
       ]),
     );
 
-    expect(positionalAlertZIndexForAnchor(anchor, getComputedStyle)).toBe(39);
+    expect(positionalAlertZIndexForAnchor(anchor, getComputedStyle)).toBe(38);
   });
 
   test("positionalAlertZIndexForAnchor allows swipe menu alerts above menu layer", () => {

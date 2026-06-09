@@ -37,6 +37,12 @@ export function positionalAlertIdsWithDetachedAnchors(
 /** Matches swipe menu wrapper `z-40` in `app/page.tsx`. */
 export const SWIPE_MENU_LAYER_Z_INDEX = 40;
 
+/** Dim overlay while the swipe-up menu is open; sits above viewport2d UI, below the menu. */
+export const SWIPE_MENU_BACKDROP_Z_INDEX = SWIPE_MENU_LAYER_Z_INDEX - 1;
+
+/** Highest z-index tier for viewport2d controls (e.g. Recenter) below the swipe backdrop. */
+export const VIEWPORT2D_TOP_LAYER_Z_INDEX = SWIPE_MENU_BACKDROP_Z_INDEX - 1;
+
 /** Renders the bubble just above its anchor layer without crossing the next UI tier. */
 export const POSITIONAL_ALERT_Z_STACK_OFFSET = 10;
 
@@ -99,7 +105,7 @@ export function positionalAlertZIndexForAnchor(
   if (positionalAlertIsUnderSwipeMenuLayer(anchor, getComputedStyle, swipeMenuLayerZ)) {
     return stackedZ;
   }
-  return Math.min(stackedZ, swipeMenuLayerZ - 1);
+  return Math.min(stackedZ, SWIPE_MENU_BACKDROP_Z_INDEX - 1);
 }
 
 export type CssBorderStyleReader = (element: Element) => Pick<

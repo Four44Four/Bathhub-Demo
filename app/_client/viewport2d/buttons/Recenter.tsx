@@ -118,7 +118,7 @@ export function Recenter({
       : 0;
 
   return (
-    <div className="pointer-events-none absolute inset-0 z-[39]">
+    <div className="pointer-events-none absolute inset-0 z-[38]">
       {viewportSize.width > 0 && viewportSize.height > 0 ? (
         <Button
           x={x}

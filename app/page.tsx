@@ -24,6 +24,7 @@ import { FindNearestBathroom } from "./_client/swipeup/buttons/FindNearestBathro
 import { RegisterNewBathroom } from "./_client/swipeup/buttons/RegisterNewBathroom";
 import { AlertSystemProvider } from "./_client/viewport2d/AlertSystem";
 import { Globe as GlobeConsts } from "./_client/ComponentConstants";
+import { SWIPE_MENU_BACKDROP_Z_INDEX } from "./_client/pure/viewport2d/PositionalAlertAnchor";
 
 /** When set to `"100%"`, the globe mount fills the virtual phone frame (see `layout.tsx`) and the initial camera distance is chosen so the globe “covers” the view (no letterboxing; excess clips on the shorter axis). */
 const GLOBE_VIEWPORT_WIDTH = "100%";
@@ -357,7 +358,6 @@ export default function Home() {
               setZoomIndicator((z) => ({ x, y, pulse: z.pulse + 1 }));
             }}
           />
-          <SwipeMenuBackdrop />
           <ZoomIndicator
             x={zoomIndicator.x}
             y={zoomIndicator.y}
@@ -395,6 +395,12 @@ export default function Home() {
             mapInitLong={mapInitLong}
           />
         ) : null}
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{ zIndex: SWIPE_MENU_BACKDROP_Z_INDEX }}
+        >
+          <SwipeMenuBackdrop />
+        </div>
         <div className="pointer-events-none absolute inset-0 z-40">
           <MainMenu
             viewportRef={phoneFrameRef}

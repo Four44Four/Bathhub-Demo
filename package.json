@@ -19,6 +19,7 @@
     "server-only": "^0.0.1"
   },
   "devDependencies": {
+    "@dotenvx/dotenvx": "^1.71.0",
     "@tailwindcss/postcss": "^4",
     "@types/geojson": "^7946.0.16",
     "@types/jest": "^30.0.0",

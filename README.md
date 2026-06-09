@@ -48,3 +48,5 @@
     - Route path calculation
  - Jest
     - Testing library
+ - dotenvx
+    - Environment variables encryption manager

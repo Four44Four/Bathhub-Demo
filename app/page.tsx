@@ -370,10 +370,10 @@ export default function Home() {
             mapInitLat={mapInitLat}
             mapInitLong={mapInitLong}
           />
-          {/* <TestDBCreate />
+          <TestDBCreate />
           <TestDBUpdate />
           <TestDBRemove />
-          <TestDBRead /> */}
+          <TestDBRead />
         </div>
         <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex justify-end pt-1 pr-1">
           <div

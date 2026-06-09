@@ -6,7 +6,7 @@ import {
   type NewTestTableRow,
   type TestTableRow,
   type TestTableRowUpdate,
-} from "../../_shared/TestTable";
+} from "../../../_shared/TestTable";
 
 export type { NewTestTableRow, TestTableRow, TestTableRowUpdate };
 

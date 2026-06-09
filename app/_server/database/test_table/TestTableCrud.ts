@@ -3,7 +3,7 @@
 import {
   type NewTestTableRow,
   type TestTableRow,
-} from "../../_shared/TestTable";
+} from "../../../_shared/TestTable";
 import * as Core from "./TestTableCrudCore";
 
 export async function testDbCreate(row: NewTestTableRow): Promise<TestTableRow> {

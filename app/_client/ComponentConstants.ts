@@ -113,10 +113,15 @@ const SwipeMenu0 = {
     PULL_HANDLE_WIDTH_RATIO: 0.18,
     PULL_HANDLE_BG_COLOR: "#888888",
     SIDE_PADDING_PX: 10,
-    PRIMARY_BTN_BG_COLOR: "#171769",
-    PRIMARY_BTN_HEIGHT_PERCENTAGE: 25,
+    PRIMARY_BTN_BG_COLOR: "#FFFFFF",
+    PRIMARY_BTN_HEIGHT_PX: 100,
     PRIMARY_BTN_FONT_SIZE: 10,
-    PRIMARY_BTN_FONT_COLOR: "#FFFFFF",
+    PRIMARY_BTN_FONT_COLOR: "#B5B5C4",
+    PRIMARY_BTN_HOVER_BG_COLOR: "#E6E6F0",
+    PRIMARY_BTN_HOVER_FG_VALUE_FACTOR: 0.7,
+    PRIMARY_BTN_HOVER_DURA_MS: 500,
+    PRIMARY_BTN_IMG_WIDTH_RATIO: 0.5,
+    PRIMARY_BTN_WIDTH_RATIO: 0.25,
     /** Milliseconds to fade the globe backdrop when the swipe-up handle is tapped to toggle. */
     BACKDROP_INTERP_TOGGLE_MS: 100,
     /** Globe dim overlay color while the swipe-up menu is open (CSS rgba). */

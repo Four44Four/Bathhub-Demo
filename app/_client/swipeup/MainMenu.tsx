@@ -42,10 +42,17 @@ export function swipeMenuPrimaryButtonWidthPx(viewportWidthPx: number): number {
   return Math.max(0, viewportWidthPx - 2 * SwipeMenuConsts.SIDE_PADDING_PX);
 }
 
-export function swipeMenuPrimaryButtonHeightPx(viewportHeightPx: number): number {
-  const pct = SwipeMenuConsts.PRIMARY_BTN_HEIGHT_PERCENTAGE;
-  if (!Number.isFinite(pct)) return 0;
-  return Math.max(0, (viewportHeightPx * pct) / 100);
+export function swipeMenuPrimaryButtonItemWidthPx(viewportWidthPx: number): number {
+  return Math.max(
+    0,
+    viewportWidthPx * SwipeMenuConsts.PRIMARY_BTN_WIDTH_RATIO,
+  );
+}
+
+export function swipeMenuPrimaryButtonHeightPx(): number {
+  const heightPx = SwipeMenuConsts.PRIMARY_BTN_HEIGHT_PX;
+  if (!Number.isFinite(heightPx)) return 0;
+  return Math.max(0, heightPx);
 }
 
 export type SwipeMenuViewport = {

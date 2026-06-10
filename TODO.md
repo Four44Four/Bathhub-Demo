@@ -1,15 +1,6 @@
 # Sprint 2 (basic backend)
     - (for all Bathroom CRUD) Have rate limits on all Bathroom DB operations
- - Add a button to enter "Mark a new bathroom" mode
-    - Add a Globe viewport mode that is activated when that button is tapped
-       - Mostly identical to normal Globe viewport mode
-       - But render a 2D Globe marker pointing at center of screen
-       - And add a new, salient button for marking the center as a new bathroom
-          - When this button is tapped:
-             - Trigger a request to the remote DB to make a new "Pending" bathroom
-             - Tell user that a new bathroom was marked
-             - Return to normal Globe viewport mode
-             - Refresh the Globe viewport
+    - (for all Bathroom CRUD) Make integration tests in ./supabase/migrations
  - Cache the Bathroom locations that are found in a local SQLite DB so that repeated zooming in and out doesn't DOS the DB
     - Use GeoPackage ?
  - When zooming close enough to the Globe:

@@ -68,7 +68,7 @@ export function generateTempData(): string {
   return randomAlphanumericString(TEMP_DATA_LENGTH);
 }
 
-export async function createBathroomDataPrimaryAt(
+export async function createAt(
   latitude: number,
   longitude: number,
 ): Promise<BathroomDataPrimaryRow> {
@@ -89,7 +89,7 @@ export async function createBathroomDataPrimaryAt(
   return data as BathroomDataPrimaryRow;
 }
 
-export async function getBathroomDataPrimaryInBounds(
+export async function getInBounds(
   bounds: ViewportBounds,
 ): Promise<BathroomDataPrimaryRow[]> {
   const { data, error } = await getSupabaseClient().rpc(

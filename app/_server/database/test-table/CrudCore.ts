@@ -52,7 +52,7 @@ function formatSupabaseError(context: string, message: string): string {
   return `${context}: ${message}`;
 }
 
-export async function createTestTableRow(
+export async function createRow(
   row: NewTestTableRow,
 ): Promise<TestTableRow> {
   const { data, error } = await getSupabaseClient()
@@ -68,7 +68,7 @@ export async function createTestTableRow(
   return data;
 }
 
-export async function getTestTableRowById(id: number): Promise<TestTableRow | null> {
+export async function getRowById(id: number): Promise<TestTableRow | null> {
   const { data, error } = await getSupabaseClient()
     .from(TEST_TABLE_NAME)
     .select()
@@ -82,7 +82,7 @@ export async function getTestTableRowById(id: number): Promise<TestTableRow | nu
   return data;
 }
 
-export async function getAllTestTableRows(): Promise<TestTableRow[]> {
+export async function getAllRows(): Promise<TestTableRow[]> {
   const { data, error } = await getSupabaseClient()
     .from(TEST_TABLE_NAME)
     .select()
@@ -95,7 +95,7 @@ export async function getAllTestTableRows(): Promise<TestTableRow[]> {
   return data ?? [];
 }
 
-export async function getOldestTestTableRowByUpdatedAt(): Promise<TestTableRow | null> {
+export async function getOldestRowByUpdatedAt(): Promise<TestTableRow | null> {
   const { data, error } = await getSupabaseClient()
     .from(TEST_TABLE_NAME)
     .select()
@@ -112,7 +112,7 @@ export async function getOldestTestTableRowByUpdatedAt(): Promise<TestTableRow |
   return data;
 }
 
-export async function updateTestTableRow(
+export async function updateRow(
   id: number,
   updates: TestTableRowUpdate,
 ): Promise<TestTableRow> {
@@ -130,7 +130,7 @@ export async function updateTestTableRow(
   return data;
 }
 
-export async function deleteTestTableRow(id: number): Promise<void> {
+export async function deleteRow(id: number): Promise<void> {
   const { error } = await getSupabaseClient()
     .from(TEST_TABLE_NAME)
     .delete()

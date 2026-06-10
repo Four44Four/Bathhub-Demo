@@ -2,7 +2,7 @@
 
 import { type Errorable } from "../_shared/Utils";
 import { type BathroomDataPrimaryRow } from "../_shared/BathroomDataPrimary";
-import * as BathroomCrud from "../_server/database/bathroom_data_primary/BathroomDataPrimaryCrud";
+import * as BathroomCrud from "../_server/database/bathroom-data-primary/Crud";
 
 async function toErrorable<T>(run: () => Promise<T>): Promise<Errorable<T>> {
   try {

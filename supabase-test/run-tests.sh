@@ -5,12 +5,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WORKSPACE_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 setup_supabase_project() {
-  mkdir -p "$WORKSPACE_DIR/supabase/migrations"
   cp "$SCRIPT_DIR/supabase/config.toml" "$WORKSPACE_DIR/supabase/config.toml"
-  ln -sfn "$WORKSPACE_DIR/sql/create_bathroom_data_primary.sql" \
-    "$WORKSPACE_DIR/supabase/migrations/20260609000000_create_bathroom_data_primary.sql"
-  ln -sfn "$WORKSPACE_DIR/sql/bathroom_data_primary_rpc.sql" \
-    "$WORKSPACE_DIR/supabase/migrations/20260609000001_bathroom_data_primary_rpc.sql"
 }
 
 export_supabase_env() {
@@ -67,7 +62,7 @@ if ! supabase start; then
   exit 1
 fi
 
-echo "run-tests: applying migrations from ./sql..."
+echo "run-tests: applying migrations from ./supabase/migrations..."
 if ! supabase db reset --yes; then
   echo "run-tests: supabase db reset failed" >&2
   exit 1

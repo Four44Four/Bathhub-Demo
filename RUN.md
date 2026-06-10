@@ -18,7 +18,7 @@
     - Store the produced .env.keys file/the decryption key inside of it somewhere secure
     - Delete the .env.keys file
  - Build the docker image
-    - `docker build -t bathhub-demo:test ./`
+    - `docker build -f Dockerfile.production -t bathhub-demo:test ./`
  - Optional: compress image and SSH it
     - `docker save -o <dst-file-path-with-.tar-ext> bathhub-demo:test`
     - `scp <dst-file-path-with-.tar-ext> <user>@<ssh-ip>:<ssh-dst-directory-path>`

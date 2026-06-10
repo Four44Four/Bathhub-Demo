@@ -50,3 +50,5 @@
     - Testing library
  - dotenvx
     - Environment variables encryption manager
+ - Supabase
+    - Remote database

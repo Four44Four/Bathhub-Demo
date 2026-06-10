@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "jest --verbose ./tests",
+    "unit-test": "jest --verbose ./unit-tests",
     "supabase-test": "node supabase-test/run-docker.mjs"
   },
   "dependencies": {

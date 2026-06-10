@@ -6,10 +6,8 @@ const createJestConfig = nextJest({ dir: "./" });
 const customJestConfig = {
   testEnvironment: "node",
   testMatch: [
-    "<rootDir>/test/**/*.test.ts",
-    "<rootDir>/test/**/*.test.tsx",
-    "<rootDir>/tests/**/*.test.ts",
-    "<rootDir>/tests/**/*.test.tsx",
+    "<rootDir>/unit-tests/**/*.test.ts",
+    "<rootDir>/unit-tests/**/*.test.tsx",
     "<rootDir>/supabase-test/**/*.test.ts",
   ],
 };

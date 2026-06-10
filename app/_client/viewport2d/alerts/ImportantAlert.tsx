@@ -2,14 +2,12 @@
 
 import type { CSSProperties } from "react";
 
-import { Alerts as AlertConsts } from "../../ComponentConstants";
+import { Alerts as AlertConsts, Menus as MenuConsts } from "../../ComponentConstants";
 import { Button } from "../Button";
 import { TextWeight } from "../../Utils";
 
-const IMPORTANT_ALERT_BACKDROP_COLOR = "rgba(12, 13, 18, 0.62)";
 const IMPORTANT_ALERT_PANEL_BG_COLOR = "#ffffff";
 const IMPORTANT_ALERT_TEXT_COLOR = "#0E0F11";
-const IMPORTANT_ALERT_OK_FILL_COLOR = AlertConsts.ACCENT_COLOR;
 const IMPORTANT_ALERT_OK_TEXT_COLOR = AlertConsts.TEXT_COLOR;
 /** Ok button width as a percentage of the alert panel background width (edge to edge). */
 const IMPORTANT_ALERT_OK_BUTTON_WIDTH_PERCENTAGE = 90;
@@ -17,19 +15,25 @@ const IMPORTANT_ALERT_OK_BUTTON_WIDTH_PERCENTAGE = 90;
 export type ImportantAlertProps = {
   message: string;
   okLabel?: string;
+  positive: boolean;
   onDismiss: () => void;
 };
 
 export function ImportantAlert({
   message,
   okLabel = "Ok",
+  positive,
   onDismiss,
 }: ImportantAlertProps) {
+  const okAccentColor = positive
+    ? AlertConsts.POSITIVE_ACCENT_COLOR
+    : AlertConsts.NEGATIVE_ACCENT_COLOR;
+
   const backdropStyle: CSSProperties = {
     position: "fixed",
     inset: 0,
     zIndex: 30000,
-    backgroundColor: IMPORTANT_ALERT_BACKDROP_COLOR,
+    backgroundColor: MenuConsts.BACKDROP_COLOR,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -84,8 +88,8 @@ export function ImportantAlert({
             width="100%"
             text={okLabel}
             textWeight={TextWeight.BOLD}
-            fillColor={IMPORTANT_ALERT_OK_FILL_COLOR}
-            outlineColor={IMPORTANT_ALERT_OK_FILL_COLOR}
+            fillColor={okAccentColor}
+            outlineColor={okAccentColor}
             textColor={IMPORTANT_ALERT_OK_TEXT_COLOR}
             onClick={onDismiss}
           />

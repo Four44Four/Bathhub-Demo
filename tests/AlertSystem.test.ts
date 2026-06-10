@@ -22,8 +22,13 @@ describe("AlertSystemState", () => {
 
   test("show and dismiss important alert", () => {
     let state = EMPTY_ALERT_SYSTEM_STATE;
-    state = alertSystemShowImportant(state, "Fatal error", "Ok");
-    expect(state.important).toEqual({ message: "Fatal error", okLabel: "Ok" });
+    state = alertSystemShowImportant(state, "Fatal error", "Ok", false);
+    expect(state.important).toEqual({
+      message: "Fatal error",
+      okLabel: "Ok",
+      positive: false,
+      onDismiss: undefined,
+    });
     state = alertSystemDismissImportant(state);
     expect(state.important).toBeNull();
   });

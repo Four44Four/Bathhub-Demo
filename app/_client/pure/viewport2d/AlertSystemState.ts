@@ -9,6 +9,8 @@ export type PositionalAlertRecord = {
 export type ImportantAlertRecord = {
   message: string;
   okLabel: string;
+  positive: boolean;
+  onDismiss?: () => void;
 };
 
 export type AlertSystemState = {
@@ -53,10 +55,12 @@ export function alertSystemShowImportant(
   state: AlertSystemState,
   message: string,
   okLabel: string,
+  positive: boolean,
+  onDismiss?: () => void,
 ): AlertSystemState {
   return {
     ...state,
-    important: { message, okLabel },
+    important: { message, okLabel, positive, onDismiss },
   };
 }
 

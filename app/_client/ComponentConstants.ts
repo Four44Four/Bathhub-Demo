@@ -7,6 +7,9 @@ export const Shared = {
     FONT_REGULAR_CLASS: Fonts.NOTOSANS_REGULAR_CLASS,
     FONT_BOLD_CLASS: Fonts.NOTOSANS_BOLD_CLASS,
     FONT_LIGHT_CLASS: Fonts.NOTOSANS_LIGHT_CLASS,
+    NEGATIVE_COLOR: "#E06C89",
+    POSITIVE_COLOR: "#6CE0D1",
+    FG_COLOR_VALUE_FACTOR: 0.7,
 } as const;
 
 export const Button = {
@@ -122,10 +125,6 @@ const SwipeMenu0 = {
     PRIMARY_BTN_HOVER_DURA_MS: 500,
     PRIMARY_BTN_IMG_WIDTH_RATIO: 0.5,
     PRIMARY_BTN_WIDTH_RATIO: 0.25,
-    /** Milliseconds to fade the globe backdrop when the swipe-up handle is tapped to toggle. */
-    BACKDROP_INTERP_TOGGLE_MS: 100,
-    /** Globe dim overlay color while the swipe-up menu is open (CSS rgba). */
-    BACKDROP_COLOR: "rgba(12, 13, 18, 0.62)",
 };
 const SwipeMenu1 = {
     /** Inset from the menu shell edge to the pull-handle pill. */
@@ -135,6 +134,14 @@ const SwipeMenu1 = {
 export const SwipeMenu = { ...SwipeMenu0, ...SwipeMenu1 };
 
 export const Alerts = {
-    ACCENT_COLOR: "#EC3968",
+    NEGATIVE_ACCENT_COLOR: "#EC3968",
+    POSITIVE_ACCENT_COLOR: "#7BE3C7",
     TEXT_COLOR: "#ffffff",
+} as const;
+
+export const Menus = {
+    /** Milliseconds to fade the globe backdrop when a menu is toggled. */
+    BACKDROP_INTERP_TOGGLE_MS: 100,
+    /** Globe dim overlay color while the swipe-up menu is open (CSS rgba). */
+    BACKDROP_COLOR: "rgba(12, 13, 18, 0.62)",
 } as const;

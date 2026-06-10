@@ -134,7 +134,7 @@ export function PositionalAlert({
       : positionalAlertTailBox(
           placement,
           POSITIONAL_ALERT_TAIL_SIZE_PX,
-          AlertConsts.ACCENT_COLOR,
+          AlertConsts.NEGATIVE_ACCENT_COLOR,
         );
 
   const bubbleStyle: CSSProperties =
@@ -148,7 +148,7 @@ export function PositionalAlert({
           height: renderedBubbleHeightPx,
           padding: `${BUBBLE_PADDING_Y_PX}px ${BUBBLE_PADDING_X_PX}px`,
           borderRadius: BUBBLE_BORDER_RADIUS_PX,
-          backgroundColor: AlertConsts.ACCENT_COLOR,
+          backgroundColor: AlertConsts.NEGATIVE_ACCENT_COLOR,
           color: AlertConsts.TEXT_COLOR,
           boxSizing: "border-box",
           display: "flex",

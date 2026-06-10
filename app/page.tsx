@@ -1,7 +1,13 @@
 
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type RefObject,
+} from "react";
 import { Recenter } from "./_client/viewport2d/buttons/Recenter";
 import { TestDBCreate } from "./_client/viewport2d/buttons/testing/TestDBCreate";
 import { TestDBRead } from "./_client/viewport2d/buttons/testing/TestDBRead";
@@ -23,6 +29,11 @@ import {
 import { FindNearestBathroom } from "./_client/swipeup/buttons/FindNearestBathroom";
 import { RegisterNewBathroom } from "./_client/swipeup/buttons/RegisterNewBathroom";
 import { AlertSystemProvider } from "./_client/viewport2d/AlertSystem";
+import {
+  AddBathroomMode,
+  AddBathroomModeProvider,
+  useAddBathroomMode,
+} from "./_client/viewport2d/add-bathroom-mode";
 import { Globe as GlobeConsts } from "./_client/ComponentConstants";
 import { SWIPE_MENU_BACKDROP_Z_INDEX } from "./_client/pure/viewport2d/PositionalAlertAnchor";
 
@@ -69,8 +80,12 @@ function writeGeoCache(lat: number, lng: number) {
   }
 }
 
-export default function Home() {
-  const phoneFrameRef = useRef<HTMLDivElement | null>(null);
+function HomeContent({
+  phoneFrameRef,
+}: {
+  phoneFrameRef: RefObject<HTMLDivElement | null>;
+}) {
+  const { isActive: addBathroomModeActive } = useAddBathroomMode();
   const globeRootRef = useRef<HTMLDivElement | null>(null);
   const globeRef = useRef<GlobeViewportHandle | null>(null);
   /**
@@ -334,7 +349,6 @@ export default function Home() {
   }, []);
 
   return (
-    <AlertSystemProvider phoneViewportRef={phoneFrameRef}>
     <SwipeMenuInteractionContext.Provider value={swipeMenuInteraction}>
     <main className="flex h-full min-h-0 flex-col">
       <div ref={phoneFrameRef} className="relative flex min-h-0 flex-1 flex-col">
@@ -358,22 +372,26 @@ export default function Home() {
               setZoomIndicator((z) => ({ x, y, pulse: z.pulse + 1 }));
             }}
           />
-          <ZoomIndicator
-            x={zoomIndicator.x}
-            y={zoomIndicator.y}
-            pulse={zoomIndicator.pulse}
-            hidden={zoomIndicator.pulse === 0}
-          />
-          <TestPathfind
-            globeRef={globeRef}
-            isClientGeoGranted={isClientGeoGranted}
-            mapInitLat={mapInitLat}
-            mapInitLong={mapInitLong}
-          />
-          <TestDBCreate />
-          <TestDBUpdate />
-          <TestDBRemove />
-          <TestDBRead />
+          {!addBathroomModeActive ? (
+            <>
+              <ZoomIndicator
+                x={zoomIndicator.x}
+                y={zoomIndicator.y}
+                pulse={zoomIndicator.pulse}
+                hidden={zoomIndicator.pulse === 0}
+              />
+              <TestPathfind
+                globeRef={globeRef}
+                isClientGeoGranted={isClientGeoGranted}
+                mapInitLat={mapInitLat}
+                mapInitLong={mapInitLong}
+              />
+              <TestDBCreate />
+              <TestDBUpdate />
+              <TestDBRemove />
+              <TestDBRead />
+            </>
+          ) : null}
         </div>
         <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex justify-end pt-1 pr-1">
           <div
@@ -386,7 +404,7 @@ export default function Home() {
             <CesiumAttribution />
           </div>
         </div>
-        {showRecenterButton ? (
+        {!addBathroomModeActive && showRecenterButton ? (
           <Recenter
             globeRef={globeRef}
             viewportRef={phoneFrameRef}
@@ -395,6 +413,7 @@ export default function Home() {
             mapInitLong={mapInitLong}
           />
         ) : null}
+        <AddBathroomMode globeRef={globeRef} />
         <div
           className="pointer-events-none absolute inset-0"
           style={{ zIndex: SWIPE_MENU_BACKDROP_Z_INDEX }}
@@ -407,12 +426,23 @@ export default function Home() {
             onInteractionChange={setSwipeMenuInteraction}
           >
             <FindNearestBathroom />
-            <RegisterNewBathroom globeRef={globeRef} />
+            <RegisterNewBathroom />
           </MainMenu>
         </div>
       </div>
     </main>
     </SwipeMenuInteractionContext.Provider>
+  );
+}
+
+export default function Home() {
+  const phoneFrameRef = useRef<HTMLDivElement | null>(null);
+
+  return (
+    <AlertSystemProvider phoneViewportRef={phoneFrameRef}>
+      <AddBathroomModeProvider>
+        <HomeContent phoneFrameRef={phoneFrameRef} />
+      </AddBathroomModeProvider>
     </AlertSystemProvider>
   );
 }

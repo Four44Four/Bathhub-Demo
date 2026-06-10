@@ -47,6 +47,8 @@ export type ShowPositionalAlertOptions = {
 export type ShowImportantAlertOptions = {
   message: string;
   okLabel?: string;
+  positive?: boolean;
+  onDismiss?: () => void;
 };
 
 export type AlertSystemApi = {
@@ -110,7 +112,11 @@ function AlertSystemOverlay({
           key: "important",
           message: important.message,
           okLabel: important.okLabel,
-          onDismiss: onDismissImportant,
+          positive: important.positive,
+          onDismiss: () => {
+            important.onDismiss?.();
+            onDismissImportant();
+          },
         })
       : null,
   );
@@ -184,8 +190,15 @@ export function AlertSystemProvider({
   }, [state.positional]);
 
   const showImportantAlert = useCallback(
-    ({ message, okLabel = "Ok" }: ShowImportantAlertOptions) => {
-      setState((prev) => alertSystemShowImportant(prev, message, okLabel));
+    ({
+      message,
+      okLabel = "Ok",
+      positive = false,
+      onDismiss,
+    }: ShowImportantAlertOptions) => {
+      setState((prev) =>
+        alertSystemShowImportant(prev, message, okLabel, positive, onDismiss),
+      );
     },
     [],
   );

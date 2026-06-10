@@ -14,10 +14,12 @@ import {
   type RefObject,
 } from "react";
 
+import { useAnimatedOpacity } from "../useAnimatedOpacity";
+import { addBathroomModeSwipeMenuRestoreTarget } from "../pure/viewport2d/AddBathroomModeState";
+
 import {
   SWIPE_MENU_HANDLE_ATTR,
   swipeMenuBackdropOpacity,
-  swipeMenuBackdropOpacityLerp,
   swipeMenuContentHeightPx,
   swipeMenuHeightAfterHandlePointerUp,
   swipeMenuHeightAfterOutsideTap,
@@ -37,6 +39,7 @@ import {
   suppressViewportClicksBriefly,
   type SwipeMenuInteraction,
 } from "./SwipeMenuInteraction";
+import { useAddBathroomMode } from "../viewport2d/add-bathroom-mode";
 
 export function swipeMenuPrimaryButtonWidthPx(viewportWidthPx: number): number {
   return Math.max(0, viewportWidthPx - 2 * SwipeMenuConsts.SIDE_PADDING_PX);
@@ -84,6 +87,10 @@ export function MainMenu({
   className,
   onInteractionChange,
 }: MainMenuProps) {
+  const {
+    isActive: addBathroomModeActive,
+    registerExitHandler,
+  } = useAddBathroomMode();
   const inactiveHeightPx = SwipeMenuConsts.INACTIVE_HEIGHT_PX;
   const dragRef = useRef<{
     pointerId: number;
@@ -95,57 +102,11 @@ export function MainMenu({
 
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
   const [heightPx, setHeightPx] = useState(inactiveHeightPx);
-  const [backdropOpacity, setBackdropOpacity] = useState(0);
-  const backdropOpacityRef = useRef(0);
-  const backdropAnimFrameRef = useRef<number | null>(null);
-
-  const cancelBackdropAnimation = useCallback(() => {
-    if (backdropAnimFrameRef.current !== null) {
-      cancelAnimationFrame(backdropAnimFrameRef.current);
-      backdropAnimFrameRef.current = null;
-    }
-  }, []);
-
-  const setBackdropOpacityImmediate = useCallback(
-    (opacity: number) => {
-      cancelBackdropAnimation();
-      const clamped = Math.min(1, Math.max(0, opacity));
-      backdropOpacityRef.current = clamped;
-      setBackdropOpacity(clamped);
-    },
-    [cancelBackdropAnimation],
-  );
-
-  const animateBackdropOpacityTo = useCallback(
-    (targetOpacity: number) => {
-      cancelBackdropAnimation();
-      const from = backdropOpacityRef.current;
-      const to = Math.min(1, Math.max(0, targetOpacity));
-      if (from === to) {
-        setBackdropOpacityImmediate(to);
-        return;
-      }
-      const durationMs = SwipeMenuConsts.BACKDROP_INTERP_TOGGLE_MS;
-      const startMs =
-        typeof performance !== "undefined" ? performance.now() : Date.now();
-
-      const tick = (nowMs: number) => {
-        const elapsed = nowMs - startMs;
-        const t = durationMs > 0 ? Math.min(1, elapsed / durationMs) : 1;
-        const next = swipeMenuBackdropOpacityLerp(from, to, t);
-        backdropOpacityRef.current = next;
-        setBackdropOpacity(next);
-        if (t < 1) {
-          backdropAnimFrameRef.current = requestAnimationFrame(tick);
-        } else {
-          backdropAnimFrameRef.current = null;
-        }
-      };
-
-      backdropAnimFrameRef.current = requestAnimationFrame(tick);
-    },
-    [cancelBackdropAnimation, setBackdropOpacityImmediate],
-  );
+  const {
+    opacity: backdropOpacity,
+    animateTo: animateBackdropOpacityTo,
+    setImmediate: setBackdropOpacityImmediate,
+  } = useAnimatedOpacity();
 
   const resolveMaxHeightPx = useCallback(() => {
     const measuredHeight =
@@ -188,6 +149,35 @@ export function MainMenu({
     setHeightPx((h) => Math.min(Math.max(h, inactiveHeightPx), maxHeightPx));
   }, [inactiveHeightPx, maxHeightPx]);
 
+  useLayoutEffect(() => {
+    if (addBathroomModeActive) {
+      setHeightPx(0);
+      setBackdropOpacityImmediate(0);
+    }
+  }, [addBathroomModeActive, setBackdropOpacityImmediate]);
+
+  useEffect(() => {
+    return registerExitHandler(({ withNewBathroom }) => {
+      const dragMaxHeightPx = resolveMaxHeightPx();
+      const restoreTarget = addBathroomModeSwipeMenuRestoreTarget(withNewBathroom);
+      const targetHeightPx =
+        restoreTarget === "expanded" ? dragMaxHeightPx : inactiveHeightPx;
+      setHeightPx(targetHeightPx);
+      animateBackdropOpacityTo(
+        swipeMenuBackdropOpacity(
+          targetHeightPx,
+          inactiveHeightPx,
+          dragMaxHeightPx,
+        ),
+      );
+    });
+  }, [
+    animateBackdropOpacityTo,
+    inactiveHeightPx,
+    registerExitHandler,
+    resolveMaxHeightPx,
+  ]);
+
   const collapseIfOpenAboveCollapsedRef = useRef<() => void>(() => {});
   collapseIfOpenAboveCollapsedRef.current = () => {
     const dragMaxHeightPx = resolveMaxHeightPx();
@@ -226,9 +216,8 @@ export function MainMenu({
     });
   }, [isOpenAboveCollapsed, backdropOpacity, onInteractionChange]);
 
-  useEffect(() => () => cancelBackdropAnimation(), [cancelBackdropAnimation]);
-
   const onPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (addBathroomModeActive) return;
     if (e.button !== 0) return;
     if (swipeMenuPointerTargetIsInteractive(e.target)) return;
     measureViewport();
@@ -314,7 +303,7 @@ export function MainMenu({
     right: 0,
     bottom: 0,
     height: heightPx,
-    minHeight: inactiveHeightPx,
+    minHeight: addBathroomModeActive ? 0 : inactiveHeightPx,
     backgroundColor: SwipeMenuConsts.BG_COLOR,
     borderTopLeftRadius: 12,
     borderTopRightRadius: 12,
@@ -359,7 +348,7 @@ export function MainMenu({
 
   return (
     <>
-      {isOpenAboveCollapsed ? (
+      {isOpenAboveCollapsed && !addBathroomModeActive ? (
         <div
           ref={outsideDismissRef}
           aria-hidden="true"
@@ -378,13 +367,15 @@ export function MainMenu({
       onPointerUp={endDrag}
       onPointerCancel={endDrag}
     >
-      <div
-        aria-hidden="true"
-        style={handleStripStyle}
-        {...{ [SWIPE_MENU_HANDLE_ATTR]: "" }}
-      >
-        <div style={pullIndicatorStyle} />
-      </div>
+      {!addBathroomModeActive ? (
+        <div
+          aria-hidden="true"
+          style={handleStripStyle}
+          {...{ [SWIPE_MENU_HANDLE_ATTR]: "" }}
+        >
+          <div style={pullIndicatorStyle} />
+        </div>
+      ) : null}
       {children != null && contentHeightPx > 0 ? (
         <SwipeMenuViewportContext.Provider
           value={{ widthPx: viewportSize.width, heightPx: viewportSize.height }}

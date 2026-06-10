@@ -6,7 +6,7 @@ import {
   type TestTableRow,
 } from "../_shared/TestTable";
 import * as ServerDebug from "../_server/Debug";
-import * as TestTableCrud from "../_server/database/test_table/TestTableCrud";
+import * as TestTableCrud from "../_server/database/test-table/TestTableCrud";
 
 export const RANDOM_DESCRIPTION_LENGTH = 200;
 

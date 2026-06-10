@@ -6,6 +6,11 @@ import {
   type BathroomDataPrimaryRow,
   type ViewportBounds,
 } from "../../../_shared/BathroomDataPrimary";
+import {
+  CREATE_BATHROOM_RPC_NAME,
+  createBathroomAt,
+  type CreateBathroomRpc,
+} from "../../pure/bathroom-data-primary/CreateBathroom";
 
 export type { BathroomDataPrimaryRow, ViewportBounds };
 
@@ -17,11 +22,6 @@ const SUPABASE_KEY_ENV = "SUPABASE_KEY" as const;
 
 /** Bathroom table used by this CRUD module. */
 export const BATHROOM_DATA_PRIMARY_TABLE_NAME = "bathroom_data_primary" as const;
-
-const TEMP_DATA_LENGTH = 64;
-
-const ALPHANUM =
-  "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
 function getSupabaseUrl(): string {
   const url = process.env[SUPABASE_URL_ENV];
@@ -56,37 +56,19 @@ function formatSupabaseError(context: string, message: string): string {
   return `${context}: ${message}`;
 }
 
-export function randomAlphanumericString(length: number): string {
-  let value = "";
-  for (let i = 0; i < length; i++) {
-    value += ALPHANUM[Math.floor(Math.random() * ALPHANUM.length)];
-  }
-  return value;
-}
-
-export function generateTempData(): string {
-  return randomAlphanumericString(TEMP_DATA_LENGTH);
-}
-
 export async function createAt(
   latitude: number,
   longitude: number,
 ): Promise<BathroomDataPrimaryRow> {
-  const { data, error } = await getSupabaseClient()
-    .rpc("create_bathroom_data_primary_at", {
-      p_latitude: latitude,
-      p_longitude: longitude,
-      p_temp_data: generateTempData(),
-    })
-    .single();
+  const client = getSupabaseClient();
+  const rpc: CreateBathroomRpc = async (params) => {
+    const { data, error } = await client
+      .rpc(CREATE_BATHROOM_RPC_NAME, params)
+      .single();
+    return { data: data as BathroomDataPrimaryRow | null, error };
+  };
 
-  if (error !== null) {
-    throw new Error(
-      formatSupabaseError("Failed to create bathroom_data_primary row", error.message),
-    );
-  }
-
-  return data as BathroomDataPrimaryRow;
+  return createBathroomAt(latitude, longitude, rpc);
 }
 
 export async function getInBounds(

@@ -45,9 +45,19 @@ RETURNS TABLE (
     temp_data text,
     created_at timestamp
 )
-LANGUAGE sql
+LANGUAGE plpgsql
 STABLE
 AS $$
+BEGIN
+    -- NaN fails the equality self-check; reject before building an envelope.
+    IF p_min_longitude <> p_min_longitude
+        OR p_min_latitude <> p_min_latitude
+        OR p_max_longitude <> p_max_longitude
+        OR p_max_latitude <> p_max_latitude THEN
+        RAISE EXCEPTION 'invalid bbox coordinates';
+    END IF;
+
+    RETURN QUERY
     SELECT
         b.id,
         ST_Y(b.location::geometry) AS latitude,
@@ -56,16 +66,19 @@ AS $$
         b.temp_data,
         b.created_at
     FROM bathroom_data_primary b
+  -- Geometry envelopes support full-world longitude spans; geography casts
+  -- reject envelopes with antipodal (>= 180 degree) edges.
     WHERE ST_Intersects(
-        b.location,
+        b.location::geometry,
         ST_MakeEnvelope(
             p_min_longitude,
             p_min_latitude,
             p_max_longitude,
             p_max_latitude,
             4326
-        )::geography
+        )
     );
+END;
 $$;
 
 GRANT EXECUTE ON FUNCTION create_bathroom_data_primary_at(

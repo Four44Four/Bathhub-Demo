@@ -10,6 +10,7 @@ const customJestConfig = {
     "<rootDir>/test/**/*.test.tsx",
     "<rootDir>/tests/**/*.test.ts",
     "<rootDir>/tests/**/*.test.tsx",
+    "<rootDir>/supabase-test/**/*.test.ts",
   ],
 };
 

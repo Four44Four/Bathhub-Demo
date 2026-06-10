@@ -1,0 +1,34 @@
+{
+  "bathrooms": [
+    {
+      "label": "nyc",
+      "latitude": 40.712776,
+      "longitude": -74.005974,
+      "verify_status": "pending"
+    },
+    {
+      "label": "los_angeles",
+      "latitude": 34.052235,
+      "longitude": -118.243683,
+      "verify_status": "pending"
+    },
+    {
+      "label": "chicago",
+      "latitude": 41.878113,
+      "longitude": -87.629799,
+      "verify_status": "pending"
+    },
+    {
+      "label": "houston",
+      "latitude": 29.760427,
+      "longitude": -95.369804,
+      "verify_status": "pending"
+    },
+    {
+      "label": "seattle",
+      "latitude": 47.606209,
+      "longitude": -122.332069,
+      "verify_status": "pending"
+    }
+  ]
+}

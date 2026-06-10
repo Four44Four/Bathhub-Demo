@@ -1,0 +1,36 @@
+# Local Supabase config for bathhub CRUD integration tests.
+# API is exposed on 54323 so SUPABASE_URL=http://127.0.0.1:54323 matches supabase status.
+
+project_id = "bathhub-supabase-test"
+
+[api]
+enabled = true
+port = 54323
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 15
+
+[studio]
+enabled = true
+port = 54329
+
+[inbucket]
+enabled = true
+port = 54324
+
+[storage]
+enabled = true
+
+[auth]
+enabled = true
+
+[edge_runtime]
+enabled = true
+
+[analytics]
+enabled = false

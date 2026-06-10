@@ -56,6 +56,25 @@ function formatSupabaseError(context: string, message: string): string {
   return `${context}: ${message}`;
 }
 
+const READ_IN_BOUNDS_INVALID_BBOX_MESSAGE = "invalid bbox coordinates" as const;
+
+function assertFiniteViewportBounds(bounds: ViewportBounds): void {
+  const { lowerLeft, upperRight } = bounds;
+  if (
+    !Number.isFinite(lowerLeft.latitude) ||
+    !Number.isFinite(lowerLeft.longitude) ||
+    !Number.isFinite(upperRight.latitude) ||
+    !Number.isFinite(upperRight.longitude)
+  ) {
+    throw new Error(
+      formatSupabaseError(
+        "Failed to list bathroom_data_primary rows in bounds",
+        READ_IN_BOUNDS_INVALID_BBOX_MESSAGE,
+      ),
+    );
+  }
+}
+
 export async function createAt(
   latitude: number,
   longitude: number,
@@ -74,6 +93,8 @@ export async function createAt(
 export async function getInBounds(
   bounds: ViewportBounds,
 ): Promise<BathroomDataPrimaryRow[]> {
+  assertFiniteViewportBounds(bounds);
+
   const { data, error } = await getSupabaseClient().rpc(
     "get_bathroom_data_primary_in_bbox",
     {

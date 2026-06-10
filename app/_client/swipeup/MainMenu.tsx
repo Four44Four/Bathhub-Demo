@@ -31,6 +31,7 @@ import {
   swipeMenuPointerTargetIsInteractive,
   swipeMenuSnapHeightPx,
   swipeMenuSnapTarget,
+  swipeMenuViewportInteraction,
 } from "../pure/swipeup/SwipeMenu";
 
 import { subscribeOnTap, TAP_MAX_MOVEMENT_PX } from "../NonDragTapDetector";
@@ -119,12 +120,13 @@ export function MainMenu({
   }, [viewportRef, viewportSize.height, inactiveHeightPx]);
 
   const maxHeightPx = resolveMaxHeightPx();
+  const menuHeightPx = addBathroomModeActive ? 0 : heightPx;
   const isOpenAboveCollapsed = swipeMenuIsOpenAboveCollapsed(
-    heightPx,
+    menuHeightPx,
     inactiveHeightPx,
   );
 
-  const contentHeightPx = swipeMenuContentHeightPx(heightPx, inactiveHeightPx);
+  const contentHeightPx = swipeMenuContentHeightPx(menuHeightPx, inactiveHeightPx);
 
   const measureViewport = useCallback(() => {
     const target = viewportRef.current;
@@ -210,11 +212,21 @@ export function MainMenu({
   }, [isOpenAboveCollapsed]);
 
   useEffect(() => {
-    onInteractionChange?.({
-      blocksViewportPointer: isOpenAboveCollapsed,
-      backdropOpacity,
-    });
-  }, [isOpenAboveCollapsed, backdropOpacity, onInteractionChange]);
+    onInteractionChange?.(
+      swipeMenuViewportInteraction(
+        addBathroomModeActive,
+        heightPx,
+        inactiveHeightPx,
+        backdropOpacity,
+      ),
+    );
+  }, [
+    addBathroomModeActive,
+    backdropOpacity,
+    heightPx,
+    inactiveHeightPx,
+    onInteractionChange,
+  ]);
 
   const onPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
     if (addBathroomModeActive) return;
@@ -302,14 +314,14 @@ export function MainMenu({
     left: 0,
     right: 0,
     bottom: 0,
-    height: heightPx,
+    height: menuHeightPx,
     minHeight: addBathroomModeActive ? 0 : inactiveHeightPx,
     backgroundColor: SwipeMenuConsts.BG_COLOR,
     borderTopLeftRadius: 12,
     borderTopRightRadius: 12,
     boxSizing: "border-box",
     touchAction: "none",
-    pointerEvents: "auto",
+    pointerEvents: addBathroomModeActive ? "none" : "auto",
     overflow: "hidden",
     display: "flex",
     flexDirection: "column",

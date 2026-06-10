@@ -15,6 +15,7 @@ import { loadCesium } from "./loadCesium";
 import * as Utils from "../Utils";
 import * as ServerDebug from "../../_server/Debug";
 import { type Point } from "../../_shared/Utils";
+import { type ViewportBounds } from "../../_shared/BathroomDataPrimary";
 import { installClickedIndicator } from "./ClickedIndicator";
 import { installDebugCrosshair } from "./DebugCrosshair";
 import { installMapMarker } from "./MapMarker";
@@ -24,63 +25,87 @@ import { globeLodVisualStateFromCameraHeightM } from "../pure/globe/GlobeLayerLo
 import { TwoToneTileProcessor } from "./TwoToneTileProcessor";
 import { dimensionCss } from "../pure/globe/GlobeViewportCss";
 import * as GeoArrival from "../pure/globe/GeoArrivalCameraLock";
+import {
+  computeViewportBoundsLatLon,
+  pickViewportSurfaceLatLon,
+  type ViewportSurfacePickDeps,
+} from "../pure/globe/ViewportSurfacePick";
 import { useSwipeMenuBlocksViewport } from "../swipeup/SwipeMenuInteraction";
 
 /** Set to true once `GLOBE_VIEWPORT_DETECT_IDLE_MS` elapses without move/zoom activity; cleared when activity resumes. */
 let isClientIdle = false;
 
+function buildViewportSurfacePickDeps(
+  viewer: CesiumTypes.Viewer,
+  Cesium: typeof import("cesium"),
+): ViewportSurfacePickDeps {
+  const canvas = viewer.scene.canvas;
+  const ellipsoid = viewer.scene.globe.ellipsoid;
+
+  return {
+    canvasWidth: canvas.clientWidth,
+    canvasHeight: canvas.clientHeight,
+    pickPositionSupported: viewer.scene.pickPositionSupported,
+    pickPosition: (x, y) => {
+      try {
+        return viewer.scene.pickPosition(new Cesium.Cartesian2(x, y));
+      } catch {
+        return undefined;
+      }
+    },
+    getPickRay: (x, y) => {
+      try {
+        return viewer.camera.getPickRay(new Cesium.Cartesian2(x, y));
+      } catch {
+        return null;
+      }
+    },
+    globePick: (ray) => {
+      try {
+        return viewer.scene.globe.pick(ray as CesiumTypes.Ray, viewer.scene);
+      } catch {
+        return undefined;
+      }
+    },
+    pickEllipsoid: (x, y) => {
+      try {
+        return viewer.camera.pickEllipsoid(
+          new Cesium.Cartesian2(x, y),
+          ellipsoid,
+        );
+      } catch {
+        return null;
+      }
+    },
+    cartographicFromCartesian: (cartesian) => {
+      try {
+        return Cesium.Cartographic.fromCartesian(
+          cartesian as CesiumTypes.Cartesian3,
+          ellipsoid,
+        );
+      } catch {
+        return undefined;
+      }
+    },
+    toDegrees: (radians) => Cesium.Math.toDegrees(radians),
+  };
+}
+
 function computeViewportCenterLatLon(
   viewer: CesiumTypes.Viewer,
   Cesium: typeof import("cesium"),
 ): Point | null {
-  const canvas = viewer.scene.canvas;
-  const cw = canvas.clientWidth;
-  const ch = canvas.clientHeight;
-  if (cw < 1 || ch < 1) return null;
-  const center = new Cesium.Cartesian2(cw / 2, ch / 2);
-  const ellipsoid = viewer.scene.globe.ellipsoid;
+  const deps = buildViewportSurfacePickDeps(viewer, Cesium);
+  const centerX = deps.canvasWidth / 2;
+  const centerY = deps.canvasHeight / 2;
+  return pickViewportSurfaceLatLon(deps, centerX, centerY);
+}
 
-  // Match tap picking (`Camera.ts` pointer-up): `globe.pick` alone skews at max zoom where the
-  // depth buffer matches the draped imagery better than ray–globe mesh intersection.
-  let carto: CesiumTypes.Cartographic | undefined;
-
-  try {
-    if (viewer.scene.pickPositionSupported) {
-      const world = viewer.scene.pickPosition(center);
-      if (Cesium.defined(world)) {
-        carto = Cesium.Cartographic.fromCartesian(world as CesiumTypes.Cartesian3, ellipsoid);
-      }
-    }
-  } catch {
-    // ignore
-  }
-
-  if (!carto) {
-    try {
-      const ray = viewer.camera.getPickRay(center);
-      if (ray) {
-        const gp = viewer.scene.globe.pick(ray, viewer.scene);
-        if (Cesium.defined(gp)) {
-          carto = Cesium.Cartographic.fromCartesian(gp as CesiumTypes.Cartesian3, ellipsoid);
-        }
-      }
-    } catch {
-      // ignore
-    }
-  }
-
-  if (!carto) {
-    const world = viewer.camera.pickEllipsoid(center, ellipsoid);
-    if (world) {
-      carto = Cesium.Cartographic.fromCartesian(world, ellipsoid);
-    }
-  }
-
-  if (!carto) return null;
-  const lat = Cesium.Math.toDegrees(carto.latitude);
-  const lon = Cesium.Math.toDegrees(carto.longitude);
-  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
-  return { latitude: lat, longitude: lon };
+function computeViewportBoundsFromViewer(
+  viewer: CesiumTypes.Viewer,
+  Cesium: typeof import("cesium"),
+): ViewportBounds | null {
+  return computeViewportBoundsLatLon(buildViewportSurfacePickDeps(viewer, Cesium));
 }
 
 /**
@@ -97,6 +122,8 @@ export type GlobeViewportHandle = {
   snapTo: (lat: number, long: number) => void;
   /** Lat/long where the map surface lies under the viewport center (camera look target). */
   getViewportCenterLatLon: () => Point | null;
+  /** Geographic bounding box of the visible globe surface in the viewport. */
+  getViewportBoundsLatLon: () => ViewportBounds | null;
   /** Lat/long of the tap/click marker on the globe, if the user has clicked. */
   getClickedIndicatorLatLon: () => Point | null;
   /**
@@ -204,6 +231,7 @@ export function GlobeViewport({
   const pathHandleRef = useRef<PathHandle | null>(null);
   /** Shared cache for `getViewportCenterLatLon`, MapMarker viewport-follow mode, and callers like `getStartPos`. */
   const viewportCenterLatLonRef = useRef<Point | null>(null);
+  const viewportBoundsLatLonRef = useRef<ViewportBounds | null>(null);
   const [mapMarkerStaticOverlay, setMapMarkerStaticOverlay] = useState(true);
   /**
    * Live MapMarker handle (replaced when the viewer reinits). The imperative
@@ -254,6 +282,7 @@ export function GlobeViewport({
         }
       },
       getViewportCenterLatLon: () => viewportCenterLatLonRef.current,
+      getViewportBoundsLatLon: () => viewportBoundsLatLonRef.current,
       getClickedIndicatorLatLon: () => {
         const api = clickedIndicatorApiRef.current;
         if (!api) return null;
@@ -621,6 +650,10 @@ export function GlobeViewport({
         if (cancelled || !viewer) return;
         const p = computeViewportCenterLatLon(viewer, Cesium);
         if (p) viewportCenterLatLonRef.current = p;
+        viewportBoundsLatLonRef.current = computeViewportBoundsFromViewer(
+          viewer,
+          Cesium,
+        );
         mapMarker.refreshViewportFollowFromCache();
         if (p) debugCrosshair?.notifyViewportCenterSampled();
         viewer.scene.requestRender();
@@ -827,6 +860,7 @@ export function GlobeViewport({
       cesiumNsRef.current = null;
       clickedIndicatorApiRef.current = null;
       viewportCenterLatLonRef.current = null;
+      viewportBoundsLatLonRef.current = null;
       isClientIdle = false;
       geoArrivalLockStateRef.current = GeoArrival.initialGeoArrivalLockState();
       // Drop the imperative-handle target so a late `animateTo` can't drive a

@@ -10,6 +10,7 @@ import {
   addBathroomRequestResolveSuccess,
   addBathroomRequestResolveTimeout,
   INITIAL_ADD_BATHROOM_REQUEST_STATE,
+  resolveAddBathroomCreateResult,
   type AddBathroomRequestPhase,
   type AddBathroomRequestState,
 } from "../../pure/viewport2d/AddBathroomModeState";
@@ -60,6 +61,23 @@ function withTimeout<T>(
   });
 }
 
+function dispatchTerminalPhase(
+  dispatch: (action: RequestAction) => void,
+  phase: Exclude<AddBathroomRequestPhase, "idle" | "pending">,
+): void {
+  switch (phase) {
+    case "success":
+      dispatch({ type: "success" });
+      break;
+    case "failure":
+      dispatch({ type: "failure" });
+      break;
+    case "timeout":
+      dispatch({ type: "timeout" });
+      break;
+  }
+}
+
 export function useAddBathroomRequest() {
   const [requestState, dispatch] = useReducer(
     requestReducer,
@@ -76,27 +94,22 @@ export function useAddBathroomRequest() {
     async (
       latitude: number,
       longitude: number,
+      showLoadingScreen: () => void,
     ): Promise<AddBathroomRequestPhase | null> => {
       if (inFlightRef.current) return null;
       inFlightRef.current = true;
-      dispatch({ type: "begin" });
 
-      const result = await withTimeout(
+      const requestPromise = withTimeout(
         createBathroomAt(latitude, longitude),
         ADD_BATHROOM_REQUEST_TIMEOUT_MS,
       );
 
-      let terminalPhase: AddBathroomRequestPhase;
-      if (result === "timeout") {
-        terminalPhase = "timeout";
-        dispatch({ type: "timeout" });
-      } else if (result.errorMsg) {
-        terminalPhase = "failure";
-        dispatch({ type: "failure" });
-      } else {
-        terminalPhase = "success";
-        dispatch({ type: "success" });
-      }
+      showLoadingScreen();
+      dispatch({ type: "begin" });
+
+      const result = await requestPromise;
+      const terminalPhase = resolveAddBathroomCreateResult(result);
+      dispatchTerminalPhase(dispatch, terminalPhase);
 
       inFlightRef.current = false;
       return terminalPhase;

@@ -5,6 +5,7 @@ import { useCallback, useEffect, type CSSProperties, type RefObject } from "reac
 import type { GlobeViewportHandle } from "../../globe/GlobeViewport";
 import { useAnimatedOpacity } from "../../useAnimatedOpacity";
 import {
+  addBathroomModeBackdropBlocksPointerEvents,
   addBathroomModeShouldRender,
   addBathroomModeShowSpinner,
   addBathroomResultAlertForPhase,
@@ -16,6 +17,7 @@ import { useAddBathroomMode } from "./Context";
 import { Backdrop } from "./Backdrop";
 import { Marker } from "./Marker";
 import { useAddBathroomRequest } from "./useAddBathroomRequest";
+import { refreshBathroomsInGlobeViewport } from "../../Bathroom";
 
 export type AddBathroomModeProps = {
   globeRef: RefObject<GlobeViewportHandle | null>;
@@ -74,6 +76,9 @@ export function AddBathroomMode({ globeRef }: AddBathroomModeProps) {
         positive: alertConfig.positive,
         onDismiss: () => {
           animateBackdropOpacityTo(0);
+          if (alertConfig.exitWithNewBathroom) {
+            void refreshBathroomsInGlobeViewport(globeRef);
+          }
           exitAddBathroomMode({
             withNewBathroom: alertConfig.exitWithNewBathroom,
           });
@@ -84,6 +89,7 @@ export function AddBathroomMode({ globeRef }: AddBathroomModeProps) {
     [
       animateBackdropOpacityTo,
       exitAddBathroomMode,
+      globeRef,
       resetRequest,
       showImportantAlert,
     ],
@@ -97,10 +103,10 @@ export function AddBathroomMode({ globeRef }: AddBathroomModeProps) {
     const center = globeRef.current?.getViewportCenterLatLon();
     if (!center) return;
 
-    animateBackdropOpacityTo(1);
     const terminalPhase = await submitCreate(
       center.latitude,
       center.longitude,
+      () => animateBackdropOpacityTo(1),
     );
     if (
       terminalPhase === "success" ||
@@ -133,7 +139,13 @@ export function AddBathroomMode({ globeRef }: AddBathroomModeProps) {
 
   return (
     <>
-      <Backdrop opacity={backdropOpacity} spinnerOpacity={spinnerOpacity} />
+      <Backdrop
+        opacity={backdropOpacity}
+        spinnerOpacity={spinnerOpacity}
+        blocksPointerEvents={addBathroomModeBackdropBlocksPointerEvents(
+          requestState.phase,
+        )}
+      />
       {isActive ? (
         <div style={shellStyle}>
           <Marker />

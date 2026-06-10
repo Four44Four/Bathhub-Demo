@@ -198,6 +198,30 @@ export function swipeMenuIsOpenAboveCollapsed(
   return heightPx > inactiveHeightPx;
 }
 
+export type SwipeMenuViewportInteraction = {
+  blocksViewportPointer: boolean;
+  backdropOpacity: number;
+};
+
+/** Globe dimming and pointer blocking come only from the swipe menu, never add-bathroom mode. */
+export function swipeMenuViewportInteraction(
+  addBathroomModeActive: boolean,
+  heightPx: number,
+  inactiveHeightPx: number,
+  menuBackdropOpacity: number,
+): SwipeMenuViewportInteraction {
+  if (addBathroomModeActive) {
+    return { blocksViewportPointer: false, backdropOpacity: 0 };
+  }
+  return {
+    blocksViewportPointer: swipeMenuIsOpenAboveCollapsed(
+      heightPx,
+      inactiveHeightPx,
+    ),
+    backdropOpacity: menuBackdropOpacity,
+  };
+}
+
 /**
  * On pointer release, toggle expand/collapse when the gesture started on the
  * handle and did not move enough to count as a drag. Otherwise returns

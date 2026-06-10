@@ -109,3 +109,19 @@ export function addBathroomModeShowSpinner(
 ): boolean {
   return requestPhase === "pending";
 }
+
+/** Backdrop blocks globe input only while the create request is in flight. */
+export function addBathroomModeBackdropBlocksPointerEvents(
+  requestPhase: AddBathroomRequestPhase,
+): boolean {
+  return requestPhase === "pending";
+}
+
+/** Maps a create-bathroom server result (or timeout) to the terminal request phase. */
+export function resolveAddBathroomCreateResult(
+  result: { errorMsg?: string } | "timeout",
+): Exclude<AddBathroomRequestPhase, "idle" | "pending"> {
+  if (result === "timeout") return "timeout";
+  if (result.errorMsg) return "failure";
+  return "success";
+}

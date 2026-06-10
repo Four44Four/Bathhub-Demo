@@ -17,6 +17,7 @@ import {
   swipeMenuPullIndicatorWidthPx,
   swipeMenuSnapHeightPx,
   swipeMenuSnapTarget,
+  swipeMenuViewportInteraction,
 } from "../app/_client/pure/swipeup/SwipeMenu";
 
 describe("SwipeMenu", () => {
@@ -219,5 +220,17 @@ describe("SwipeMenu", () => {
         inactive,
       ),
     ).toBe(inactive);
+  });
+
+  test("swipeMenuViewportInteraction clears overlay during add-bathroom mode", () => {
+    expect(
+      swipeMenuViewportInteraction(true, max, inactive, 1),
+    ).toEqual({ blocksViewportPointer: false, backdropOpacity: 0 });
+    expect(
+      swipeMenuViewportInteraction(false, max, inactive, 0.75),
+    ).toEqual({ blocksViewportPointer: true, backdropOpacity: 0.75 });
+    expect(
+      swipeMenuViewportInteraction(false, inactive, inactive, 0),
+    ).toEqual({ blocksViewportPointer: false, backdropOpacity: 0 });
   });
 });

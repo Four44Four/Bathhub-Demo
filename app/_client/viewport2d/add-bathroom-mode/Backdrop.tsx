@@ -9,9 +9,14 @@ import { LoadingSpinner } from "./LoadingSpinner";
 export type BackdropProps = {
   opacity: number;
   spinnerOpacity: number;
+  blocksPointerEvents: boolean;
 };
 
-export function Backdrop({ opacity, spinnerOpacity }: BackdropProps) {
+export function Backdrop({
+  opacity,
+  spinnerOpacity,
+  blocksPointerEvents,
+}: BackdropProps) {
   if (opacity <= 0 && spinnerOpacity <= 0) return null;
 
   const style: CSSProperties = {
@@ -23,7 +28,7 @@ export function Backdrop({ opacity, spinnerOpacity }: BackdropProps) {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    pointerEvents: opacity > 0 ? "auto" : "none",
+    pointerEvents: blocksPointerEvents ? "auto" : "none",
     touchAction: "none",
   };
 

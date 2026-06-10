@@ -1,6 +1,7 @@
 import {
   addBathroomModeShouldRender,
   addBathroomModeShowSpinner,
+  addBathroomModeBackdropBlocksPointerEvents,
   addBathroomModeSwipeMenuRestoreTarget,
   addBathroomRequestBegin,
   addBathroomRequestReset,
@@ -9,6 +10,7 @@ import {
   addBathroomRequestResolveTimeout,
   addBathroomResultAlertForPhase,
   INITIAL_ADD_BATHROOM_REQUEST_STATE,
+  resolveAddBathroomCreateResult,
 } from "../app/_client/pure/viewport2d/AddBathroomModeState";
 
 describe("AddBathroomModeState", () => {
@@ -69,5 +71,23 @@ describe("AddBathroomModeState", () => {
       positive: false,
       exitWithNewBathroom: false,
     });
+  });
+
+  test("create result resolves to terminal request phase", () => {
+    expect(resolveAddBathroomCreateResult("timeout")).toBe("timeout");
+    expect(resolveAddBathroomCreateResult({ errorMsg: "db down" })).toBe(
+      "failure",
+    );
+    expect(resolveAddBathroomCreateResult({ val: { id: 1 } } as never)).toBe(
+      "success",
+    );
+  });
+
+  test("backdrop blocks pointer events only while pending", () => {
+    expect(addBathroomModeBackdropBlocksPointerEvents("idle")).toBe(false);
+    expect(addBathroomModeBackdropBlocksPointerEvents("pending")).toBe(true);
+    expect(addBathroomModeBackdropBlocksPointerEvents("success")).toBe(false);
+    expect(addBathroomModeBackdropBlocksPointerEvents("failure")).toBe(false);
+    expect(addBathroomModeBackdropBlocksPointerEvents("timeout")).toBe(false);
   });
 });

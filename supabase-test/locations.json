@@ -29,6 +29,156 @@
       "latitude": 47.606209,
       "longitude": -122.332069,
       "verify_status": "pending"
+    },
+    {
+      "label": "london",
+      "latitude": 51.507351,
+      "longitude": -0.127758,
+      "verify_status": "pending"
+    },
+    {
+      "label": "paris",
+      "latitude": 48.856613,
+      "longitude": 2.352222,
+      "verify_status": "pending"
+    },
+    {
+      "label": "tokyo",
+      "latitude": 35.689487,
+      "longitude": 139.691711,
+      "verify_status": "pending"
+    },
+    {
+      "label": "sydney",
+      "latitude": -33.86882,
+      "longitude": 151.209296,
+      "verify_status": "pending"
+    },
+    {
+      "label": "cairo",
+      "latitude": 30.04442,
+      "longitude": 31.235712,
+      "verify_status": "pending"
+    },
+    {
+      "label": "sao_paulo",
+      "latitude": -23.55052,
+      "longitude": -46.633308,
+      "verify_status": "pending"
+    },
+    {
+      "label": "cape_town",
+      "latitude": -33.924869,
+      "longitude": 18.424055,
+      "verify_status": "pending"
+    },
+    {
+      "label": "mumbai",
+      "latitude": 19.075984,
+      "longitude": 72.877656,
+      "verify_status": "pending"
+    },
+    {
+      "label": "moscow",
+      "latitude": 55.755826,
+      "longitude": 37.6173,
+      "verify_status": "pending"
+    },
+    {
+      "label": "buenos_aires",
+      "latitude": -34.603684,
+      "longitude": -58.381559,
+      "verify_status": "pending"
+    },
+    {
+      "label": "mexico_city",
+      "latitude": 19.432608,
+      "longitude": -99.133209,
+      "verify_status": "pending"
+    },
+    {
+      "label": "bangkok",
+      "latitude": 13.756331,
+      "longitude": 100.501762,
+      "verify_status": "pending"
+    },
+    {
+      "label": "istanbul",
+      "latitude": 41.008238,
+      "longitude": 28.978359,
+      "verify_status": "pending"
+    },
+    {
+      "label": "seoul",
+      "latitude": 37.566535,
+      "longitude": 126.977969,
+      "verify_status": "pending"
+    },
+    {
+      "label": "nairobi",
+      "latitude": -1.292066,
+      "longitude": 36.821945,
+      "verify_status": "pending"
+    },
+    {
+      "label": "reykjavik",
+      "latitude": 64.146582,
+      "longitude": -21.942636,
+      "verify_status": "pending"
+    },
+    {
+      "label": "auckland",
+      "latitude": -36.848461,
+      "longitude": 174.763336,
+      "verify_status": "pending"
+    },
+    {
+      "label": "lima",
+      "latitude": -12.046374,
+      "longitude": -77.042793,
+      "verify_status": "pending"
+    },
+    {
+      "label": "jakarta",
+      "latitude": -6.208763,
+      "longitude": 106.845599,
+      "verify_status": "pending"
+    },
+    {
+      "label": "lagos",
+      "latitude": 6.524379,
+      "longitude": 3.379206,
+      "verify_status": "pending"
+    },
+    {
+      "label": "beijing",
+      "latitude": 39.904211,
+      "longitude": 116.407395,
+      "verify_status": "pending"
+    },
+    {
+      "label": "vancouver",
+      "latitude": 49.282729,
+      "longitude": -123.120738,
+      "verify_status": "pending"
+    },
+    {
+      "label": "manila",
+      "latitude": 14.599512,
+      "longitude": 120.984222,
+      "verify_status": "pending"
+    },
+    {
+      "label": "santiago",
+      "latitude": -33.44889,
+      "longitude": -70.669265,
+      "verify_status": "pending"
+    },
+    {
+      "label": "oslo",
+      "latitude": 59.913869,
+      "longitude": 10.752245,
+      "verify_status": "pending"
     }
   ]
 }

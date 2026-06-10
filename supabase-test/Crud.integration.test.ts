@@ -28,7 +28,6 @@ const READ_IN_BOUNDS_ERROR_CONTEXT =
   "Failed to list bathroom_data_primary rows in bounds" as const;
 
 const COORD_EPSILON = 1e-5;
-const EXPECTED_ROW_COUNT = 5;
 const WORLD_BOUNDS: ViewportBounds = {
   lowerLeft: { latitude: -90, longitude: -180 },
   upperRight: { latitude: 90, longitude: 180 },
@@ -44,8 +43,8 @@ function loadExpectedBathrooms(): InputCoordinate[] {
   const raw = readFileSync(join(__dirname, "locations.json"), "utf8");
   const parsed = JSON.parse(raw) as { bathrooms: InputCoordinate[] };
 
-  if (!Array.isArray(parsed.bathrooms) || parsed.bathrooms.length !== EXPECTED_ROW_COUNT) {
-    throw new Error(`locations.json must define exactly ${EXPECTED_ROW_COUNT} bathrooms`);
+  if (!Array.isArray(parsed.bathrooms) || parsed.bathrooms.length === 0) {
+    throw new Error("locations.json must define a non-empty bathrooms array");
   }
 
   return parsed.bathrooms;
@@ -218,10 +217,10 @@ describe("bathroom_data_primary CRUD against local Supabase", () => {
 
     try {
       tableRows = await bathroomDbReadInBounds(WORLD_BOUNDS);
-      if (tableRows.length !== EXPECTED_ROW_COUNT) {
+      if (tableRows.length !== expectedBathrooms.length) {
         testsPassed = false;
         recordFailure(failedRows, "(table scan)", null, [
-          `read: expected ${EXPECTED_ROW_COUNT} rows in bathroom_data_primary, got ${tableRows.length}`,
+          `read: expected ${expectedBathrooms.length} rows in bathroom_data_primary, got ${tableRows.length}`,
         ]);
       }
     } catch (error) {
@@ -252,17 +251,17 @@ describe("bathroom_data_primary CRUD against local Supabase", () => {
   });
 
   test("create responses match pre-generated locations and verify statuses", () => {
-    expect(created).toHaveLength(EXPECTED_ROW_COUNT);
+    expect(created).toHaveLength(expectedBathrooms.length);
     expect(failuresForPhase(failedRows, "create")).toHaveLength(0);
   });
 
   test("bathroomDbReadInBounds returns persisted rows matching expected data", () => {
-    expect(created).toHaveLength(EXPECTED_ROW_COUNT);
+    expect(created).toHaveLength(expectedBathrooms.length);
     expect(failuresForPhase(failedRows, "read")).toHaveLength(0);
   });
 
-  test("bathroom_data_primary contains exactly five rows after seeding", () => {
-    expect(tableRows).toHaveLength(EXPECTED_ROW_COUNT);
+  test("bathroom_data_primary row count matches locations.json after seeding", () => {
+    expect(tableRows).toHaveLength(expectedBathrooms.length);
   });
 
   test("bathroomDbReadInBounds returns empty for an out-of-bounds viewport", async () => {
@@ -277,7 +276,7 @@ describe("bathroom_data_primary CRUD against local Supabase", () => {
       ).rejects.toThrow(`${CREATE_BATHROOM_ERROR_CONTEXT}:`);
 
       expect((await bathroomDbReadInBounds(WORLD_BOUNDS)).length).toBe(
-        EXPECTED_ROW_COUNT,
+        expectedBathrooms.length,
       );
     });
 
@@ -287,7 +286,7 @@ describe("bathroom_data_primary CRUD against local Supabase", () => {
       );
 
       expect((await bathroomDbReadInBounds(WORLD_BOUNDS)).length).toBe(
-        EXPECTED_ROW_COUNT,
+        expectedBathrooms.length,
       );
     });
 
@@ -300,7 +299,7 @@ describe("bathroom_data_primary CRUD against local Supabase", () => {
       ).rejects.toThrow(READ_IN_BOUNDS_ERROR_CONTEXT);
 
       expect((await bathroomDbReadInBounds(WORLD_BOUNDS)).length).toBe(
-        EXPECTED_ROW_COUNT,
+        expectedBathrooms.length,
       );
     });
   });

@@ -125,7 +125,9 @@ function section(title: string, body: string, color?: string): string {
 }
 
 export function formatCrudReport(data: CrudReportData): string {
-  const inputTable = buildTable([...INPUT_COLUMNS], inputRows(data.inputs));
+  const inputPreview = data.inputs.slice(0, DISPLAY_LIMIT);
+  let inputTable = buildTable([...INPUT_COLUMNS], inputRows(inputPreview));
+  inputTable += appendOverflowSuffix(inputPreview.length, data.inputs.length);
 
   const outputColor = data.testsPassed ? ANSI.green : ANSI.red;
 

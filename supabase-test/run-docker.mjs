@@ -5,6 +5,12 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const image = "bathhub-supabase-test";
 
+const ANSI = {
+  green: "\x1b[32m",
+  red: "\x1b[31m",
+  reset: "\x1b[0m",
+};
+
 function run(command, args) {
   const result = spawnSync(command, args, {
     cwd: root,
@@ -39,9 +45,9 @@ const testRun = spawnSync(
 );
 
 if (testRun.status === 0) {
-  console.log("supabase-test: PASSED");
+  console.log(`${ANSI.green}supabase-test: PASSED${ANSI.reset}`);
   process.exit(0);
 }
 
-console.log("supabase-test: FAILED");
+console.log(`${ANSI.red}supabase-test: FAILED${ANSI.reset}`);
 process.exit(testRun.status ?? 1);

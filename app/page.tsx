@@ -9,10 +9,6 @@ import {
   type RefObject,
 } from "react";
 import { Recenter } from "./_client/viewport2d/buttons/Recenter";
-import { TestDBCreate } from "./_client/viewport2d/buttons/testing/TestDBCreate";
-import { TestDBRead } from "./_client/viewport2d/buttons/testing/TestDBRead";
-import { TestDBRemove } from "./_client/viewport2d/buttons/testing/TestDBRemove";
-import { TestDBUpdate } from "./_client/viewport2d/buttons/testing/TestDBUpdate";
 import { TestPathfind } from "./_client/viewport2d/buttons/testing/TestPathfind";
 import {
   GlobeViewport,
@@ -390,10 +386,6 @@ function HomeContent({
                 mapInitLat={mapInitLat}
                 mapInitLong={mapInitLong}
               />
-              <TestDBCreate />
-              <TestDBUpdate />
-              <TestDBRemove />
-              <TestDBRead />
             </>
           ) : null}
         </div>

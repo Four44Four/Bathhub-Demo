@@ -145,3 +145,7 @@ export const Menus = {
     /** Globe dim overlay color while the swipe-up menu is open (CSS rgba). */
     BACKDROP_COLOR: "rgba(12, 13, 18, 0.62)",
 } as const;
+
+export const BathroomDB = {
+    READ_DEBOUNCE_MS_CLIENT: 500,
+} as const;

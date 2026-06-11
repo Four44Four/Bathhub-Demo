@@ -1,8 +1,6 @@
 # Sprint 2 (basic backend)
-    - (for all Bathroom CRUD) Have rate limits on all Bathroom DB operations
+    - (for all Bathroom CRUD) Have REMOTE rate limits on all Bathroom DB operations
     - (for all Bathroom CRUD) Make integration tests in ./supabase/migrations
- - Cache the Bathroom locations that are found in a local SQLite DB so that repeated zooming in and out doesn't DOS the DB
-    - Use GeoPackage ?
  - When zooming close enough to the Globe:
     - Automatically start querying for bathrooms in viewport
     - Render them as they are received by the client
@@ -11,6 +9,8 @@
     - When a visible Bathroom marker is tapped on:
        - Open up its bathroom page from the slide up menu
        - Show some dummy info on each bathroom that is unique for now
+ - Cache the Bathroom locations that are found in a local SQLite DB so that repeated zooming in and out doesn't DOS the DB
+    - Use GeoPackage ?
  - Add rating system on bathrooms (stars 1-5)
  - Add comments system on bathrooms
  - Setup S3 for Supabase

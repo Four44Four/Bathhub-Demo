@@ -5,6 +5,8 @@ This version has breaking changes — APIs, conventions, and file structure may 
 <!-- END:nextjs-agent-rules -->
 
 ## Implementation rules
+ - This is a webapp demo version of an app
+    - Implement code that will work solely in a browser environment
  - Always extract purely functional/mathematical logic into modular, top level functions
  - Use dependency injection pattern whenever possible
  - Create unit tests whenever new pure functions or logic is added

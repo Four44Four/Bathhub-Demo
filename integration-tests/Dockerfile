@@ -12,6 +12,6 @@ RUN npm ci
 
 COPY . .
 
-RUN chmod +x ./supabase-test/*.sh
+RUN chmod +x ./integration-tests/*.sh
 
-ENTRYPOINT ["./supabase-test/entrypoint.sh"]
+ENTRYPOINT ["./integration-tests/entrypoint.sh"]

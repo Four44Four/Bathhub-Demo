@@ -3,7 +3,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-const image = "bathhub-supabase-test";
+const image = "bathhub-integration-tests";
 
 const ANSI = {
   green: "\x1b[32m",
@@ -23,17 +23,17 @@ function run(command, args) {
   }
 }
 
-console.log("supabase-test: building Docker image...");
+console.log("integration-tests: building Docker image...");
 run("docker", [
   "build",
   "-f",
-  "supabase-test/Dockerfile",
+  "integration-tests/Dockerfile",
   "-t",
   image,
   ".",
 ]);
 
-console.log("supabase-test: running containerized tests...");
+console.log("integration-tests: running containerized tests...");
 const testRun = spawnSync(
   "docker",
   ["run", "--rm", "--privileged", image],
@@ -45,9 +45,9 @@ const testRun = spawnSync(
 );
 
 if (testRun.status === 0) {
-  console.log(`${ANSI.green}supabase-test: PASSED${ANSI.reset}`);
+  console.log(`${ANSI.green}integration-tests: PASSED${ANSI.reset}`);
   process.exit(0);
 }
 
-console.log(`${ANSI.red}supabase-test: FAILED${ANSI.reset}`);
+console.log(`${ANSI.red}integration-tests: FAILED${ANSI.reset}`);
 process.exit(testRun.status ?? 1);

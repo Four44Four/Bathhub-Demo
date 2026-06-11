@@ -8,7 +8,7 @@ const customJestConfig = {
   testMatch: [
     "<rootDir>/unit-tests/**/*.test.ts",
     "<rootDir>/unit-tests/**/*.test.tsx",
-    "<rootDir>/supabase-test/**/*.test.ts",
+    "<rootDir>/integration-tests/**/*.test.ts",
   ],
 };
 

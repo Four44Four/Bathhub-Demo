@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "unit-test": "jest --verbose ./unit-tests",
-    "supabase-test": "node supabase-test/run-docker.mjs"
+    "integration-tests": "node integration-tests/run-docker.mjs"
   },
   "dependencies": {
     "@sqlite.org/sqlite-wasm": "^3.50.4-build1",

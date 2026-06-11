@@ -1,7 +1,7 @@
 # Local Supabase config for bathhub CRUD integration tests.
 # API is exposed on 54323 so SUPABASE_URL=http://127.0.0.1:54323 matches supabase status.
 
-project_id = "bathhub-supabase-test"
+project_id = "bathhub-integration-tests"
 
 [api]
 enabled = true

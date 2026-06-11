@@ -13,7 +13,7 @@ for attempt in $(seq 1 60); do
   if docker info >/dev/null 2>&1; then
     storage_driver="$(docker info -f '{{.Driver}}' 2>/dev/null || true)"
     echo "entrypoint: Docker daemon is ready (storage driver: ${storage_driver:-unknown})"
-    exec ./supabase-test/run-tests.sh
+    exec ./integration-tests/run-tests.sh
   fi
   sleep 1
 done

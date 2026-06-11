@@ -36,6 +36,7 @@ const OUTPUT_COLUMNS = [
   "verify_status",
   "temp_data",
   "created_at",
+  "version",
 ] as const;
 
 const FAILED_COLUMNS = [

@@ -35,6 +35,15 @@ import { useSwipeMenuBlocksViewport } from "../swipeup/SwipeMenuInteraction";
 /** Set to true once `GLOBE_VIEWPORT_DETECT_IDLE_MS` elapses without move/zoom activity; cleared when activity resumes. */
 let isClientIdle = false;
 
+type ViewportChangeListener = () => void;
+const viewportChangeListeners = new Set<ViewportChangeListener>();
+
+function notifyViewportChangeListeners(): void {
+  for (const listener of viewportChangeListeners) {
+    listener();
+  }
+}
+
 function buildViewportSurfacePickDeps(
   viewer: CesiumTypes.Viewer,
   Cesium: typeof import("cesium"),
@@ -124,6 +133,14 @@ export type GlobeViewportHandle = {
   getViewportCenterLatLon: () => Point | null;
   /** Geographic bounding box of the visible globe surface in the viewport. */
   getViewportBoundsLatLon: () => ViewportBounds | null;
+  /** Camera height in meters above the WGS84 ellipsoid. */
+  getCameraHeightM: () => number;
+  /** Subscribe to viewport bounds / camera updates (returns an unsubscribe function). */
+  subscribeViewportChanges: (listener: ViewportChangeListener) => () => void;
+  /** Resolves once the underlying Cesium viewer is ready. */
+  waitForViewer: () => Promise<CesiumTypes.Viewer>;
+  /** Re-samples viewport bounds/camera and notifies subscribers immediately. */
+  requestViewportResync: () => void;
   /** Lat/long of the tap/click marker on the globe, if the user has clicked. */
   getClickedIndicatorLatLon: () => Point | null;
   /**
@@ -232,6 +249,11 @@ export function GlobeViewport({
   /** Shared cache for `getViewportCenterLatLon`, MapMarker viewport-follow mode, and callers like `getStartPos`. */
   const viewportCenterLatLonRef = useRef<Point | null>(null);
   const viewportBoundsLatLonRef = useRef<ViewportBounds | null>(null);
+  const cameraHeightMRef = useRef<number>(Number.POSITIVE_INFINITY);
+  const viewerReadyResolversRef = useRef<Array<(viewer: CesiumTypes.Viewer) => void>>(
+    [],
+  );
+  const requestViewportResyncRef = useRef<(() => void) | null>(null);
   const [mapMarkerStaticOverlay, setMapMarkerStaticOverlay] = useState(true);
   /**
    * Live MapMarker handle (replaced when the viewer reinits). The imperative
@@ -283,6 +305,25 @@ export function GlobeViewport({
       },
       getViewportCenterLatLon: () => viewportCenterLatLonRef.current,
       getViewportBoundsLatLon: () => viewportBoundsLatLonRef.current,
+      getCameraHeightM: () => cameraHeightMRef.current,
+      subscribeViewportChanges: (listener) => {
+        viewportChangeListeners.add(listener);
+        return () => {
+          viewportChangeListeners.delete(listener);
+        };
+      },
+      waitForViewer: () =>
+        new Promise((resolve) => {
+          const existing = viewerRef.current;
+          if (existing) {
+            resolve(existing);
+            return;
+          }
+          viewerReadyResolversRef.current.push(resolve);
+        }),
+      requestViewportResync: () => {
+        requestViewportResyncRef.current?.();
+      },
       getClickedIndicatorLatLon: () => {
         const api = clickedIndicatorApiRef.current;
         if (!api) return null;
@@ -398,6 +439,10 @@ export function GlobeViewport({
         // Start with no imagery; we add our recolored Google-tile layer next.
       });
       viewerRef.current = viewer;
+      const readyResolvers = viewerReadyResolversRef.current.splice(0);
+      for (const resolve of readyResolvers) {
+        resolve(viewer);
+      }
       viewer.resize();
       viewer.forceResize?.();
 
@@ -654,9 +699,12 @@ export function GlobeViewport({
           viewer,
           Cesium,
         );
+        cameraHeightMRef.current =
+          viewer.camera.positionCartographic.height ?? Number.POSITIVE_INFINITY;
         mapMarker.refreshViewportFollowFromCache();
         if (p) debugCrosshair?.notifyViewportCenterSampled();
         viewer.scene.requestRender();
+        notifyViewportChangeListeners();
       };
 
       /** Single deferred sample when the client has just been classified idle (does not reschedule). */
@@ -721,12 +769,20 @@ export function GlobeViewport({
       };
 
       viewportSamplerWakeRef.ensureBusy = ensureBusySampling;
+      requestViewportResyncRef.current = () => {
+        ensureBusySampling();
+        runViewportCenterSample();
+      };
 
       const samplerKickOnCameraChanged = () => {
         if (cancelled || !viewer) return;
         tickGeoArrivalLock();
+        cameraHeightMRef.current =
+          viewer.camera.positionCartographic.height ?? Number.POSITIVE_INFINITY;
         if (cameraControls.isGlobeViewportSamplerBusy()) {
           ensureBusySampling();
+        } else {
+          notifyViewportChangeListeners();
         }
       };
 
@@ -861,11 +917,13 @@ export function GlobeViewport({
       clickedIndicatorApiRef.current = null;
       viewportCenterLatLonRef.current = null;
       viewportBoundsLatLonRef.current = null;
+      cameraHeightMRef.current = Number.POSITIVE_INFINITY;
       isClientIdle = false;
       geoArrivalLockStateRef.current = GeoArrival.initialGeoArrivalLockState();
       // Drop the imperative-handle target so a late `animateTo` can't drive a
       // destroyed viewer. Future calls will re-queue into pendingAnimateToRef.
       cameraControlsRef.current = null;
+      requestViewportResyncRef.current = null;
     };
   }, [initLat, initLong, initialSnapToGeoView, width]);
 

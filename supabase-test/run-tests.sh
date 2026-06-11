@@ -22,6 +22,13 @@ export_supabase_env() {
 
   export SUPABASE_KEY="$ANON_KEY"
 
+  if [[ -z "${SERVICE_ROLE_KEY:-}" ]]; then
+    echo "run-tests: SERVICE_ROLE_KEY missing from 'supabase status -o env'" >&2
+    exit 1
+  fi
+
+  export SERVICE_ROLE_KEY
+
   case "$SUPABASE_URL" in
     http://127.0.0.1:*|http://localhost:*|https://127.0.0.1:*|https://localhost:*)
       ;;
@@ -70,7 +77,12 @@ fi
 
 export_supabase_env
 
-echo "run-tests: running CRUD integration checks via Crud.ts..."
-npx jest --verbose "$SCRIPT_DIR/Crud.integration.test.ts"
+echo "run-tests: running bathroom_data_primary CRUD integration checks..."
+npx jest --runInBand --verbose "$SCRIPT_DIR/Crud.integration.test.ts"
+
+echo "run-tests: running local cache integration checks against seeded locations.json rows..."
+# sqlite-wasm loads through Node dynamic import; Jest needs VM module support.
+NODE_OPTIONS="${NODE_OPTIONS:+$NODE_OPTIONS }--experimental-vm-modules" \
+  npx jest --runInBand --verbose "$SCRIPT_DIR/LocalCache.integration.test.ts"
 
 echo "run-tests: SUCCESS"

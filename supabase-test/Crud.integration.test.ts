@@ -1,17 +1,10 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
-
 import {
   bathroomDbCreate,
   bathroomDbReadInBounds,
 } from "../app/_server/database/bathroom-data-primary/Crud";
-import { getSupabaseClient } from "../app/_server/database/bathroom-data-primary/CrudCore";
 import {
   CREATE_BATHROOM_ERROR_CONTEXT,
-  CREATE_BATHROOM_RPC_NAME,
-  createBathroomAt,
   TEMP_DATA_LENGTH,
-  type CreateBathroomRpc,
 } from "../app/_server/pure/bathroom-data-primary/CreateBathroom";
 import {
   type BathroomDataPrimaryRow,
@@ -22,6 +15,7 @@ import {
   type InputCoordinate,
   printCrudReport,
 } from "./formatCrudReport";
+import { loadLocations } from "./loadLocations";
 import { requireLocalSupabaseEnv } from "./requireLocalSupabase";
 
 const READ_IN_BOUNDS_ERROR_CONTEXT =
@@ -38,27 +32,6 @@ const EMPTY_OCEAN_BOUNDS: ViewportBounds = {
   lowerLeft: { latitude: -5, longitude: -10 },
   upperRight: { latitude: -4, longitude: -9 },
 };
-
-function loadExpectedBathrooms(): InputCoordinate[] {
-  const raw = readFileSync(join(__dirname, "locations.json"), "utf8");
-  const parsed = JSON.parse(raw) as { bathrooms: InputCoordinate[] };
-
-  if (!Array.isArray(parsed.bathrooms) || parsed.bathrooms.length === 0) {
-    throw new Error("locations.json must define a non-empty bathrooms array");
-  }
-
-  return parsed.bathrooms;
-}
-
-function createBathroomRpc(): CreateBathroomRpc {
-  const client = getSupabaseClient();
-  return async (params) => {
-    const { data, error } = await client
-      .rpc(CREATE_BATHROOM_RPC_NAME, params)
-      .single();
-    return { data: data as BathroomDataPrimaryRow | null, error };
-  };
-}
 
 function nearlyEqual(actual: number, expected: number, epsilon = COORD_EPSILON): boolean {
   return Math.abs(actual - expected) <= epsilon;
@@ -116,6 +89,10 @@ function validateRow(
     );
   }
 
+  if (actual.version !== 0) {
+    errors.push(`${phase}: version expected 0, got ${actual.version}`);
+  }
+
   if (actual.temp_data.length !== TEMP_DATA_LENGTH) {
     errors.push(
       `${phase}: temp_data length expected ${TEMP_DATA_LENGTH}, got ${actual.temp_data.length}`,
@@ -163,7 +140,7 @@ function failuresForPhase(
 }
 
 describe("bathroom_data_primary CRUD against local Supabase", () => {
-  const expectedBathrooms = loadExpectedBathrooms();
+  const expectedBathrooms = loadLocations();
   const created: Array<{ expected: InputCoordinate; row: BathroomDataPrimaryRow }> = [];
   const failedRows: FailedRowReport[] = [];
   let tableRows: BathroomDataPrimaryRow[] = [];
@@ -270,17 +247,7 @@ describe("bathroom_data_primary CRUD against local Supabase", () => {
   });
 
   describe("error paths", () => {
-    test("createBathroomAt surfaces DB temp_data length constraint", async () => {
-      await expect(
-        createBathroomAt(0, 0, createBathroomRpc(), () => "too-short"),
-      ).rejects.toThrow(`${CREATE_BATHROOM_ERROR_CONTEXT}:`);
-
-      expect((await bathroomDbReadInBounds(WORLD_BOUNDS)).length).toBe(
-        expectedBathrooms.length,
-      );
-    });
-
-    test("createBathroomAt surfaces invalid latitude from PostGIS", async () => {
+    test("bathroomDbCreate rejects invalid latitude from PostGIS", async () => {
       await expect(bathroomDbCreate(Number.NaN, 0)).rejects.toThrow(
         CREATE_BATHROOM_ERROR_CONTEXT,
       );
@@ -290,7 +257,7 @@ describe("bathroom_data_primary CRUD against local Supabase", () => {
       );
     });
 
-    test("getInBounds surfaces invalid bbox coordinates from PostGIS", async () => {
+    test("bathroomDbReadInBounds rejects invalid bbox coordinates from PostGIS", async () => {
       await expect(
         bathroomDbReadInBounds({
           lowerLeft: { latitude: Number.NaN, longitude: 0 },

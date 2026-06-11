@@ -4,7 +4,10 @@ import { type RefObject } from "react";
 
 import { type Errorable } from "../_shared/Utils";
 import {
+  type BathroomClientCacheEntry,
   type BathroomDataPrimaryRow,
+  type BathroomSyncResponse,
+  type BathroomViewportEntry,
   type ViewportBounds,
 } from "../_shared/BathroomDataPrimary";
 import * as BathroomCrud from "../_server/database/bathroom-data-primary/Crud";
@@ -22,7 +25,7 @@ async function toErrorable<T>(run: () => Promise<T>): Promise<Errorable<T>> {
 }
 
 export type BathroomViewportRenderHandler = (
-  bathrooms: BathroomDataPrimaryRow[],
+  bathrooms: BathroomViewportEntry[],
 ) => void;
 
 let bathroomViewportRenderHandler: BathroomViewportRenderHandler | null = null;
@@ -54,18 +57,29 @@ export async function readBathroomsInBounds(
   return toErrorable(() => BathroomCrud.bathroomDbReadInBounds(bounds));
 }
 
-export async function refreshBathroomsInGlobeViewport(
-  globeRef: RefObject<GlobeViewportHandle | null>,
-  renderHandler: BathroomViewportRenderHandler | null = bathroomViewportRenderHandler,
-): Promise<Errorable<BathroomDataPrimaryRow[]>> {
-  const bounds = globeRef.current?.getViewportBoundsLatLon();
-  if (!bounds) {
-    return { val: null, errorMsg: "Globe viewport bounds are unavailable." };
-  }
+export async function syncBathroomsInBounds(
+  bounds: ViewportBounds,
+  clientCache: BathroomClientCacheEntry[],
+): Promise<Errorable<BathroomSyncResponse>> {
+  return toErrorable(() =>
+    BathroomCrud.bathroomDbSyncInBounds(bounds, clientCache),
+  );
+}
 
-  const result = await readBathroomsInBounds(bounds);
+export async function syncBathroomsInGlobeViewport(
+  bounds: ViewportBounds,
+  clientCache: BathroomClientCacheEntry[],
+  renderHandler: BathroomViewportRenderHandler | null = bathroomViewportRenderHandler,
+): Promise<Errorable<BathroomSyncResponse>> {
+  const result = await syncBathroomsInBounds(bounds, clientCache);
   if (result.val && renderHandler) {
-    renderHandler(result.val);
+    renderHandler(result.val.upserts);
   }
   return result;
+}
+
+export async function refreshBathroomsInGlobeViewport(
+  globeRef: RefObject<GlobeViewportHandle | null>,
+): Promise<void> {
+  globeRef.current?.requestViewportResync();
 }

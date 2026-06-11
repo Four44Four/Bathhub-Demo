@@ -11,6 +11,16 @@ import {
   createBathroomAt,
   type CreateBathroomRpc,
 } from "../../pure/bathroom-data-primary/CreateBathroom";
+import {
+  type BathroomClientCacheEntry,
+  type BathroomSyncResponse,
+} from "../../../_shared/BathroomDataPrimary";
+import {
+  SYNC_BATHROOM_ERROR_CONTEXT,
+  SYNC_BATHROOM_RPC_NAME,
+  buildSyncBathroomRpcParams,
+  parseSyncBathroomRpcPayload,
+} from "../../pure/bathroom-data-primary/SyncBathrooms";
 
 export type { BathroomDataPrimaryRow, ViewportBounds };
 
@@ -115,4 +125,24 @@ export async function getInBounds(
   }
 
   return (data ?? []) as BathroomDataPrimaryRow[];
+}
+
+export async function syncInBounds(
+  bounds: ViewportBounds,
+  clientCache: BathroomClientCacheEntry[],
+): Promise<BathroomSyncResponse> {
+  assertFiniteViewportBounds(bounds);
+
+  const { data, error } = await getSupabaseClient().rpc(
+    SYNC_BATHROOM_RPC_NAME,
+    buildSyncBathroomRpcParams(bounds, clientCache),
+  );
+
+  if (error !== null) {
+    throw new Error(
+      formatSupabaseError(SYNC_BATHROOM_ERROR_CONTEXT, error.message),
+    );
+  }
+
+  return parseSyncBathroomRpcPayload(data);
 }

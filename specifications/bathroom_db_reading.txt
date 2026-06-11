@@ -1,10 +1,11 @@
 - Retrieving all bathrooms given a lower left location and an upper right location
-   - These will be calculated from the Globe viewport when the zoom level is close enough
+   - These will be calculated from the Globe viewport when the zoom level is close enough when the camera is within a specified distance from the surface of the Globe
    - The server should only send down the `location`, `verify_status`, `version`, and `id` for an upsert OR the server can send down a specific DELETE payload with just `id` to signal a local deletion
 - Maintain a separate datastructure for all currently rendered found bathrooms
    - This should have the `id`s of the bathrooms as keys so that duplicate bathrooms from the local DB and the remote UPSERT response are deduplicated
 - Every time the client moves the viewport/Globe and the zoom level is close enough:
    - Find all bathrooms in the local SQLite Geopackage DB that fall within the viewport bounds
+   - Save the current contents of the rendered found bathrooms datastructure
    - Empty the rendered found bathrooms datastructure
    - Insert all bathrooms found locally in the client viewport bounds into the rendered found bathrooms datastructure
    - Send a request to the server to retrieve all bathroom data within the lower left and upper right Globe locations of the viewport
@@ -19,15 +20,25 @@
       - Remove it from the rendered found bathrooms datastructure
       - Update the local cache DB as specified below in the Localized caching section
    - Signal a update to the Globe to sync the rendering state to the state of the rendered found bathrooms datastructure
-   - There will be a specified debounce so that a request is not sent every frame that the client is moving the viewport
+   - A new request to remote DB should not be attempted until a response from the server after querying the remote DB is received
+      - However, if the remote DB takes longer than a specified maximum delay, then allow for a retry of requesting server for remote DB fresh data
+   - There will be a specified minimum delay (**not** debounce) for local in-memory DB scans
+      - While user is zooming or dragging on the Globe viewport, the local sync will occur every duration of time that this delay takes so that bathroom map markers will be updated as the client is panning or zooming around the Globe
+      - These happen regardless of if the remote DB is not responding
+      - If the remote DB does respond, always override the local in-memory DB with the remote DB
+         - The remote DB's data should be prioritized over the local in-memory DB data
    - Bathrooms received will be cached in a local DB so that repeatedly moving around the same area will only cause updated or new bathroom entries to be sent down by the server
       - See below section for Localized caching for more details on the caching logic
 - When a signal to sync with the rendered found bathrooms datastructure is made:
-   - Clear all currently rendered GlobeImages of public/bathhub_pending_verify_bathroom_map_marker.svg or public/bathhub_verified_bathroom_map_marker.svg
-   - Iterate over all the rendered found bathrooms datastructure elements and render a GlobeImage of either public/bathhub_pending_verify_bathroom_map_marker.svg or public/bathhub_verified_bathroom_map_marker.svg depending on their `verify_status` at their `location` on the Globe (the bottom center edge should be on that exact location on the Globe)
+   - Analyze the difference between the current rendered found bathrooms datastructure and the previous version
+   - Destroy and render all of the ones that are different (same id but different verification status)
+   - Any new ones should be rendered
+   - If any have the same id and have the same verification status, leave them as is
+- All bathroom markers that are offscreeen from the Globe viewport should be culled
+   - Once the bathroom markers are far enough away from the center of the Globe viewport by a specified amount:
+      - Destroy them (though this will incur a time cost if the client decides to return)
 - When zooming beyond the level that bathrooms would be queried at:
-   - Empty the rendered found bathrooms datastructure
-   - Clear all currently rendered GlobeImages of public/bathhub_pending_verify_bathroom_map_marker.svg or public/bathhub_verified_bathroom_map_marker.svg
+   - Stop rendering all the bathroom markers
 - Localized caching:
    - Maintain a local SQLite database with GeoPackage which will be backed up to disk in a .gpkg file
       - There will be a client platform agnostic interface to perform operations on this local DB
@@ -59,3 +70,9 @@
    - There will be a configurable expiration time on each cached bathroom entry to evict the first expired bathroom entry whenever a new bathroom entry is upserted
        - When a new bathroom is upserted:
           - Check if the oldest updated bathroom entry in the local cache DB is beyond the configured time from the current time and evict it if so
+   - When the client "opens the app":
+      - When as a web-app demo: this means when the website is visited
+      - When as a native app: this means when the app is actually opened
+      - The local cache DB will be checked for if the correct tables (for Geopackage as well) are created_at
+         - If not, create them
+      - Then load up the local cache DB as an in-memory DB that is writing to a on-disk gpkg file

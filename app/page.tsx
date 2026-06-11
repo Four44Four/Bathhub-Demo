@@ -35,6 +35,8 @@ import {
   useAddBathroomMode,
 } from "./_client/viewport2d/add-bathroom-mode";
 import { Globe as GlobeConsts } from "./_client/ComponentConstants";
+import { BathroomViewportSync } from "./_client/bathroom/BathroomViewportSync";
+import { BathroomLocalDbOnAppOpen } from "./_client/local-db";
 import { SWIPE_MENU_BACKDROP_Z_INDEX } from "./_client/pure/viewport2d/PositionalAlertAnchor";
 
 /** When set to `"100%"`, the globe mount fills the virtual phone frame (see `layout.tsx`) and the initial camera distance is chosen so the globe “covers” the view (no letterboxing; excess clips on the shorter axis). */
@@ -350,6 +352,7 @@ function HomeContent({
 
   return (
     <SwipeMenuInteractionContext.Provider value={swipeMenuInteraction}>
+    <BathroomLocalDbOnAppOpen />
     <main className="flex h-full min-h-0 flex-col">
       <div ref={phoneFrameRef} className="relative flex min-h-0 flex-1 flex-col">
         <div
@@ -372,6 +375,7 @@ function HomeContent({
               setZoomIndicator((z) => ({ x, y, pulse: z.pulse + 1 }));
             }}
           />
+          <BathroomViewportSync globeRef={globeRef} />
           {!addBathroomModeActive ? (
             <>
               <ZoomIndicator

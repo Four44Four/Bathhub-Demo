@@ -146,6 +146,27 @@ export const Menus = {
     BACKDROP_COLOR: "rgba(12, 13, 18, 0.62)",
 } as const;
 
-export const BathroomDB = {
-    READ_DEBOUNCE_MS_CLIENT: 500,
+export const BathroomRemoteDB = {
+    READ_RETRY_MS: 2000,
+} as const;
+
+export const BathroomMapMarker = {
+    SIZE: 50,
+    PENDING_IMAGE: "/bathhub_pending_verify_bathroom_map_marker.svg",
+    VERIFIED_IMAGE: "/bathhub_verified_bathroom_map_marker.svg",
+    COLOR: "#FFF",
+    OPACITY: 1.0,
+    /**
+     * When true, markers **not** loaded from the local cache are tinted 50% darker
+     * for debug visualization.
+     */
+    DEBUG_CACH_LOADED_MARKER: true,
+    /** Max camera height (m above ellipsoid) to query and render bathroom markers. */
+    MAX_QUERY_CAMERA_HEIGHT_M: Globe.CAMERA_INIT_SURFACE_OFFSET * 100,
+    DESTROY_DISTANCE_FROM_VIEWPORT_CENTER: 5000,
+} as const;
+
+export const BathroomLocalDB = {
+    CACHE_EXPIRATION_SECS: 86400,
+    QUERY_DELAY_MS: 500,
 } as const;

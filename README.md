@@ -52,3 +52,5 @@
     - Environment variables encryption manager
  - Supabase
     - Remote database
+ - SQLite
+    - Local cache database

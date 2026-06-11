@@ -17,6 +17,7 @@ const sampleRow: BathroomDataPrimaryRow = {
   verify_status: "pending",
   temp_data: "abc123",
   created_at: "2026-06-09T00:00:00.000Z",
+  version: 0,
 };
 
 describe("CreateBathroom pure logic", () => {

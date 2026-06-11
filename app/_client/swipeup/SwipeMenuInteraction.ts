@@ -7,11 +7,14 @@ export type SwipeMenuInteraction = {
   blocksViewportPointer: boolean;
   /** 0–1 opacity multiplier for the globe dim backdrop (see {@link SWIPE_UP_BACKDROP_COLOR}). */
   backdropOpacity: number;
+  /** Current swipe-up menu shell height in CSS pixels (0 when hidden). */
+  menuHeightPx: number;
 };
 
 export const SwipeMenuInteractionContext = createContext<SwipeMenuInteraction>({
   blocksViewportPointer: false,
   backdropOpacity: 0,
+  menuHeightPx: 0,
 });
 
 let viewportClickSuppressedUntilMs = 0;
@@ -33,4 +36,8 @@ export function useSwipeMenuBlocksViewport(): boolean {
 
 export function useSwipeMenuBackdropOpacity(): number {
   return useContext(SwipeMenuInteractionContext).backdropOpacity;
+}
+
+export function useSwipeMenuHeightPx(): number {
+  return useContext(SwipeMenuInteractionContext).menuHeightPx;
 }

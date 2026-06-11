@@ -43,6 +43,9 @@ export const SWIPE_MENU_BACKDROP_Z_INDEX = SWIPE_MENU_LAYER_Z_INDEX - 1;
 /** Highest z-index tier for viewport2d controls (e.g. Recenter) below the swipe backdrop. */
 export const VIEWPORT2D_TOP_LAYER_Z_INDEX = SWIPE_MENU_BACKDROP_Z_INDEX - 1;
 
+/** Upward shadow strip at the swipe menu top edge; below viewport2d controls. */
+export const SWIPE_MENU_TOP_SHADOW_Z_INDEX = VIEWPORT2D_TOP_LAYER_Z_INDEX - 1;
+
 /** Renders the bubble just above its anchor layer without crossing the next UI tier. */
 export const POSITIONAL_ALERT_Z_STACK_OFFSET = 10;
 

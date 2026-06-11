@@ -26,6 +26,74 @@ export function swipeMenuPullIndicatorWidthCss(widthRatio: number): string {
   return `${widthRatio * 100}%`;
 }
 
+const CSS_RGB_RGBA_RE =
+  /^rgba?\(\s*(\d+(?:\.\d+)?)\s*,\s*(\d+(?:\.\d+)?)\s*,\s*(\d+(?:\.\d+)?)\s*(?:,\s*(\d+(?:\.\d+)?)\s*)?\)$/i;
+
+/** Multiply the alpha channel of a CSS `rgb` / `rgba` color string. */
+export function multiplyCssRgbaAlpha(
+  colorCss: string,
+  alphaFactor: number,
+): string {
+  const match = colorCss.trim().match(CSS_RGB_RGBA_RE);
+  if (!match) return colorCss;
+  const r = match[1];
+  const g = match[2];
+  const b = match[3];
+  const alpha = match[4] !== undefined ? Number(match[4]) : 1;
+  const factor = Number.isFinite(alphaFactor) ? alphaFactor : 1;
+  const nextAlpha = Utils.clamp01(alpha * factor);
+  return `rgba(${r}, ${g}, ${b}, ${nextAlpha})`;
+}
+
+/**
+ * CSS `top` for the menu top-edge shadow strip inside the shell.
+ * Opaque end sits `topCornerRadiusPx` below the shell top so rounded corners
+ * stay covered.
+ */
+export function swipeMenuTopShadowTopPx(
+  shadowHeightPx: number,
+  topCornerRadiusPx: number,
+): number {
+  if (!Number.isFinite(shadowHeightPx) || shadowHeightPx < 0) return 0;
+  if (!Number.isFinite(topCornerRadiusPx) || topCornerRadiusPx < 0) {
+    return -shadowHeightPx;
+  }
+  return topCornerRadiusPx - shadowHeightPx;
+}
+
+/**
+ * Shadow alpha multiplier at normalized height above the shadow start
+ * (0 = start below top corners, 1 = shadow top). Quadratic ease-out: `(1 - t)²`.
+ */
+export function swipeMenuShadowAlphaAtProgress(progress01: number): number {
+  const t = Utils.clamp01(progress01);
+  const oneMinusT = 1 - t;
+  return oneMinusT * oneMinusT;
+}
+
+/**
+ * Upward fade from {@link shadowColorCss} (alpha scaled by `alphaFactor`) to
+ * transparent for the swipe-up menu top-edge shadow strip.
+ */
+export function swipeMenuShadowGradient(
+  shadowColorCss: string,
+  alphaFactor: number,
+  stopCount = 12,
+): string {
+  const stops: string[] = [];
+  const n = Math.max(2, Math.floor(stopCount));
+  for (let i = 0; i <= n; i += 1) {
+    const progress = i / n;
+    const positionPct = progress * 100;
+    const color = multiplyCssRgbaAlpha(
+      shadowColorCss,
+      alphaFactor * swipeMenuShadowAlphaAtProgress(progress),
+    );
+    stops.push(`${color} ${positionPct}%`);
+  }
+  return `linear-gradient(to top, ${stops.join(", ")})`;
+}
+
 /**
  * Apply a vertical pointer delta to the menu height.
  * Screen Y grows downward, so dragging up (negative delta) increases height.
@@ -201,6 +269,7 @@ export function swipeMenuIsOpenAboveCollapsed(
 export type SwipeMenuViewportInteraction = {
   blocksViewportPointer: boolean;
   backdropOpacity: number;
+  menuHeightPx: number;
 };
 
 /** Globe dimming and pointer blocking come only from the swipe menu, never add-bathroom mode. */
@@ -211,7 +280,7 @@ export function swipeMenuViewportInteraction(
   menuBackdropOpacity: number,
 ): SwipeMenuViewportInteraction {
   if (addBathroomModeActive) {
-    return { blocksViewportPointer: false, backdropOpacity: 0 };
+    return { blocksViewportPointer: false, backdropOpacity: 0, menuHeightPx: 0 };
   }
   return {
     blocksViewportPointer: swipeMenuIsOpenAboveCollapsed(
@@ -219,6 +288,7 @@ export function swipeMenuViewportInteraction(
       inactiveHeightPx,
     ),
     backdropOpacity: menuBackdropOpacity,
+    menuHeightPx: heightPx,
   };
 }
 

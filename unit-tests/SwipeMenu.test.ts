@@ -13,6 +13,10 @@ import {
   swipeMenuIsOpenAboveCollapsed,
   swipeMenuIsTapGesture,
   swipeMenuMaxHeightPx,
+  multiplyCssRgbaAlpha,
+  swipeMenuShadowAlphaAtProgress,
+  swipeMenuShadowGradient,
+  swipeMenuTopShadowTopPx,
   swipeMenuPullIndicatorWidthCss,
   swipeMenuPullIndicatorWidthPx,
   swipeMenuSnapHeightPx,
@@ -49,6 +53,39 @@ describe("SwipeMenu", () => {
   test("swipeMenuPullIndicatorWidthCss", () => {
     expect(swipeMenuPullIndicatorWidthCss(0.18)).toBe("18%");
     expect(swipeMenuPullIndicatorWidthCss(0)).toBe("0%");
+  });
+
+  test("multiplyCssRgbaAlpha", () => {
+    expect(multiplyCssRgbaAlpha("rgba(12, 13, 18, 0.62)", 0.5)).toBe(
+      "rgba(12, 13, 18, 0.31)",
+    );
+    expect(multiplyCssRgbaAlpha("rgb(12, 13, 18)", 0.5)).toBe(
+      "rgba(12, 13, 18, 0.5)",
+    );
+    expect(multiplyCssRgbaAlpha("rgba(12, 13, 18, 0.62)", 0)).toBe(
+      "rgba(12, 13, 18, 0)",
+    );
+  });
+
+  test("swipeMenuTopShadowTopPx", () => {
+    expect(swipeMenuTopShadowTopPx(30, 12)).toBe(-18);
+    expect(swipeMenuTopShadowTopPx(10, 12)).toBe(2);
+    expect(swipeMenuTopShadowTopPx(30, 0)).toBe(-30);
+  });
+
+  test("swipeMenuShadowAlphaAtProgress", () => {
+    expect(swipeMenuShadowAlphaAtProgress(0)).toBe(1);
+    expect(swipeMenuShadowAlphaAtProgress(1)).toBe(0);
+    expect(swipeMenuShadowAlphaAtProgress(0.5)).toBeCloseTo(0.25, 5);
+    expect(swipeMenuShadowAlphaAtProgress(0.25)).toBeCloseTo(0.5625, 5);
+  });
+
+  test("swipeMenuShadowGradient", () => {
+    const gradient = swipeMenuShadowGradient("rgba(12, 13, 18, 0.62)", 0.5, 4);
+    expect(gradient.startsWith("linear-gradient(to top, ")).toBe(true);
+    expect(gradient).toContain("rgba(12, 13, 18, 0.31) 0%");
+    expect(gradient).toContain("rgba(12, 13, 18, 0) 100%");
+    expect(gradient).toContain("rgba(12, 13, 18, 0.0775) 50%");
   });
 
   test("swipeMenuPullIndicatorWidthPx", () => {
@@ -225,12 +262,12 @@ describe("SwipeMenu", () => {
   test("swipeMenuViewportInteraction clears overlay during add-bathroom mode", () => {
     expect(
       swipeMenuViewportInteraction(true, max, inactive, 1),
-    ).toEqual({ blocksViewportPointer: false, backdropOpacity: 0 });
+    ).toEqual({ blocksViewportPointer: false, backdropOpacity: 0, menuHeightPx: 0 });
     expect(
       swipeMenuViewportInteraction(false, max, inactive, 0.75),
-    ).toEqual({ blocksViewportPointer: true, backdropOpacity: 0.75 });
+    ).toEqual({ blocksViewportPointer: true, backdropOpacity: 0.75, menuHeightPx: max });
     expect(
       swipeMenuViewportInteraction(false, inactive, inactive, 0),
-    ).toEqual({ blocksViewportPointer: false, backdropOpacity: 0 });
+    ).toEqual({ blocksViewportPointer: false, backdropOpacity: 0, menuHeightPx: inactive });
   });
 });

@@ -115,6 +115,11 @@ const SwipeMenu0 = {
     EXPAND_SNAP_THRESHOLD_RATIO: 0.35,
     PULL_HANDLE_WIDTH_RATIO: 0.18,
     PULL_HANDLE_BG_COLOR: "#888888",
+    SHADOW_ALPHA_FACTOR: 0.5,
+    /** Upward shadow height in CSS pixels from the shadow start below the top corners. */
+    SHADOW_ALPHA_HEIGHT_PX: 50,
+    /** Menu shell top corner radius in CSS pixels. */
+    TOP_CORNER_RADIUS_PX: 12,
     SIDE_PADDING_PX: 10,
     PRIMARY_BTN_BG_COLOR: "#FFFFFF",
     PRIMARY_BTN_HEIGHT_PX: 100,

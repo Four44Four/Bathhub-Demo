@@ -18,6 +18,7 @@ import { CesiumAttribution } from "./_client/viewport2d/CesiumAttribution";
 import { ZoomIndicator } from "./_client/viewport2d/ZoomIndicator";
 import { MainMenu } from "./_client/swipeup/MainMenu";
 import { SwipeMenuBackdrop } from "./_client/swipeup/SwipeMenuBackdrop";
+import { SwipeMenuTopShadow } from "./_client/swipeup/SwipeMenuTopShadow";
 import {
   SwipeMenuInteractionContext,
   type SwipeMenuInteraction,
@@ -30,7 +31,7 @@ import {
   AddBathroomModeProvider,
   useAddBathroomMode,
 } from "./_client/viewport2d/add-bathroom-mode";
-import { Globe as GlobeConsts } from "./_client/ComponentConstants";
+import { Globe as GlobeConsts, SwipeMenu as SwipeMenuConsts } from "./_client/ComponentConstants";
 import { BathroomViewportSync } from "./_client/bathroom/BathroomViewportSync";
 import { BathroomLocalDbOnAppOpen } from "./_client/local-db";
 import { SWIPE_MENU_BACKDROP_Z_INDEX } from "./_client/pure/viewport2d/PositionalAlertAnchor";
@@ -100,6 +101,7 @@ function HomeContent({
     useState<SwipeMenuInteraction>({
       blocksViewportPointer: false,
       backdropOpacity: 0,
+      menuHeightPx: SwipeMenuConsts.INACTIVE_HEIGHT_PX,
     });
   // Bumped when module-level `mapInitLat` / `mapInitLong` / `isClientGeoGranted`
   // update without a `setGlobeInit` (e.g. geo animate-on-init) so consumers like
@@ -400,6 +402,7 @@ function HomeContent({
             <CesiumAttribution />
           </div>
         </div>
+        <SwipeMenuTopShadow />
         {!addBathroomModeActive && showRecenterButton ? (
           <Recenter
             globeRef={globeRef}

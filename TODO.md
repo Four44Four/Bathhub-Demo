@@ -1,6 +1,14 @@
 # Sprint 2 (basic backend)
     - (for all Bathroom CRUD) Have REMOTE rate limits on all Bathroom DB operations
     - (for all Bathroom CRUD) Make integration tests in ./supabase/migrations
+ - clean up test db stuff
+    - remove test db buttons from interface
+    - remove test db migrations from ./supabase/migrations
+    - remove test db CRUD and its folder
+ - add dark gradient/shadow behind swipe-up menu pull handle bg
+ - add hover/interact animations to the Globe viewport buttons
+ - move find nearest bathroom onto the Globe viewport
+    - make it pathfind from the user to the actual nearest bathroom
  - Add rating system on bathrooms (stars 1-5)
  - Add comments system on bathrooms
  - Setup S3 for Supabase

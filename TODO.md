@@ -1,10 +1,12 @@
 # Sprint 2 (basic backend)
     - (for all Bathroom CRUD) Have REMOTE rate limits on all Bathroom DB operations
     - (for all Bathroom CRUD) Make integration tests in ./supabase/migrations
- - add hover/interact animations to the Globe viewport buttons
-    - invert the value of the button line, fill, text, and image over a specified duration
- - add bathroom preferences button + move find nearest bathroom onto the Globe viewport
- - impl bathroom preferences (clientside)
+ - add settings button + move Find nearest bathroom onto the Globe viewport
+    - Fine nearest bathroom should have a custom icon of a magnifying glass with a mini bathroom in the lens
+    - Settings button will have a gear icon inside of the swipe up menu
+ - Settings for controlling basic visual data
+    - Store within SQLite local data somehow (use a client platform agnostic interface for storing local data)
+ - impl bathroom preferences in setting (clientside)
  - impl find nearest bathroom button
     - make it pathfind from the user to the actual nearest bathroom
     - save the original camera position/zoom level

@@ -1,7 +1,6 @@
 # Sprint 2 (basic backend)
     - (for all Bathroom CRUD) Have REMOTE rate limits on all Bathroom DB operations
     - (for all Bathroom CRUD) Make integration tests in ./supabase/migrations
- - add dark gradient/shadow behind swipe-up menu pull handle bg
  - add hover/interact animations to the Globe viewport buttons
  - move find nearest bathroom onto the Globe viewport
     - make it pathfind from the user to the actual nearest bathroom

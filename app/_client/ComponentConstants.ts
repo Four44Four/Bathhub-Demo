@@ -130,6 +130,8 @@ const SwipeMenu0 = {
     PRIMARY_BTN_HOVER_DURA_MS: 500,
     PRIMARY_BTN_IMG_WIDTH_RATIO: 0.5,
     PRIMARY_BTN_WIDTH_RATIO: 0.25,
+    /** Box-shadow alpha for primary menu buttons (`rgba(18, 18, 47, α)`). */
+    PRIMARY_BTN_SHADOW_ALPHA: 0.25,
 };
 const SwipeMenu1 = {
     /** Inset from the menu shell edge to the pull-handle pill. */

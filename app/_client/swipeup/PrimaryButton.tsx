@@ -54,7 +54,7 @@ export function PrimaryButton({
       ? SwipeMenuConsts.PRIMARY_BTN_HOVER_BG_COLOR
       : SwipeMenuConsts.PRIMARY_BTN_BG_COLOR,
     transition: `background-color ${hoverTransition}`,
-    boxShadow: "0 2px 8px rgba(18, 18, 47, 0.12)",
+    boxShadow: `0 2px 8px rgba(18, 18, 47, ${SwipeMenuConsts.PRIMARY_BTN_SHADOW_ALPHA})`,
     cursor: onClick ? "pointer" : "default",
     overflow: "hidden",
   };

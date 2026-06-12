@@ -1,17 +1,15 @@
 "use client";
 
-import type {
-  CSSProperties,
-  MouseEventHandler,
-  ReactNode,
-} from "react";
+import { useState, type CSSProperties, type MouseEventHandler, type ReactNode } from "react";
 
-import { Button as ButtonConsts } from "../ComponentConstants";
+import { BtnInteractAnim, Button as ButtonConsts } from "../ComponentConstants";
+import { viewportButtonInteractColors } from "../pure/viewport2d/ButtonInteractColor";
 import {
   areViewportClicksSuppressed,
   useSwipeMenuBlocksViewport,
 } from "../swipeup/SwipeMenuInteraction";
 import { TextWeight } from "../Utils";
+import { useButtonSvgInteractSrc } from "./useButtonSvgInteractSrc";
 
 export type ButtonProps = {
   cornerRadius?: number;
@@ -43,6 +41,77 @@ export type ButtonProps = {
   onClick?: MouseEventHandler<HTMLButtonElement>;
 };
 
+function ButtonImage({
+  imageSizePx,
+  isHighlighted,
+  interactTransition,
+  normalSrc,
+  invertedSrc,
+  isSvg,
+}: {
+  imageSizePx: number;
+  isHighlighted: boolean;
+  interactTransition: string;
+  normalSrc: string | undefined;
+  invertedSrc: string | undefined;
+  isSvg: boolean;
+}) {
+  const imageStyle: CSSProperties = {
+    height: imageSizePx,
+    width: imageSizePx,
+    display: "block",
+    flexShrink: 0,
+    objectFit: "contain",
+  };
+
+  if (isSvg && invertedSrc != null && normalSrc != null) {
+    return (
+      <div
+        style={{
+          position: "relative",
+          width: imageSizePx,
+          height: imageSizePx,
+          flexShrink: 0,
+        }}
+      >
+        <img
+          src={normalSrc}
+          alt=""
+          draggable={false}
+          style={{
+            ...imageStyle,
+            position: "absolute",
+            inset: 0,
+            opacity: isHighlighted ? 0 : 1,
+            transition: `opacity ${interactTransition}`,
+          }}
+        />
+        <img
+          src={invertedSrc}
+          alt=""
+          draggable={false}
+          style={{
+            ...imageStyle,
+            position: "absolute",
+            inset: 0,
+            opacity: isHighlighted ? 1 : 0,
+            transition: `opacity ${interactTransition}`,
+          }}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={normalSrc}
+      alt=""
+      draggable={false}
+      style={imageStyle}
+    />
+  );
+}
+
 export function Button({
   cornerRadius = ButtonConsts.CORNER_RADIUS,
   fillColor = ButtonConsts.DEFAULT_FILL_COLOR,
@@ -64,6 +133,24 @@ export function Button({
   onClick,
 }: ButtonProps) {
   const viewportPointerBlocked = useSwipeMenuBlocksViewport();
+  const [isHovered, setIsHovered] = useState(false);
+  const [isPressed, setIsPressed] = useState(false);
+  const isHighlighted = isHovered || isPressed;
+  const interactTransition = `${BtnInteractAnim.BTN_INTERACT_DURA_MS}ms ease`;
+
+  const {
+    fillColor: resolvedFillColor,
+    outlineColor: resolvedOutlineColor,
+    textColor: resolvedTextColor,
+  } = viewportButtonInteractColors(
+    fillColor,
+    outlineColor,
+    textColor,
+    isHighlighted,
+  );
+
+  const { isSvg, normalSrc, invertedSrc } = useButtonSvgInteractSrc(imageSrc);
+
   const hasText = text != null && text.length > 0;
   const hasImage = imageSrc != null && imageSrc.length > 0;
   const useCircularLayout = circular && hasImage && !hasText;
@@ -77,17 +164,13 @@ export function Button({
   };
 
   const imageEl = hasImage ? (
-    <img
-      src={imageSrc}
-      alt=""
-      draggable={false}
-      style={{
-        height: imageSizePx,
-        width: imageSizePx,
-        display: "block",
-        flexShrink: 0,
-        objectFit: "contain",
-      }}
+    <ButtonImage
+      imageSizePx={imageSizePx}
+      isHighlighted={isHighlighted}
+      interactTransition={interactTransition}
+      normalSrc={normalSrc}
+      invertedSrc={invertedSrc}
+      isSvg={isSvg}
     />
   ) : null;
 
@@ -95,10 +178,11 @@ export function Button({
     <span
       className={textWeight}
       style={{
-        color: textColor,
+        color: resolvedTextColor,
         fontSize: 14,
         lineHeight: 1.2,
         whiteSpace: "nowrap",
+        transition: `color ${interactTransition}`,
       }}
     >
       {text}
@@ -140,10 +224,13 @@ export function Button({
     top: y,
     zIndex,
     margin: 0,
-    backgroundColor: fillColor,
-    border: `${outlineThickness}px solid ${outlineColor}`,
+    backgroundColor: resolvedFillColor,
+    borderWidth: outlineThickness,
+    borderStyle: "solid",
+    borderColor: resolvedOutlineColor,
     cursor: "pointer",
     boxSizing: "border-box",
+    transition: `background-color ${interactTransition}, border-color ${interactTransition}`,
   };
 
   const layoutStyle: CSSProperties = useCircularLayout
@@ -180,6 +267,14 @@ export function Button({
       className={viewportPointerBlocked ? "pointer-events-none" : "pointer-events-auto"}
       disabled={viewportPointerBlocked}
       onClick={handleClick}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => {
+        setIsHovered(false);
+        setIsPressed(false);
+      }}
+      onPointerDown={() => setIsPressed(true)}
+      onPointerUp={() => setIsPressed(false)}
+      onPointerCancel={() => setIsPressed(false)}
       style={layoutStyle}
     >
       {inner}

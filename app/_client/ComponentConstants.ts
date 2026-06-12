@@ -20,6 +20,10 @@ export const Button = {
     TEXT_COLOR: "#AFB4C6",
 } as const;
 
+export const BtnInteractAnim = {
+    BTN_INTERACT_DURA_MS: 500,
+} as const;
+
 export const ClickedIndicator = {
     // Screen-space sizing (in CSS pixels). This stays constant regardless of zoom.
     SIZE: 50,
@@ -125,9 +129,8 @@ const SwipeMenu0 = {
     PRIMARY_BTN_HEIGHT_PX: 100,
     PRIMARY_BTN_FONT_SIZE: 10,
     PRIMARY_BTN_FONT_COLOR: "#B5B5C4",
-    PRIMARY_BTN_HOVER_BG_COLOR: "#E6E6F0",
-    PRIMARY_BTN_HOVER_FG_VALUE_FACTOR: 0.7,
-    PRIMARY_BTN_HOVER_DURA_MS: 500,
+    PRIMARY_BTN_INTERACT_BG_COLOR: "#E6E6F0",
+    PRIMARY_BTN_INTERACT_FG_VALUE_FACTOR: 0.7,
     PRIMARY_BTN_IMG_WIDTH_RATIO: 0.5,
     PRIMARY_BTN_WIDTH_RATIO: 0.25,
     /** Box-shadow alpha for primary menu buttons (`rgba(18, 18, 47, α)`). */

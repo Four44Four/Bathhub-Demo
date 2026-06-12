@@ -9,7 +9,10 @@ import {
   useSwipeMenuViewport,
 } from "./MainMenu";
 
-import { SwipeMenu as SwipeMenuConsts } from "../ComponentConstants";
+import {
+  BtnInteractAnim,
+  SwipeMenu as SwipeMenuConsts,
+} from "../ComponentConstants";
 
 export type PrimaryButtonProps = {
   label: string;
@@ -30,11 +33,11 @@ export function PrimaryButton({
   const buttonHeightPx = swipeMenuPrimaryButtonHeightPx();
   const imageWidthPx = buttonWidthPx * SwipeMenuConsts.PRIMARY_BTN_IMG_WIDTH_RATIO;
   const isHighlighted = isHovered || isPressed;
-  const hoverTransitionMs = SwipeMenuConsts.PRIMARY_BTN_HOVER_DURA_MS;
-  const hoverTransition = `${hoverTransitionMs}ms ease`;
+  const interactTransitionMs = BtnInteractAnim.BTN_INTERACT_DURA_MS;
+  const interactTransition = `${interactTransitionMs}ms ease`;
 
-  const hoverFgBrightness = isHighlighted
-    ? SwipeMenuConsts.PRIMARY_BTN_HOVER_FG_VALUE_FACTOR
+  const interactFgBrightness = isHighlighted
+    ? SwipeMenuConsts.PRIMARY_BTN_INTERACT_FG_VALUE_FACTOR
     : 1;
 
   const buttonStyle: CSSProperties = {
@@ -51,9 +54,9 @@ export function PrimaryButton({
     border: "none",
     borderRadius: 15,
     backgroundColor: isHighlighted
-      ? SwipeMenuConsts.PRIMARY_BTN_HOVER_BG_COLOR
+      ? SwipeMenuConsts.PRIMARY_BTN_INTERACT_BG_COLOR
       : SwipeMenuConsts.PRIMARY_BTN_BG_COLOR,
-    transition: `background-color ${hoverTransition}`,
+    transition: `background-color ${interactTransition}`,
     boxShadow: `0 2px 8px rgba(18, 18, 47, ${SwipeMenuConsts.PRIMARY_BTN_SHADOW_ALPHA})`,
     cursor: onClick ? "pointer" : "default",
     overflow: "hidden",
@@ -68,8 +71,8 @@ export function PrimaryButton({
     flex: 1,
     minHeight: 0,
     width: "100%",
-    filter: `brightness(${hoverFgBrightness})`,
-    transition: `filter ${hoverTransition}`,
+    filter: `brightness(${interactFgBrightness})`,
+    transition: `filter ${interactTransition}`,
   };
 
   const labelStyle: CSSProperties = {

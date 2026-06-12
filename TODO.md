@@ -25,7 +25,7 @@
              - animate (depending on config option) camera back to position when the bathroom navigation started
           - if client accepts:
              - send request to server to retrieve path data from client current location to target bathroom location
-             - ??? keep updating path every <some-amt-of-time> ???
+             - ??? keep updating path every <some-amt-of-time>/if client moves enough from the previous location ???
              - once client reaches within specified distance from bathroom:
                 - ??? stop updating path ????
                 - notify client (non-intrusively) that they have reached the bathroom

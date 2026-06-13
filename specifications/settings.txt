@@ -1,0 +1,61 @@
+General:
+ - Will have header text "Settings" at the top left in large bold text
+ - Will have a circular and reddish "X" button on the bottom right of the screen at all TIMESTAMP
+    - Should be anchored to the same screen coordinates so that it remains static even if client scrolls down on the page 
+    - Will exit the current settings or subsettings page to go to the previous one
+       - Will move client to be at the top of the previous settings or subsettings page if the client is currently in a subsettings page
+ - Types of settings:
+    - Boolean option for turning something on and off
+    - Number slider for scaling number value between 2 values
+       - Will have an inclusive minimum and maximum values
+       - Can have an integer variant which snaps to integers between the min and max values
+       - Can have a float variant which allows for decimal values between the min and max values
+    - Subsettings page button with a ">" symbol at the right slider
+       - Will open a new settings page with a specified header
+          - Can contain all the setting types that a normal settings page will have
+       - The header will show "Settings > <current-settings-page-header>"
+       - Nested subsettings pages (subsettings pages inside of subsetting pages) will show the nesting in the header text
+          - EXAMPLE: "Settings > SubsettingsPage0 > SubsettingsPage1 > SubsettingsPage2"
+ - Settings will be stored in a dedicated table in a local SQLite db
+    - Table name: user_settings
+    - SCHEMA:
+       - Each bullet point in the Settings section will specify the DB column name and typing as well as any restrictions on the value
+ - The server will always store a schema version number that will also be stored on the client somewhere
+    - Whenever the client connects to the server (on web app demo it will happen when the web page is loaded, on native app it could happen after the app is opened as it supports opening in an offline state):
+       - The client will request a possible user settings schema update from the server along with the current locally stored schema version number
+       - If the server determines that the client's user schema version number is equivalent or greater than the server's schema version number:
+          - Server responds with a USER_SETTING_UP_TO_DATE response
+       - Else:
+          - Server sends down a USER_SETTING_SCHEMA_UPDATE response along with the schema migration SQL scripts to change the client's schema version **by 1 increment**
+             - The schema migration should be reversable and atomic, so that a partial migration can always be reverted in the future
+             - The schema migration should only be from one version to the version directly after it, never skipping any versions
+                - This will prevent user setting data from being unintentionally lost if the client falls behind very far on their local user setting schema version
+             - The schema migration should always fill new columns with default values
+             - The schema migration should always make UPDATE statements to coerce all potentially newly invalid values to be some valid value if a new CHECK constraint is added or if an existing CHECK constraint is updated
+             - If the client has received it and correctly processed all the migration SQL code:
+                - The client will send up a USER_SETTING_SUCCESSFUL_SCHEMA_UPDATE along with the current version of the user's schema version
+                - The server will receive this data and repeat the process of sending down USER_SETTING_SCHEMA_UPDATE until the client's schema version during a the processing of a USER_SETTING_SUCCESSFUL_SCHEMA_UPDATE connection matches the server's current schema version
+ - There will be a margin at the bottom of the settings and subsettings pages to allow for the "X" button for exiting the settings pages to be displayed without covering up any settings options 
+ - DO NOT IMPLEMENT THIS NOW, THIS IS JUST A PROPOSAL:
+    - One day, there will be an option to upload your settings into the remote DB to sync up settings between multiple devices
+Settings:
+ - Boolean option for toggling Globe movement animations on and off
+    - Client name: Globe movement smooth animations
+    - SQL Name: globe_movement_smooth
+    - SQL Type: BOOLEAN
+    - SQL Restrictions: CHECK (globe_movement_smooth IN (0, 1))
+ - Number slider option for setting how far up the camera will start from the Globe's surface:
+    - Client name: Init camera height (meters)
+    - Min: 500
+    - Max: 10000
+    - SQL Name: camera_init_surface_offset_m
+    - SQL Type: INTEGER
+    - SQL Restrictions: CHECK (camera_init_surface_offset_m >= <Min-value-for-this-setting> AND camera_init_surface_offset_m <= <Max-value-for-this-setting>)
+ - Bathroom settings subsettings page:
+    - Number slider option for maximum distance of finding nearest bathroom
+       - Client name: Find nearest bathroom max. distance (meters)
+       - Min: 0
+       - Max: 10000
+       - SQL Name: find_nearest_bathroom_max_dist_m
+       - SQL Type: INTEGER
+       - SQL Restrictions: CHECK (find_nearest_bathroom_max_dist_m >= <Min-value-for-this-setting> AND find_nearest_bathroom_max_dist_m <= <Max-value-for-this-setting>)

@@ -19,6 +19,7 @@
     - If the menu was not collapsed the menu was dragged down to within that area:
        - Collapse the menu
  - The menu will have:
+    - A button for opening settings
     - A button for adding a new bathroom
        - Has a plus symbol
        - Has text label "Add bathroom"

@@ -5,12 +5,14 @@
     - Fine nearest bathroom should have a custom icon of a magnifying glass with a mini bathroom in the lens
     - Settings button will have a gear icon inside of the swipe up menu
  - Settings for controlling basic visual data
-    - Store within SQLite local data somehow (use a client platform agnostic interface for storing local data)
+    - Store within SQLite local data somehow
  - impl bathroom preferences in setting (clientside)
  - impl find nearest bathroom button
     - make it pathfind from the user to the actual nearest bathroom
     - save the original camera position/zoom level
+    - client will send up their find nearest bathroom settings data/constraints
     - nearest bathroom is calculated on the remote DB side
+       - there will be a serverside maximum distance on how far away the bathroom can be calculated (should match up with the user setting schema's find nearest bathroom maximum distance)
        - if it times out (> than specified amt of time):
           - make a notification to client
           - calculate it from the cached local bathrooms

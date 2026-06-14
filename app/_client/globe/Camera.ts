@@ -583,7 +583,10 @@ export function installOrbitCameraControls({
   let wheelZoomRaf: number | null = null;
   let wheelZoomLastT = 0;
   let wheelZoomLastPulseT = 0;
-  let wheelZoomLerpRate = 18; // higher = faster convergence
+  const defaultWheelZoomLerpRate = OrbitCam.defaultWheelZoomSmoothLerpRateMs(
+    GlobeConsts.ANIMATE_ON_INIT_DURA,
+  );
+  let wheelZoomLerpRate = defaultWheelZoomLerpRate; // higher = faster convergence
 
   // Programmatic orbit-rotation animation (used by `animateTo`). Rotates `theta`/`phi`
   // toward a target without touching `range`. Always cancellable by user input.
@@ -676,7 +679,7 @@ export function installOrbitCameraControls({
       if (step.stopLoop) {
         if (step.clearZoomAimIfNearStart) clearZoomAim();
         wheelZoomRaf = null;
-        if (step.resetDefaultLerpRate) wheelZoomLerpRate = 18;
+        if (step.resetDefaultLerpRate) wheelZoomLerpRate = defaultWheelZoomLerpRate;
         return;
       }
 
@@ -987,7 +990,7 @@ export function installOrbitCameraControls({
         // remaining(T) = exp(-rate*T). Solve for remaining=0.01 at T=durS.
         wheelZoomLerpRate = OrbitCam.wheelZoomLerpRateForApprox99PercentInDuration(durS);
       } else {
-        wheelZoomLerpRate = 18;
+        wheelZoomLerpRate = defaultWheelZoomLerpRate;
       }
       clearZoomAim();
       wheelZoomLastClient = null;

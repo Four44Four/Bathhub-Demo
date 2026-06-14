@@ -63,6 +63,14 @@ describe("orbitCameraMath", () => {
       expect(r).toBeCloseTo(4.605170186, 5);
     });
 
+    test("defaultWheelZoomSmoothLerpRateMs matches 99% rate for the reference duration", () => {
+      const ms = 1500;
+      expect(OrbitCam.defaultWheelZoomSmoothLerpRateMs(ms)).toBeCloseTo(
+        OrbitCam.wheelZoomLerpRateForApprox99PercentInDuration(ms / 1000),
+        10,
+      );
+    });
+
     test("orbitRangeMetersWheelDampingFromSurfacePathMidpoint: average clearance matches average center distance", () => {
       const R = 6_371_000;
       const start = R + 500_000;

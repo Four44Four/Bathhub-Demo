@@ -330,7 +330,7 @@ export function wheelSmoothZoomLerpTick(args: {
   wheelZoomLastTMs: number;
   rangeM: number;
   stopLoop: boolean;
-  /** When true, caller resets lerp rate to 18 (default wheel smoothing). */
+  /** When true, caller resets lerp rate to the default smooth wheel-zoom rate. */
   resetDefaultLerpRate: boolean;
   /** When stopping: clear zoom aim if `|range − zoomAim.startRange| < 0.5`. */
   clearZoomAimIfNearStart: boolean;
@@ -387,6 +387,17 @@ export function wheelSmoothZoomLerpTick(args: {
 /** Rate such that `1 - exp(-rate * durationS) ≈ 0.99` (same constant as Camera.ts). */
 export function wheelZoomLerpRateForApprox99PercentInDuration(durationSeconds: number): number {
   return 4.605170186 / Math.max(0.001, durationSeconds);
+}
+
+/**
+ * Default exponential lerp rate for user wheel smooth-zoom. Matches geo-arrival programmatic
+ * zoom for the same duration (e.g. `Globe.ANIMATE_ON_INIT_DURA`) so scroll-wheel zoom feels
+ * the same whether the camera snapped or animated to the init target.
+ */
+export function defaultWheelZoomSmoothLerpRateMs(durationMs: number): number {
+  return wheelZoomLerpRateForApprox99PercentInDuration(
+    Math.max(1, durationMs) / 1000,
+  );
 }
 
 /** `exp(±L)` hits reciprocal scale bounds; clamping **raw** exponent to `[-L, L]` keeps `scale(δ)*scale(−δ)===1` (clamping `exp` output does not). */

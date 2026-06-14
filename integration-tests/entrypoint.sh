@@ -2,12 +2,30 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+DOCKER_DATA_MNT="${DOCKER_DATA_MNT:-/var/lib/docker-data}"
+dockerd_pid=""
 
-echo "entrypoint: preparing loopback ext4 storage for inner Docker daemon..."
+cleanup() {
+  if [[ -n "$dockerd_pid" ]] && kill -0 "$dockerd_pid" 2>/dev/null; then
+    echo "entrypoint: stopping inner Docker daemon..."
+    kill -TERM "$dockerd_pid" 2>/dev/null || true
+    wait "$dockerd_pid" 2>/dev/null || true
+  fi
+
+  if mountpoint -q "$DOCKER_DATA_MNT" 2>/dev/null; then
+    echo "entrypoint: unmounting $DOCKER_DATA_MNT..."
+    umount "$DOCKER_DATA_MNT" 2>/dev/null || true
+  fi
+}
+
+trap cleanup EXIT
+
+echo "entrypoint: preparing tmpfs storage for inner Docker daemon..."
 "$SCRIPT_DIR/setup-docker-storage.sh"
 
 echo "entrypoint: starting in-container Docker daemon..."
 dockerd >/var/log/dockerd.log 2>&1 &
+dockerd_pid=$!
 
 for attempt in $(seq 1 60); do
   if docker info >/dev/null 2>&1; then

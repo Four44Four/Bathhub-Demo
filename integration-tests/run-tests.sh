@@ -8,6 +8,25 @@ setup_supabase_project() {
   cp "$SCRIPT_DIR/supabase/config.toml" "$WORKSPACE_DIR/supabase/config.toml"
 }
 
+start_supabase_stack() {
+  local -a start_args=()
+
+  if [[ "${SUPABASE_DEBUG:-}" == "1" ]]; then
+    start_args+=(--debug)
+  fi
+
+  echo "run-tests: starting local Supabase stack..."
+  echo "run-tests: after migrations, Supabase pulls and starts API containers through nested Docker."
+  echo "run-tests: this step is slow on the first run; later runs reuse the bathhub-integration-inner-docker volume cache."
+  echo "run-tests: set SUPABASE_DEBUG=1 for per-container progress from the Supabase CLI."
+
+  if ! supabase start "${start_args[@]}"; then
+    echo "run-tests: supabase start failed" >&2
+    supabase status >&2 || true
+    exit 1
+  fi
+}
+
 export_supabase_env() {
   export SUPABASE_URL="http://127.0.0.1:54323"
 
@@ -62,12 +81,7 @@ fi
 
 setup_supabase_project
 
-echo "run-tests: starting local Supabase stack..."
-if ! supabase start; then
-  echo "run-tests: supabase start failed" >&2
-  supabase status >&2 || true
-  exit 1
-fi
+start_supabase_stack
 
 echo "run-tests: applying migrations from ./supabase/migrations..."
 if ! supabase db reset --yes; then

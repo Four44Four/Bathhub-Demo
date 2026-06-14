@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const image = "bathhub-integration-tests";
+const innerDockerVolume = "bathhub-integration-inner-docker";
 
 const ANSI = {
   green: "\x1b[32m",
@@ -23,6 +24,14 @@ function run(command, args) {
   }
 }
 
+function runAllowFailure(command, args) {
+  return spawnSync(command, args, {
+    cwd: root,
+    stdio: "inherit",
+    shell: process.platform === "win32",
+  });
+}
+
 console.log("integration-tests: building Docker image...");
 run("docker", [
   "build",
@@ -33,10 +42,22 @@ run("docker", [
   ".",
 ]);
 
+console.log(
+  `integration-tests: ensuring Docker volume ${innerDockerVolume} for nested daemon image cache...`,
+);
+runAllowFailure("docker", ["volume", "create", innerDockerVolume]);
+
 console.log("integration-tests: running containerized tests...");
 const testRun = spawnSync(
   "docker",
-  ["run", "--rm", "--privileged", image],
+  [
+    "run",
+    "--rm",
+    "--privileged",
+    "-v",
+    `${innerDockerVolume}:/var/lib/docker-data`,
+    image,
+  ],
   {
     cwd: root,
     stdio: "inherit",

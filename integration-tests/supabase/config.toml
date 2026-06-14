@@ -1,5 +1,10 @@
 # Local Supabase config for bathhub CRUD integration tests.
 # API is exposed on 54323 so SUPABASE_URL=http://127.0.0.1:54323 matches supabase status.
+#
+# Only services required by the integration suite are enabled. Optional Supabase
+# services (studio, storage, realtime, etc.) add several extra image pulls and
+# container health checks during `supabase start`, which is especially slow when
+# Supabase runs through the nested Docker daemon inside the test container.
 
 project_id = "bathhub-integration-tests"
 
@@ -15,22 +20,25 @@ port = 54322
 shadow_port = 54320
 major_version = 15
 
+[realtime]
+enabled = false
+
 [studio]
-enabled = true
+enabled = false
 port = 54329
 
 [inbucket]
-enabled = true
+enabled = false
 port = 54324
 
 [storage]
-enabled = true
+enabled = false
 
 [auth]
 enabled = true
 
 [edge_runtime]
-enabled = true
+enabled = false
 
 [analytics]
 enabled = false

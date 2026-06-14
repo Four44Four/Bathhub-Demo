@@ -9,6 +9,7 @@ import {
   type RefObject,
 } from "react";
 import { Recenter } from "./_client/viewport2d/buttons/Recenter";
+import { FindNearestBathroom } from "./_client/viewport2d/buttons/FindNearestBathroom";
 import { TestPathfind } from "./_client/viewport2d/buttons/testing/TestPathfind";
 import {
   GlobeViewport,
@@ -23,7 +24,7 @@ import {
   SwipeMenuInteractionContext,
   type SwipeMenuInteraction,
 } from "./_client/swipeup/SwipeMenuInteraction";
-import { FindNearestBathroom } from "./_client/swipeup/buttons/FindNearestBathroom";
+import { UserSettings } from "./_client/swipeup/buttons/UserSettings";
 import { RegisterNewBathroom } from "./_client/swipeup/buttons/RegisterNewBathroom";
 import { AlertSystemProvider } from "./_client/viewport2d/AlertSystem";
 import {
@@ -412,6 +413,9 @@ function HomeContent({
             mapInitLong={mapInitLong}
           />
         ) : null}
+        {!addBathroomModeActive ? (
+          <FindNearestBathroom />
+        ) : null}
         <AddBathroomMode globeRef={globeRef} />
         <div
           className="pointer-events-none absolute inset-0"
@@ -424,7 +428,7 @@ function HomeContent({
             viewportRef={phoneFrameRef}
             onInteractionChange={setSwipeMenuInteraction}
           >
-            <FindNearestBathroom />
+            <UserSettings />
             <RegisterNewBathroom />
           </MainMenu>
         </div>

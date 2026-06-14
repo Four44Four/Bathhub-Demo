@@ -158,3 +158,12 @@ export function linearCrossfade01(
   const t = (fadeStart - value) / (fadeStart - fullyAt);
   return clamp01(t);
 }
+
+/** Outer width/height of a circular viewport `Button` (`border-box`, symmetric padding). */
+export function viewportCircularButtonOuterSidePx(
+  imageSizePx: number,
+  circularPaddingPx: number,
+  outlineThicknessPx: number,
+): number {
+  return imageSizePx + 2 * circularPaddingPx + 2 * outlineThicknessPx;
+}

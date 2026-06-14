@@ -4,6 +4,7 @@ import { RefObject, useCallback, useLayoutEffect, useState } from "react";
 
 import { Button as ButtonConsts, SwipeMenu as SwipeMenuConsts, Globe as GlobeConsts } from "../../ComponentConstants";
 import { type GlobeViewportHandle, getStartPos } from "../../globe/GlobeViewport";
+import { viewportCircularButtonOuterSidePx } from "../../Utils";
 import { Button } from "../Button";
 
 export const BTN_IMG_SRC = "/crosshairs_center.svg";
@@ -13,15 +14,6 @@ export const BTN_IMG_SIZE_PX = 40;
 export const BTN_CIRCULAR_PADDING_PX = 5;
 /** Distance from the left edge of the phone frame (matches `TestPathfind` `BTN_X`). */
 export const BTN_X = 16;
-
-/** Outer width/height of a circular `Button` (`border-box`, symmetric padding). */
-export function viewportCircularButtonOuterSidePx(
-  imageSizePx: number,
-  circularPaddingPx: number,
-  outlineThicknessPx: number,
-): number {
-  return imageSizePx + 2 * circularPaddingPx + 2 * outlineThicknessPx;
-}
 
 /** `top` coordinate so the button sits `offsetAboveMenuPx` above the swipe menu collapsed top edge. */
 export function recenterButtonTopPx(

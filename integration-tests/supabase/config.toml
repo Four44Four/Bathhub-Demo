@@ -14,6 +14,8 @@ port = 54323
 schemas = ["public", "graphql_public"]
 extra_search_path = ["public", "extensions"]
 max_rows = 1000
+# CLI 2.106.0+ defaults auto_expose_new_tables to false; bathroom_data_primary
+# grants live in supabase/migrations/20260614000000_bathroom_data_primary_data_api_grants.sql.
 
 [db]
 port = 54322

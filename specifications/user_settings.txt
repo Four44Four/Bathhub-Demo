@@ -2,26 +2,45 @@ General:
  - Will have header text "Settings" at the top left in large bold text
  - Will have a circular and reddish "X" button on the bottom right of the screen at all TIMESTAMP
     - Should be anchored to the same screen coordinates so that it remains static even if client scrolls down on the page 
-    - Will exit the current settings or subsettings page to go to the previous one
-       - Will move client to be at the top of the previous settings or subsettings page if the client is currently in a subsettings page
+    - Will close the settings screen entirely
+       - Returns the client to the swipe-up menu
+ - When the client has entered at least one subsetting page:
+    - Add a new borderless button with specified foreground and background color to the bottom section to the left of the "X" button with the text "Back"
+    - When this button is interacted with:
+       - Move client to be at the top of the previous settings or subsettings page
  - Types of settings:
     - Boolean option for turning something on and off
+       - Will be a sliding circular switch (toggle slider)
+       - Will have 2 different sets of specified colors for the switch knob and the background
+       - Will **not** have a border on the knob or background
     - Number slider for scaling number value between 2 values
        - Will have an inclusive minimum and maximum values
        - Can have an integer variant which snaps to integers between the min and max values
        - Can have a float variant which allows for decimal values between the min and max values
+       - Will have a rounded knob and rounded bar ends
+       - The bar on the left side of the knob will be the accent 
+       - The bar on the right side fo the knob will be the same as the background for the off state of the boolean slider switch
+       - Will **not** have a border on the knob or the bar (both on the left and right of the knob)
     - Subsettings page button with a ">" symbol at the right slider
        - Will open a new settings page with a specified header
           - Can contain all the setting types that a normal settings page will have
        - The header will show "Settings > <current-settings-page-header>"
        - Nested subsettings pages (subsettings pages inside of subsetting pages) will show the nesting in the header text
           - EXAMPLE: "Settings > SubsettingsPage0 > SubsettingsPage1 > SubsettingsPage2"
+       - If the header gets too long to fit on the screen:
+          - Only show the tail end of the header and cut off everything before it with an ellipsis
+             - EXAMPLE: "Settings > SubsettingsPage0 > SubsettingsPage1 > SubsettingsPage2" could be "...ubsettingsPage2"
+       - Make the ">" symbol have a value half as much as the rest of the header text
  - Settings will be stored in a dedicated table in a local SQLite db
     - Table name: user_settings
     - SCHEMA:
        - Each bullet point in the Settings section will specify the DB column name and typing as well as any restrictions on the value
  - Client schema updating and versioning logic:
     - The server will store different migration scripts between every version by 1 increment (i.e. version 1 to 2, version 5 to 6, etc...)
+       - If the client requests migrating from an invalid version (below 0 or above maximum current version):
+          - Respond notifying the client that they requested an migration from an invalid version
+       - If the client requests migrating from the maximum current version:
+          - Respond notifying the client that they are already at the maximum current version
        - These can be accessed from the client, as long as the client specifies which version they are upgrading **FROM**
        - The schema migration should change the client's persistent schema number to be equivalent to the incremented schema number (from the schema number that the client sent up)
        - The schema migration should be reversable and atomic, so that a partial migration can always be reverted in the future
@@ -33,7 +52,7 @@ General:
     - The client's frontend code will store the valid schema number that is needed to make the frontend of the app work
        - This is not stored and queried from the server as the client may be using an out of date version of the app and relying on purely the server will lead to the out of date app breaking the moment a client migrates their local user settings DB schema
     - If the client opens the app (or visits the web-app if this is the web-app demo version):
-       - If the client's persistent SCHEMA_VERSION key-value pair and the in-memory frontend schema number (updated by updating the frontend source code) differ:
+       - If the client's persistent SCHEMA_VERSION key-value pair and the in-memory, hardcoded frontend schema number (updated by updating the frontend source code) differ:
           - The client will enter a SCHEMA_OUT_OF_DATE state
     - If the client is in a SCHEMA_OUT_OF_DATE state:
        - Display a "schema out of date" screen that prevents the client from doing anything

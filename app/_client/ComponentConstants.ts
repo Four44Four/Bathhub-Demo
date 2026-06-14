@@ -129,8 +129,8 @@ const SwipeMenu0 = {
     PRIMARY_BTN_HEIGHT_PX: 100,
     PRIMARY_BTN_FONT_SIZE: 10,
     PRIMARY_BTN_FONT_COLOR: "#B5B5C4",
-    PRIMARY_BTN_INTERACT_BG_COLOR: "#E6E6F0",
-    PRIMARY_BTN_INTERACT_FG_VALUE_FACTOR: 0.7,
+    BTN_INTERACT_BG_COLOR: "#E6E6F0",
+    BTN_INTERACT_FG_VALUE_FACTOR: 0.7,
     PRIMARY_BTN_IMG_WIDTH_RATIO: 0.5,
     PRIMARY_BTN_WIDTH_RATIO: 0.25,
     /** Box-shadow alpha for primary menu buttons (`rgba(18, 18, 47, α)`). */
@@ -154,6 +154,20 @@ export const Menus = {
     BACKDROP_INTERP_TOGGLE_MS: 100,
     /** Globe dim overlay color while the swipe-up menu is open (CSS rgba). */
     BACKDROP_COLOR: "rgba(12, 13, 18, 0.62)",
+} as const;
+
+export const UserSettings = {
+    /** Off boolean switch background; number-slider bar right of the knob (CSS hex). */
+    COMPONENT_BG_COLOR: "#DCDCE4",
+    /** On boolean switch background; number-slider accent bar left of the knob (CSS hex). */
+    COMPONENT_ACCENT_COLOR: "#B1B1FF",
+    /** Knob color for boolean switch and number slider (CSS hex). */
+    COMPONENT_KNOB_COLOR: "#45454D",
+    BOOLEAN_SWITCH_TRACK_WIDTH_PX: 44,
+    BOOLEAN_SWITCH_TRACK_HEIGHT_PX: 24,
+    BOOLEAN_SWITCH_KNOB_SIZE_PX: 20,
+    NUMBER_SLIDER_TRACK_HEIGHT_PX: 6,
+    NUMBER_SLIDER_KNOB_SIZE_PX: 20,
 } as const;
 
 export const BathroomRemoteDB = {

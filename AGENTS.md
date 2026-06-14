@@ -10,10 +10,11 @@ This version has breaking changes — APIs, conventions, and file structure may 
  - Always extract purely functional/mathematical logic into modular, top level functions
  - Use dependency injection pattern whenever possible
  - Create unit tests whenever new pure functions or logic is added
- - Whenever new Supabase DB interfacing logic is added, create corresponding integration tests in ./supabase-test to ensure DB state will be exactly as intended in a real Supabase DB
+ - Whenever new Supabase DB interfacing logic is added, create corresponding integration tests in ./integration-tests to ensure DB state will be exactly as intended in a real Supabase DB
  - If any database schema changes are prompted:
     - Do not edit old database migration scripts that create the table
     - Create a new migration script instead
+    - All migration scripts (for SQLite or PostgreSQL) should be reversible if a failure occurs during the migration
  - When creating unit or integration tests:
     - Use as much of the logic from the source code
     - The tests are intended to test logic from the source code, not invent new application logic solely for the test

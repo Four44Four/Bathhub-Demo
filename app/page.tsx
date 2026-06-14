@@ -25,6 +25,9 @@ import {
   type SwipeMenuInteraction,
 } from "./_client/swipeup/SwipeMenuInteraction";
 import { UserSettings } from "./_client/swipeup/buttons/UserSettings";
+import { UserSettingsProvider } from "./_client/user-settings/UserSettingsContext";
+import { UserSettingsOverlay } from "./_client/user-settings/UserSettingsOverlay";
+import { UserSettingsDbOnAppOpen } from "./_client/user-settings-db";
 import { RegisterNewBathroom } from "./_client/swipeup/buttons/RegisterNewBathroom";
 import { AlertSystemProvider } from "./_client/viewport2d/AlertSystem";
 import {
@@ -352,6 +355,7 @@ function HomeContent({
   return (
     <SwipeMenuInteractionContext.Provider value={swipeMenuInteraction}>
     <BathroomLocalDbOnAppOpen />
+    <UserSettingsDbOnAppOpen />
     <main className="flex h-full min-h-0 flex-col">
       <div ref={phoneFrameRef} className="relative flex min-h-0 flex-1 flex-col">
         <div
@@ -432,6 +436,7 @@ function HomeContent({
             <RegisterNewBathroom />
           </MainMenu>
         </div>
+        <UserSettingsOverlay />
       </div>
     </main>
     </SwipeMenuInteractionContext.Provider>
@@ -444,7 +449,9 @@ export default function Home() {
   return (
     <AlertSystemProvider phoneViewportRef={phoneFrameRef}>
       <AddBathroomModeProvider>
-        <HomeContent phoneFrameRef={phoneFrameRef} />
+        <UserSettingsProvider>
+          <HomeContent phoneFrameRef={phoneFrameRef} />
+        </UserSettingsProvider>
       </AddBathroomModeProvider>
     </AlertSystemProvider>
   );

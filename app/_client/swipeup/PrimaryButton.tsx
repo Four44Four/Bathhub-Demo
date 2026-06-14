@@ -37,7 +37,7 @@ export function PrimaryButton({
   const interactTransition = `${interactTransitionMs}ms ease`;
 
   const interactFgBrightness = isHighlighted
-    ? SwipeMenuConsts.PRIMARY_BTN_INTERACT_FG_VALUE_FACTOR
+    ? SwipeMenuConsts.BTN_INTERACT_FG_VALUE_FACTOR
     : 1;
 
   const buttonStyle: CSSProperties = {
@@ -54,7 +54,7 @@ export function PrimaryButton({
     border: "none",
     borderRadius: 15,
     backgroundColor: isHighlighted
-      ? SwipeMenuConsts.PRIMARY_BTN_INTERACT_BG_COLOR
+      ? SwipeMenuConsts.BTN_INTERACT_BG_COLOR
       : SwipeMenuConsts.PRIMARY_BTN_BG_COLOR,
     transition: `background-color ${interactTransition}`,
     boxShadow: `0 2px 8px rgba(18, 18, 47, ${SwipeMenuConsts.PRIMARY_BTN_SHADOW_ALPHA})`,

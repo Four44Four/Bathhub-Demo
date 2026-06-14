@@ -57,10 +57,6 @@ export const DebugCrosshair = {
 } as const;
 
 export const Globe = {    
-    // Target initial zoom level after geolocation is granted/processed:
-    // distance from the globe surface (meters).
-    CAMERA_INIT_SURFACE_OFFSET: 1500,
-    ANIMATE_ON_INIT: true,
     ANIMATE_ON_INIT_DURA: 1500,
 
     WATER_COLOR: "#41457E",
@@ -186,7 +182,7 @@ export const BathroomMapMarker = {
      */
     DEBUG_CACH_LOADED_MARKER: true,
     /** Max camera height (m above ellipsoid) to query and render bathroom markers. */
-    MAX_QUERY_CAMERA_HEIGHT_M: Globe.CAMERA_INIT_SURFACE_OFFSET * 100,
+    MAX_QUERY_CAMERA_HEIGHT_M: 150_000,
     DESTROY_DISTANCE_FROM_VIEWPORT_CENTER: 5000,
 } as const;
 

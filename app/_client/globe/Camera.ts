@@ -13,8 +13,10 @@ export type InstallOrbitCameraOptions = {
   initLat: number;
   initLong: number;
   width: number | string;
+  /** Meters above the globe surface for the post-geolocation init zoom target. */
+  cameraInitSurfaceOffsetM: number;
   /**
-   * When true, the camera starts at `CAMERA_INIT_SURFACE_OFFSET` above the surface instead of
+   * When true, the camera starts at `cameraInitSurfaceOffsetM` above the surface instead of
    * the default far “cover the viewport” distance used for `width === "100%"` layouts.
    */
   startAtInitTargetRange?: boolean;
@@ -54,13 +56,15 @@ export type InstalledOrbitCameraControls = {
   /** Set orbit angles immediately (no animation). Does NOT change zoom (range). */
   snapTo: (latDeg: number, longDeg: number) => void;
   /**
-   * Smoothly zoom the camera so it ends `Globe.CAMERA_INIT_SURFACE_OFFSET` meters
+   * Smoothly zoom the camera so it ends `cameraInitSurfaceOffsetM` meters
    * above the globe surface. Intended to be triggered when geolocation is
    * granted/processed, while the starting camera range stays at its default.
    */
   animateZoomToInitTarget: (durationMs?: number) => void;
   /** Immediately snap zoom to the init target zoom range. */
   snapZoomToInitTarget: () => void;
+  /** Updates the init zoom target when user settings change at runtime. */
+  setCameraInitSurfaceOffsetM: (offsetM: number) => void;
 };
 
 export function installOrbitCameraControls({
@@ -71,6 +75,7 @@ export function installOrbitCameraControls({
   initLat,
   initLong,
   width,
+  cameraInitSurfaceOffsetM: initialCameraInitSurfaceOffsetM,
   startAtInitTargetRange,
   containerRef,
   zoomIndicatorRootRef,
@@ -138,14 +143,19 @@ export function installOrbitCameraControls({
   controller.maximumTiltAngle = Math.PI / 2.0;
   controller.enableCollisionDetection = true;
 
-  const initTargetRange = OrbitCam.clampOrbitCenterDistanceMeters({
-    centerDistanceM: radius + GlobeConsts.CAMERA_INIT_SURFACE_OFFSET,
-    sphereRadiusM: radius,
-    minSurfaceClearanceM:
-      viewer.scene.screenSpaceCameraController.minimumZoomDistance ?? GlobeConsts.MIN_SURFACE_CLEARANCE_M,
-    maxOrbitCenterDistanceM:
-      viewer.scene.screenSpaceCameraController.maximumZoomDistance ?? radius * 20.0,
-  });
+  let cameraInitSurfaceOffsetM = initialCameraInitSurfaceOffsetM;
+
+  const computeInitTargetRange = () =>
+    OrbitCam.clampOrbitCenterDistanceMeters({
+      centerDistanceM: radius + cameraInitSurfaceOffsetM,
+      sphereRadiusM: radius,
+      minSurfaceClearanceM:
+        viewer.scene.screenSpaceCameraController.minimumZoomDistance ?? GlobeConsts.MIN_SURFACE_CLEARANCE_M,
+      maxOrbitCenterDistanceM:
+        viewer.scene.screenSpaceCameraController.maximumZoomDistance ?? radius * 20.0,
+    });
+
+  let initTargetRange = computeInitTargetRange();
 
   /** Full-bleed layout: zoom so the sphere’s limb subtends the larger of the two frustum FOVs (“cover”), clipping on the shorter axis (portrait: left/right). */
   const fillParent = typeof width === "string" && width === "100%";
@@ -173,7 +183,7 @@ export function installOrbitCameraControls({
   /**
    * Upper reference for zoom + orbit-drag damping (`zoomRateScale01`). For full-bleed layouts this is
    * **always** the same “cover viewport” orbit radius, even when `startAtInitTargetRange` starts the
-   * camera at `CAMERA_INIT_SURFACE_OFFSET`. That keeps reload-with-geolocation sensitivity aligned
+   * camera at the user-configured init surface offset. That keeps reload-with-geolocation sensitivity aligned
    * with the pre-permission session (far framing), instead of a tiny `(baseline − minRange)` band near
    * the surface.
    */
@@ -185,7 +195,7 @@ export function installOrbitCameraControls({
       viewer.scene.screenSpaceCameraController.minimumZoomDistance ?? GlobeConsts.MIN_SURFACE_CLEARANCE_M,
     maxOrbitCenterDistanceM:
       viewer.scene.screenSpaceCameraController.maximumZoomDistance ?? radius * 20.0,
-    cameraInitSurfaceOffsetM: GlobeConsts.CAMERA_INIT_SURFACE_OFFSET,
+    cameraInitSurfaceOffsetM,
     startAtInitTargetRange,
   });
   range = rangeM;
@@ -994,6 +1004,10 @@ export function installOrbitCameraControls({
       setRange(initTargetRange);
       wheelZoomTargetRange = initTargetRange;
       applyOrbit();
+    },
+    setCameraInitSurfaceOffsetM: (offsetM: number) => {
+      cameraInitSurfaceOffsetM = offsetM;
+      initTargetRange = computeInitTargetRange();
     },
     destroy: () => {
       cancelRotateAnim();

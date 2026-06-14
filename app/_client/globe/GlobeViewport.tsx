@@ -195,6 +195,8 @@ export function getStartPos(
 type GlobeViewportProps = {
   initLat: number;
   initLong: number;
+  /** Meters above the globe surface for the post-geolocation init zoom target. */
+  cameraInitSurfaceOffsetM: number;
   /**
    * When true, the camera starts at the post-geolocation zoom distance immediately (no fly-in
    * from the default whole-globe framing used for full-width layouts).
@@ -221,6 +223,7 @@ type GlobeViewportProps = {
 export function GlobeViewport({
   initLat,
   initLong,
+  cameraInitSurfaceOffsetM,
   initialSnapToGeoView = false,
   width,
   height,
@@ -233,6 +236,19 @@ export function GlobeViewport({
   const blocksViewportPointer = useSwipeMenuBlocksViewport();
   const blocksViewportPointerRef = useRef(blocksViewportPointer);
   blocksViewportPointerRef.current = blocksViewportPointer;
+  /** Latest mount props; read when async Cesium init runs (parent may update before first effect). */
+  const mountInitPropsRef = useRef({
+    initLat,
+    initLong,
+    cameraInitSurfaceOffsetM,
+    initialSnapToGeoView,
+  });
+  mountInitPropsRef.current = {
+    initLat,
+    initLong,
+    cameraInitSurfaceOffsetM,
+    initialSnapToGeoView,
+  };
   // The orbit camera controls are created inside an async init() below; until
   // they exist, queue the most recent `animateTo` request and replay it once
   // the viewer is ready.
@@ -267,6 +283,10 @@ export function GlobeViewport({
    */
   const userGeoLatLonRef = useRef<Point | null>(null);
   const geoArrivalLockStateRef = useRef(GeoArrival.initialGeoArrivalLockState());
+
+  useEffect(() => {
+    cameraControlsRef.current?.setCameraInitSurfaceOffsetM(cameraInitSurfaceOffsetM);
+  }, [cameraInitSurfaceOffsetM]);
 
   useImperativeHandle<GlobeViewportHandle | null, GlobeViewportHandle>(
     ref,
@@ -615,15 +635,23 @@ export function GlobeViewport({
           nowMs,
         );
       };
+      const {
+        initLat: mountInitLat,
+        initLong: mountInitLong,
+        cameraInitSurfaceOffsetM: mountCameraInitSurfaceOffsetM,
+        initialSnapToGeoView: mountInitialSnapToGeoView,
+      } = mountInitPropsRef.current;
+
       const cameraControls = installOrbitCameraControls({
         Cesium,
         viewer,
         ellipsoid,
         radius,
-        initLat,
-        initLong,
+        initLat: mountInitLat,
+        initLong: mountInitLong,
         width,
-        startAtInitTargetRange: initialSnapToGeoView,
+        cameraInitSurfaceOffsetM: mountCameraInitSurfaceOffsetM,
+        startAtInitTargetRange: mountInitialSnapToGeoView,
         containerRef,
         zoomIndicatorRootRef,
         onZoomIndicatorPulse,
@@ -651,16 +679,16 @@ export function GlobeViewport({
         pendingAnimateToRef.current = null;
         cameraControls.animateTo(pending.lat, pending.long, pending.durationMs);
       }
+      const pendingSnap = pendingSnapToRef.current;
+      if (pendingSnap) {
+        pendingSnapToRef.current = null;
+        cameraControls.snapTo(pendingSnap.lat, pendingSnap.long);
+      }
       const pendingZoom = pendingZoomToInitRef.current;
       if (pendingZoom) {
         pendingZoomToInitRef.current = null;
         if (pendingZoom.snap) cameraControls.snapZoomToInitTarget();
         else cameraControls.animateZoomToInitTarget(pendingZoom.durationMs);
-      }
-      const pendingSnap = pendingSnapToRef.current;
-      if (pendingSnap) {
-        pendingSnapToRef.current = null;
-        cameraControls.snapTo(pendingSnap.lat, pendingSnap.long);
       }
 
       const mapMarker = installMapMarker(
@@ -925,7 +953,11 @@ export function GlobeViewport({
       cameraControlsRef.current = null;
       requestViewportResyncRef.current = null;
     };
-  }, [initLat, initLong, initialSnapToGeoView, width]);
+  // Re-init only when layout width changes. Init lat/long, snap-to-geo framing, and
+  // camera init height are applied at first install and updated at runtime via the
+  // imperative handle (`animateTo`, `setCameraInitSurfaceOffsetM`, etc.) without
+  // tearing down the Cesium viewer.
+  }, [width]);
 
   const fillParent = typeof width === "string" && width === "100%";
 

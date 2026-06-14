@@ -91,7 +91,13 @@ export function installBathroomMarkers(
     record.loadedFromCache = entry.loadedFromCache;
   };
 
-  const requestRender = () => viewer.scene.requestRender();
+  const requestRender = () => {
+    try {
+      viewer.scene.requestRender();
+    } catch {
+      // Viewer may be destroyed while a viewport sync is still unwinding.
+    }
+  };
 
   return {
     sync(context) {

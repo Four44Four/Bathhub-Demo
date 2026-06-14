@@ -30,7 +30,7 @@ General:
        - If the header gets too long to fit on the screen:
           - Only show the tail end of the header and cut off everything before it with an ellipsis
              - EXAMPLE: "Settings > SubsettingsPage0 > SubsettingsPage1 > SubsettingsPage2" could be "...ubsettingsPage2"
-       - Make the ">" symbol have a value half as much as the rest of the header text
+       - Make the ">" symbol have a value half as bright much as the rest of the header text
  - Settings will be stored in a dedicated table in a local SQLite db
     - Table name: user_settings
     - SCHEMA:
@@ -78,10 +78,11 @@ General:
                       - The client leaves the "schema out of date" screen
                       - The client sees an important alert that a user settings update failed to apply
  - There will be a margin at the bottom of the settings and subsettings pages to allow for the "X" button for exiting the settings pages to be displayed without covering up any settings options 
+ - There should never be a complete teardown of the Cesium Globe when changing user settings unless doing so is explicitly stated in the specification for any user setting
  - DO NOT IMPLEMENT THIS NOW, THIS IS JUST A PROPOSAL:
     - One day, there will be an option to upload your settings into the remote DB to sync up settings between multiple devices
 Settings:
- - Boolean option for toggling Globe movement animations on and off
+ - Boolean option for toggling Globe movement animations on and off (for recentering and when user allows for geolocation permissions after loading the app)
     - Client name: Globe movement smooth animations
     - SQL Name: globe_movement_smooth
     - SQL Type: BOOLEAN

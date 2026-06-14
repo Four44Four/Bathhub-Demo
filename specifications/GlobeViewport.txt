@@ -8,8 +8,10 @@
     - On initially loading the app, do not render the ClickedIndicator at all
  - If the user has not allowed geolocation data permission or has blocked access to geolocation data, render a 2D static image according to ./app/_client/MapMarker.ts with its bottom midpoint centered on the center of the GlobeViewport 
  - The user allows geolocation data permission, play an animation to smoothly ease to if the correct config option is enabled, or snap camera and Globe rotation so that the camera moves down to specified close distance from the surface of the Globe and the Globe rotates so that the user's current geolocation position is in the center of the GlobeViewport
+    - The camera's distance from the Globe's surface should be determined by the "Init camera height (meters)" setting as described in specifications/user_settings.txt
  - If the user already allowed geolocation data permission upon loading the app:
     - Load the GlobeViewport, Globe, and camera to have the user's geolocation position already centered on the GlobeViewport, and have the camera already at the close distance from the surface of the Globe
+       - The camera's distance from the Globe's surface should be determined by the "Init camera height (meters)" setting as described in specifications/user_settings.txt
     - There should not be a moment where the Globe is at the default rotation and the camera is at the default distance from the surface of the Globe
  - With a specified delay, whenever the user is detected to be rotating the Globe or zooming:
     - Repeatedly calculate the 3D point on the Globe that is directly on the GlobeViewport's center
@@ -20,4 +22,4 @@
        - Call the appropriate function from ./app/_server/Pathfind.ts to calculate the path between the clicked point on the Globe and either the 3D point on the Globe directly on the GlobeViewport's center if geolocation permission is denied or yet to be granted, or the user's current geolocation position, if it has been granted
        - Render this path as an anti-aliased line on the Globe with several gradient, shader-based rendering effect options
  - The Recenter button only appears when the geolocation of the client is detected (and permissions are granted)
- - If the user clicks or taps on the Recenter button, the Globe will play the animation to smoothly ease, or snap if the correct config option is enabled, the Globe's rotation and camera zoom to the correct level to be directly over the current geolocation position if geolocation permissions were granted
+ - If the user clicks or taps on the Recenter button, the Globe will play the animation to smoothly ease, or snap if the correct config option is enabled, the Globe's rotation and camera zoom to the correct level to be directly over the current geolocation position if geolocation permissions were granted 

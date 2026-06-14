@@ -36,6 +36,10 @@ import {
   useAddBathroomMode,
 } from "./_client/viewport2d/add-bathroom-mode";
 import { Globe as GlobeConsts, SwipeMenu as SwipeMenuConsts } from "./_client/ComponentConstants";
+import { navigateGlobeToLatLon } from "./_client/pure/globe/GlobeMovementNavigation";
+import { useUserSettings } from "./_client/user-settings/UserSettingsContext";
+import { useGlobeMovementSmoothRef } from "./_client/user-settings/useGlobeMovementSmooth";
+import { USER_SETTINGS_DEFAULTS } from "./_shared/user-settings/UserSettingsSchema";
 import { BathroomViewportSync } from "./_client/bathroom/BathroomViewportSync";
 import { BathroomLocalDbOnAppOpen } from "./_client/local-db";
 import { SWIPE_MENU_BACKDROP_Z_INDEX } from "./_client/pure/viewport2d/PositionalAlertAnchor";
@@ -52,9 +56,9 @@ let isClientGeoGranted = false;
  * client has no geolocation permission (or denies the prompt). Updated to the
  * client's current position whenever geolocation data becomes available.
  *
- * Kept at module scope (rather than inside `Home()`) so the geolocation flow
- * can mutate them in place; the React state below mirrors them whenever the
- * `<GlobeViewport>` actually needs to be re-initialized.
+ * Kept at module scope so geolocation callbacks and pathfinding helpers can read
+ * the latest fix without prop drilling. Camera moves are driven imperatively via
+ * `globeRef` — changing these does not re-init the Cesium viewer.
  */
 let mapInitLat = 0.0;
 let mapInitLong = 0.0;
@@ -83,14 +87,55 @@ function writeGeoCache(lat: number, lng: number) {
   }
 }
 
+type FrozenGlobeInit = {
+  lat: number;
+  long: number;
+  snapInitialView: boolean;
+};
+
+/** SSR-safe defaults — sessionStorage is applied after mount in `useLayoutEffect`. */
+const DEFAULT_GLOBE_INIT: FrozenGlobeInit = {
+  lat: mapInitLat,
+  long: mapInitLong,
+  snapInitialView: false,
+};
+
+function applyGeoCacheFromSession(): FrozenGlobeInit | null {
+  const cached = readGeoCache();
+  if (!cached) return null;
+  mapInitLat = cached.lat;
+  mapInitLong = cached.lng;
+  return { lat: cached.lat, long: cached.lng, snapInitialView: true };
+}
+
+function snapGlobeToGeoWhenReady(
+  globe: GlobeViewportHandle | null,
+  lat: number,
+  lng: number,
+) {
+  if (!globe) return;
+  void globe.waitForViewer().then(() => {
+    globe.setMapMarkerUserLatLon(lat, lng);
+    globe.snapTo(lat, lng);
+    globe.snapZoomToInitTarget();
+  });
+}
+
 function HomeContent({
   phoneFrameRef,
 }: {
   phoneFrameRef: RefObject<HTMLDivElement | null>;
 }) {
   const { isActive: addBathroomModeActive } = useAddBathroomMode();
+  const { settings } = useUserSettings();
+  const cameraInitSurfaceOffsetM =
+    settings?.camera_init_surface_offset_m ??
+    USER_SETTINGS_DEFAULTS.camera_init_surface_offset_m;
+  const globeMovementSmoothRef = useGlobeMovementSmoothRef();
   const globeRootRef = useRef<HTMLDivElement | null>(null);
   const globeRef = useRef<GlobeViewportHandle | null>(null);
+  /** SSR-safe on first render; sessionStorage geo is merged in `useLayoutEffect` before Cesium init. */
+  const [globeInit, setGlobeInit] = useState<FrozenGlobeInit>(DEFAULT_GLOBE_INIT);
   /**
    * Recenter mounts only when geolocation permission is `granted` (Permissions API),
    * or once a live fix arrives where the Permissions API is unavailable (e.g. Safari).
@@ -108,36 +153,27 @@ function HomeContent({
       menuHeightPx: SwipeMenuConsts.INACTIVE_HEIGHT_PX,
     });
   // Bumped when module-level `mapInitLat` / `mapInitLong` / `isClientGeoGranted`
-  // update without a `setGlobeInit` (e.g. geo animate-on-init) so consumers like
-  // `<TestPathfind>` re-render with fresh coordinates.
+  // update so consumers like `<TestPathfind>` re-render with fresh coordinates.
   const [, setPathfindDepsEpoch] = useState(0);
   const bumpPathfindDeps = () => setPathfindDepsEpoch((n) => n + 1);
 
-  // Mirrors the module-level mapInitLat/mapInitLong. Updating this state
-  // re-renders Home() and feeds new initLat/initLong props into <GlobeViewport>,
-  // which causes its useEffect to tear down + re-init the Cesium viewer.
-  // We only update it for the "permission already granted" case so the
-  // "accepted later" case can use the cheap animation path instead.
-  const [globeInit, setGlobeInit] = useState<{
-    lat: number;
-    long: number;
-    /** Session/cache bootstrap: start globe framing + zoom like post-geolocation (no fly-in). */
-    snapInitialView: boolean;
-  }>({
-    lat: mapInitLat,
-    long: mapInitLong,
-    snapInitialView: false,
-  });
-
-  const globeInitRef = useRef(globeInit);
-  globeInitRef.current = globeInit;
+  /** Tracks whether the camera has been framed to the user's geo fix (no React state). */
+  const globeViewStateRef = useRef({ ...DEFAULT_GLOBE_INIT });
 
   useLayoutEffect(() => {
-    const cached = readGeoCache();
-    if (!cached) return;
-    mapInitLat = cached.lat;
-    mapInitLong = cached.lng;
-    setGlobeInit({ lat: cached.lat, long: cached.lng, snapInitialView: true });
+    const init = applyGeoCacheFromSession();
+    if (!init) return;
+
+    isClientGeoGranted = true;
+    globeViewStateRef.current = {
+      lat: init.lat,
+      long: init.long,
+      snapInitialView: true,
+    };
+    setShowRecenterButton(true);
+    setGlobeInit(init);
+    bumpPathfindDeps();
+    snapGlobeToGeoWhenReady(globeRef.current, init.lat, init.long);
   }, []);
 
   useEffect(() => {
@@ -202,21 +238,37 @@ function HomeContent({
       mapInitLong = lng;
       bumpPathfindDeps();
       writeGeoCache(lat, lng);
-      // Push to MapMarker before any state change / animation so the billboard
-      // is already in place if this triggers a viewer re-init below.
       globeRef.current?.setMapMarkerUserLatLon(lat, lng);
-      setGlobeInit((prev) => {
-        const close =
-          Math.abs(prev.lat - lat) < 0.002 && Math.abs(prev.long - lng) < 0.002;
-        if (close && prev.snapInitialView) return prev;
-        if (prev.snapInitialView && !close) {
-          queueMicrotask(() => {
-            globeRef.current?.snapTo(lat, lng);
-          });
-          return prev;
-        }
-        return { lat, long: lng, snapInitialView: true };
-      });
+
+      const prev = globeViewStateRef.current;
+      const close =
+        Math.abs(prev.lat - lat) < 0.002 && Math.abs(prev.long - lng) < 0.002;
+
+      if (close && prev.snapInitialView) {
+        globeViewStateRef.current = { lat, long: lng, snapInitialView: true };
+        snapGlobeToGeoWhenReady(globeRef.current, lat, lng);
+        return;
+      }
+
+      if (prev.snapInitialView && !close) {
+        globeViewStateRef.current = { lat, long: lng, snapInitialView: true };
+        queueMicrotask(() => {
+          globeRef.current?.snapTo(lat, lng);
+          globeRef.current?.snapZoomToInitTarget();
+        });
+        return;
+      }
+
+      globeViewStateRef.current = { lat, long: lng, snapInitialView: true };
+      navigateGlobeToLatLon(
+        {
+          globe: globeRef.current,
+          globeMovementSmooth: globeMovementSmoothRef.current,
+          animationDurationMs: GlobeConsts.ANIMATE_ON_INIT_DURA,
+        },
+        lat,
+        lng,
+      );
     };
 
     const bootstrapGrantedInstantFix = () =>
@@ -277,15 +329,17 @@ function HomeContent({
       // animateTo / animateZoomToInitTarget transition below.
       globeRef.current?.setMapMarkerUserLatLon(lat, long);
 
-      const prev = globeInitRef.current;
+      const prev = globeViewStateRef.current;
       const close =
         Math.abs(lat - prev.lat) < 0.002 && Math.abs(long - prev.long) < 0.002;
 
       if (prev.snapInitialView && close) {
+        globeViewStateRef.current = { lat, long, snapInitialView: true };
         if (!appliedUserLocation) {
           appliedUserLocation = true;
           clearWatch();
         }
+        snapGlobeToGeoWhenReady(globeRef.current, lat, long);
         return;
       }
 
@@ -294,20 +348,23 @@ function HomeContent({
       clearWatch();
 
       if (prev.snapInitialView && !close) {
+        globeViewStateRef.current = { lat, long, snapInitialView: true };
         globeRef.current?.snapTo(lat, long);
+        globeRef.current?.snapZoomToInitTarget();
         return;
       }
 
-      if (GlobeConsts.ANIMATE_ON_INIT) {
-        globeRef.current?.beginGeoArrivalInteractionLock();
-        globeRef.current?.animateTo(lat, long, GlobeConsts.ANIMATE_ON_INIT_DURA);
-        globeRef.current?.animateZoomToInitTarget(GlobeConsts.ANIMATE_ON_INIT_DURA);
-      } else {
-        setGlobeInit({ lat, long, snapInitialView: false });
-        requestAnimationFrame(() => {
-          globeRef.current?.snapZoomToInitTarget();
-        });
-      }
+      globeViewStateRef.current = { lat, long, snapInitialView: true };
+
+      navigateGlobeToLatLon(
+        {
+          globe: globeRef.current,
+          globeMovementSmooth: globeMovementSmoothRef.current,
+          animationDurationMs: GlobeConsts.ANIMATE_ON_INIT_DURA,
+        },
+        lat,
+        long,
+      );
     };
 
     const onPositionError = (err: GeolocationPositionError) => {
@@ -370,6 +427,7 @@ function HomeContent({
             ref={globeRef}
             initLat={globeInit.lat}
             initLong={globeInit.long}
+            cameraInitSurfaceOffsetM={cameraInitSurfaceOffsetM}
             initialSnapToGeoView={globeInit.snapInitialView}
             width={GLOBE_VIEWPORT_WIDTH}
             height={GLOBE_VIEWPORT_HEIGHT}

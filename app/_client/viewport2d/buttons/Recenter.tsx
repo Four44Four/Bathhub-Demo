@@ -3,6 +3,8 @@
 import { RefObject, useCallback, useLayoutEffect, useState } from "react";
 
 import { Button as ButtonConsts, SwipeMenu as SwipeMenuConsts, Globe as GlobeConsts } from "../../ComponentConstants";
+import { navigateGlobeToLatLon } from "../../pure/globe/GlobeMovementNavigation";
+import { useGlobeMovementSmoothRef } from "../../user-settings/useGlobeMovementSmooth";
 import { type GlobeViewportHandle, getStartPos } from "../../globe/GlobeViewport";
 import { viewportCircularButtonOuterSidePx } from "../../Utils";
 import { Button } from "../Button";
@@ -40,24 +42,6 @@ export type RecenterProps = {
   btnImgSizePx?: number;
 };
 
-function onRecenterClick(
-  globeRef: RefObject<GlobeViewportHandle | null>,
-  isClientGeoGranted: boolean,
-  mapInitLat: number,
-  mapInitLong: number,
-) {
-  const p = getStartPos(globeRef.current, isClientGeoGranted, mapInitLat, mapInitLong);
-  if (GlobeConsts.ANIMATE_ON_INIT) {
-    globeRef.current?.beginGeoArrivalInteractionLock();
-    globeRef.current?.animateTo(p.latitude, p.longitude, GlobeConsts.ANIMATE_ON_INIT_DURA);
-    globeRef.current?.animateZoomToInitTarget(GlobeConsts.ANIMATE_ON_INIT_DURA);
-  }
-  else {
-    globeRef.current?.snapTo(p.latitude, p.longitude);
-    globeRef.current?.snapZoomToInitTarget();
-  }
-}
-
 export function Recenter({
   globeRef,
   viewportRef,
@@ -67,6 +51,7 @@ export function Recenter({
   btnOffsetPx = BTN_OFFSET_PX,
   btnImgSizePx = BTN_IMG_SIZE_PX,
 }: RecenterProps) {
+  const globeMovementSmoothRef = useGlobeMovementSmoothRef();
   const inactiveHeightPx = SwipeMenuConsts.INACTIVE_HEIGHT_PX;
 
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
@@ -109,6 +94,19 @@ export function Recenter({
         )
       : 0;
 
+  const onRecenterClick = () => {
+    const p = getStartPos(globeRef.current, isClientGeoGranted, mapInitLat, mapInitLong);
+    navigateGlobeToLatLon(
+      {
+        globe: globeRef.current,
+        globeMovementSmooth: globeMovementSmoothRef.current,
+        animationDurationMs: GlobeConsts.ANIMATE_ON_INIT_DURA,
+      },
+      p.latitude,
+      p.longitude,
+    );
+  };
+
   return (
     <div className="pointer-events-none absolute inset-0 z-[38]">
       {viewportSize.width > 0 && viewportSize.height > 0 ? (
@@ -119,9 +117,7 @@ export function Recenter({
           circularPaddingPx={BTN_CIRCULAR_PADDING_PX}
           imageSrc={BTN_IMG_SRC}
           imageSizePx={btnImgSizePx}
-          onClick={() =>
-            onRecenterClick(globeRef, isClientGeoGranted, mapInitLat, mapInitLong)
-          }
+          onClick={onRecenterClick}
         />
       ) : null}
     </div>

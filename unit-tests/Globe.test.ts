@@ -17,6 +17,7 @@ import {
 import { dimensionCss } from "../app/_client/pure/globe/GlobeViewportCss";
 import * as GeoArrival from "../app/_client/pure/globe/GeoArrivalCameraLock";
 import { Globe as GlobeConsts } from "../app/_client/ComponentConstants";
+import { USER_SETTINGS_DEFAULTS } from "../app/_shared/user-settings/UserSettingsSchema";
 import { installOrbitCameraControls } from "../app/_client/globe/Camera";
 import type { GlobeViewportHandle } from "../app/_client/globe/GlobeViewport";
 
@@ -283,6 +284,7 @@ function installOrbitCameraPathRebuildHarness(initLat = 0, initLong = 0): OrbitC
     initLat,
     initLong,
     width: 400,
+    cameraInitSurfaceOffsetM: USER_SETTINGS_DEFAULTS.camera_init_surface_offset_m,
     containerRef: { current: null },
     onOrbitRotateAnimationEnd: rebuildPathOnCameraMoveEnd,
   });

@@ -56,24 +56,11 @@ export const USER_SETTINGS_PAGES: Record<
         min: 500,
         max: 10000,
       },
-      {
-        type: "subpage",
-        pageId: "bathroom",
-        label: "Bathroom settings",
-      },
     ],
   },
   bathroom: {
     id: "bathroom",
     title: "Bathroom settings",
-    items: [
-      {
-        type: "slider-int",
-        column: "find_nearest_bathroom_max_dist_m",
-        label: "Find nearest bathroom max. distance (meters)",
-        min: 0,
-        max: 10000,
-      },
-    ],
+    items: [],
   },
 };

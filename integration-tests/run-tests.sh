@@ -85,4 +85,8 @@ echo "run-tests: running local cache integration checks against seeded locations
 NODE_OPTIONS="${NODE_OPTIONS:+$NODE_OPTIONS }--experimental-vm-modules" \
   npx jest --runInBand --verbose "$SCRIPT_DIR/LocalCache.integration.test.ts"
 
+echo "run-tests: running Globe viewport Cesium orbit integration checks..."
+NODE_OPTIONS="${NODE_OPTIONS:+$NODE_OPTIONS }--experimental-vm-modules" \
+  npx jest --runInBand --verbose "$SCRIPT_DIR/GlobeViewport.integration.test.ts"
+
 echo "run-tests: SUCCESS"

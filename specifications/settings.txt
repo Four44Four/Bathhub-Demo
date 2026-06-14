@@ -20,21 +20,44 @@ General:
     - Table name: user_settings
     - SCHEMA:
        - Each bullet point in the Settings section will specify the DB column name and typing as well as any restrictions on the value
- - The server will always store a schema version number that will also be stored on the client somewhere
-    - Whenever the client connects to the server (on web app demo it will happen when the web page is loaded, on native app it could happen after the app is opened as it supports opening in an offline state):
-       - The client will request a possible user settings schema update from the server along with the current locally stored schema version number
-       - If the server determines that the client's user schema version number is equivalent or greater than the server's schema version number:
-          - Server responds with a USER_SETTING_UP_TO_DATE response
-       - Else:
-          - Server sends down a USER_SETTING_SCHEMA_UPDATE response along with the schema migration SQL scripts to change the client's schema version **by 1 increment**
-             - The schema migration should be reversable and atomic, so that a partial migration can always be reverted in the future
-             - The schema migration should only be from one version to the version directly after it, never skipping any versions
-                - This will prevent user setting data from being unintentionally lost if the client falls behind very far on their local user setting schema version
-             - The schema migration should always fill new columns with default values
-             - The schema migration should always make UPDATE statements to coerce all potentially newly invalid values to be some valid value if a new CHECK constraint is added or if an existing CHECK constraint is updated
-             - If the client has received it and correctly processed all the migration SQL code:
-                - The client will send up a USER_SETTING_SUCCESSFUL_SCHEMA_UPDATE along with the current version of the user's schema version
-                - The server will receive this data and repeat the process of sending down USER_SETTING_SCHEMA_UPDATE until the client's schema version during a the processing of a USER_SETTING_SUCCESSFUL_SCHEMA_UPDATE connection matches the server's current schema version
+ - Client schema updating and versioning logic:
+    - The server will store different migration scripts between every version by 1 increment (i.e. version 1 to 2, version 5 to 6, etc...)
+       - These can be accessed from the client, as long as the client specifies which version they are upgrading **FROM**
+       - The schema migration should change the client's persistent schema number to be equivalent to the incremented schema number (from the schema number that the client sent up)
+       - The schema migration should be reversable and atomic, so that a partial migration can always be reverted in the future
+       - The schema migration should only be from one version to the version directly after it, never skipping any versions
+          - This will prevent user setting data from being unintentionally lost if the client falls behind very far on their local user setting schema version
+       - The schema migration should always fill new columns with default values
+       - The schema migration should always make UPDATE statements to coerce all potentially newly invalid values to be some valid value if a new CHECK constraint is added or if an existing CHECK constraint is updated         
+    - The client will have a dedicated and persistent key-value pair named SCHEMA_VERSION with a number value stored in their SQLite DB for the last schema version that the client has installed
+    - The client's frontend code will store the valid schema number that is needed to make the frontend of the app work
+       - This is not stored and queried from the server as the client may be using an out of date version of the app and relying on purely the server will lead to the out of date app breaking the moment a client migrates their local user settings DB schema
+    - If the client opens the app (or visits the web-app if this is the web-app demo version):
+       - If the client's persistent SCHEMA_VERSION key-value pair and the in-memory frontend schema number (updated by updating the frontend source code) differ:
+          - The client will enter a SCHEMA_OUT_OF_DATE state
+    - If the client is in a SCHEMA_OUT_OF_DATE state:
+       - Display a "schema out of date" screen that prevents the client from doing anything
+       - Try every specified amount of time to request a schema update from the server
+          - The schema update request will consist of the client's current persistent schema version number
+          - If the schema update request successfully reaches the server:
+             - Server sends down a USER_SETTING_SCHEMA_UPDATE response along with the schema migration SQL scripts to change the client's schema version **by 1 increment**
+                - If the client has received it:
+                   - If the client correctly processed all the migration SQL code:
+                      - The client will check if the new persistent schema version number from the SCHEMA_VERSION key-value pair and the in-memory frontend schema number match: 
+                         - If not:
+                            - Request the next schema migration script between the current and next version
+                            - Repeat this process until the persistent schema version and in-memory frontend schema version are the same
+                         - If so:
+                            - Set SCHEMA_OUT_OF_DATE to false
+                            - The client leaves the "schema out of date" screen
+                            - The client returns to seeing whatever screen they were looking at before the user settings config request to the server succeeded
+                   - If the client encounters an error when processing the migration SQL code:
+                      - Rollback all user setting config changes to previous version
+                      - Send a server message with a USER_SETTING_SCHEMA_UPDATE_ERROR with the current client schema version, as well as the offending error strings
+                      - Set SCHEMA_OUT_OF_DATE to false (temporarily)
+                         - This will be set back to true when the client reopens the app (or revisits the web-app demo)
+                      - The client leaves the "schema out of date" screen
+                      - The client sees an important alert that a user settings update failed to apply
  - There will be a margin at the bottom of the settings and subsettings pages to allow for the "X" button for exiting the settings pages to be displayed without covering up any settings options 
  - DO NOT IMPLEMENT THIS NOW, THIS IS JUST A PROPOSAL:
     - One day, there will be an option to upload your settings into the remote DB to sync up settings between multiple devices

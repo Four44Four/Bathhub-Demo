@@ -8,6 +8,28 @@ General:
     - Add a new borderless button with specified foreground and background color to the bottom section to the left of the "X" button with the text "Back"
     - When this button is interacted with:
        - Move client to be at the top of the previous settings or subsettings page
+ - Application logic affected by the user settings values will be solely drawn from dedicated in-memory datastructures which represent the user settings (this is **not** an in-memory SQLite DB)
+    - This is to maximize application speed when retrieving the proper values when performing anything
+ - Use temporary datastructures to store the pending changes that a client has made to their user settings config
+    - Changes will be flushed to the actual ones that the app uses when the client saves their changes through the "Save changes" button
+ - When the client has changed at least one setting on any page (even if they change it back):
+    - Display a new button with text "Save changes" with the same button constants as the "Back" button, but copied by value
+    - Its location will always be the leftmost in the row of buttons at the bottom of the Settings page next to the "X" button
+    - User settings will **only** be saved if the user clicks this button
+    - Display a loading in place of the button text until the saving to **both** the in-memory datastructures representation of the user settings and their backing persistent SQLite DB are done
+       - Once they are done saving:
+          - The "Save changes" button will be hidden again until another setting changes
+    - If the user interacts with the "X" button before saving changes:
+       - If USER_SETTING_SCHEMA_UPDATE_HAS_ERRORED is true:
+          - Do not save anything, just close the user settings page
+       - Else:
+          - Don't close the user settings page
+          - Display a negative important alert with the text "You have unsaved changes" with the button text "Exit anyways"
+          - If the user interacts with "Exit anyways":
+             - The page closes and nothing is written to the in-memory user settings datastructures or the persistent SQLite DB containing the user settings
+    - If USER_SETTING_SCHEMA_UPDATE_HAS_ERRORED is true:
+       - Don't do anything
+       - Display a negative important alert with the text "Due to a settings data migration failure, saving is currently disabled" with the button text "Ok"
  - Types of settings:
     - Boolean option for turning something on and off
        - Will be a sliding circular switch (toggle slider)
@@ -31,7 +53,9 @@ General:
           - Only show the tail end of the header and cut off everything before it with an ellipsis
              - EXAMPLE: "Settings > SubsettingsPage0 > SubsettingsPage1 > SubsettingsPage2" could be "...ubsettingsPage2"
        - Make the ">" symbol have a value half as bright much as the rest of the header text
- - Settings will be stored in a dedicated table in a local SQLite db
+ - Settings will be stored in dedicated datastructures which should be synced with a dedicated table in a local persistent SQLite db (the in-memory DB should **not** be a in-memory SQLite)
+    - The datastructures representing the user settings should synchronize with the dedicated persistent SQLite table on app open (or page load for web-app demo)
+    - The persistent SQLite table should only be written to during user settings migrations and user triggering explicit saves through the settings page's "Save changes" button
     - Table name: user_settings
     - SCHEMA:
        - Each bullet point in the Settings section will specify the DB column name and typing as well as any restrictions on the value
@@ -51,7 +75,8 @@ General:
     - The client will have a dedicated and persistent key-value pair named SCHEMA_VERSION with a number value stored in their SQLite DB for the last schema version that the client has installed
     - The client's frontend code will store the valid schema number that is needed to make the frontend of the app work
        - This is not stored and queried from the server as the client may be using an out of date version of the app and relying on purely the server will lead to the out of date app breaking the moment a client migrates their local user settings DB schema
-    - If the client opens the app (or visits the web-app if this is the web-app demo version):
+    - Every schema migration that is created on the server should contain the default values for each setting so that the client can preload them later, in case a SQL migration fails
+    - (RUN THIS BEFORE LOADING PERSISTENT USER SETTINGS SQLITE TABLE INTO IN-MEMORY DATASTRUCTURES) If the client opens the app (or visits the web-app if this is the web-app demo version):
        - If the client's persistent SCHEMA_VERSION key-value pair and the in-memory, hardcoded frontend schema number (updated by updating the frontend source code) differ:
           - The client will enter a SCHEMA_OUT_OF_DATE state
     - If the client is in a SCHEMA_OUT_OF_DATE state:
@@ -61,22 +86,33 @@ General:
           - If the schema update request successfully reaches the server:
              - Server sends down a USER_SETTING_SCHEMA_UPDATE response along with the schema migration SQL scripts to change the client's schema version **by 1 increment**
                 - If the client has received it:
-                   - If the client correctly processed all the migration SQL code:
+                   - The client will preload the default values into the in-memory datastructures that the application reads the user settings from
+                      - This must happen before any SQL migration code is ran to ensure that the client will have a functional application even if the is a failure during the SQL migration process
+                   - The client will process the SQL migration code
+                   - If the client correctly processed all the SQL migration code:
                       - The client will check if the new persistent schema version number from the SCHEMA_VERSION key-value pair and the in-memory frontend schema number match: 
                          - If not:
                             - Request the next schema migration script between the current and next version
                             - Repeat this process until the persistent schema version and in-memory frontend schema version are the same
                          - If so:
                             - Set SCHEMA_OUT_OF_DATE to false
+                            - Load the user settings data from the persistent user settings SQLite DB table into the dedicated in-memory user settings datastructures
                             - The client leaves the "schema out of date" screen
                             - The client returns to seeing whatever screen they were looking at before the user settings config request to the server succeeded
                    - If the client encounters an error when processing the migration SQL code:
                       - Rollback all user setting config changes to previous version
                       - Send a server message with a USER_SETTING_SCHEMA_UPDATE_ERROR with the current client schema version, as well as the offending error strings
+                      - Set the variable USER_SETTING_SCHEMA_UPDATE_HAS_ERRORED to true
                       - Set SCHEMA_OUT_OF_DATE to false (temporarily)
                          - This will be set back to true when the client reopens the app (or revisits the web-app demo)
                       - The client leaves the "schema out of date" screen
-                      - The client sees an important alert that a user settings update failed to apply
+                      - The client sees a negative important alert that a user settings update failed to apply with the text "There was a problem updating user settings data to a newer version, settings will be saved on device, but default settings will be used until it is eventually fixed" with button text "Ok"
+    - Under no circumstances should a client's frontend code try to load data from the persistent SQLite user settings DB table without first confirming that the schema version number from the persistent SQLite local data table matches with the hardcoded frontend schema version OR if the client has USER_SETTING_SCHEMA_UPDATE_HAS_ERRORED as true
+       - This way, mismatches will not occur during the loading process for an out of date user settings config
+    - If USER_SETTING_SCHEMA_UPDATE_HAS_ERRORED is true:
+       - The client will have a reddish band (same color as the negative important alert's button background color, but copy the constant by value into a new constant) at the top of the screen with white text saying "Danger: user settings cannot be changed"
+    - If the user visits the app without an SQLite DB for the user settings:
+       - Retrieve from the server and run the migration from schema version 0 to schema version 1 while following the other specifications for migration timing in relation to application loading and init, as well as all error handling specifications listed above
  - There will be a margin at the bottom of the settings and subsettings pages to allow for the "X" button for exiting the settings pages to be displayed without covering up any settings options 
  - There should never be a complete teardown of the Cesium Globe when changing user settings unless doing so is explicitly stated in the specification for any user setting
  - DO NOT IMPLEMENT THIS NOW, THIS IS JUST A PROPOSAL:

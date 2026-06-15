@@ -1,7 +1,6 @@
 # Sprint 2 (basic backend)
     - (for all Bathroom CRUD) Have REMOTE rate limits on all Bathroom DB operations
     - (for all Bathroom CRUD) Make integration tests in ./supabase/migrations
- - integrate current user settings with respective in-app functions
  - implement the server and client user settings schema updating mechanism
  - impl find nearest bathroom button
     - make it pathfind from the user to the actual nearest bathroom

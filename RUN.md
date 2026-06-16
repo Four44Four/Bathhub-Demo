@@ -5,15 +5,15 @@
  - SUPABASE_KEY
 ## Optional
 
+# Run tests
+ - `npm run unit-tests`
+ - `npm run integration-tests`
+
 # Development server
  - Create a .env file with environment variables outlined [above](#environment-variables)
  - `npm install`
  - `npm run dev`
  - Go to http://localhost:3000
-
-# Run tests
- - `npm run unit-tests`
- - `npm run integration-tests`
 
 # Production/Deployment server
  - If `.env.production.vault` doesn't exist: create a .env.production.vault file and encrypt it

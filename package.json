@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "unit-test": "jest --verbose ./unit-tests",
+    "unit-tests": "jest --verbose ./unit-tests",
     "integration-tests": "node integration-tests/run-docker.mjs"
   },
   "dependencies": {

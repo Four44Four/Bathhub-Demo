@@ -1,20 +1,27 @@
 "use client";
 
+import type {
+  UserSettingsBooleanColumnName,
+  UserSettingsNumericColumnName,
+} from "@/app/_shared/user-settings/UserSettingsPageDefinition";
 import type { UserSettingsRow } from "@/app/_shared/user-settings/UserSettingsSchema";
 import { useUserSettings } from "./UserSettingsContext";
 
 export function useUserSettingsValues(): {
   settings: UserSettingsRow | null;
-  refresh: () => Promise<void>;
-  setBoolean: (
-    column: "globe_movement_smooth",
+  setPendingBoolean: (
+    column: UserSettingsBooleanColumnName,
     value: boolean,
-  ) => Promise<void>;
-  setInt: (
-    column: "camera_init_surface_offset_m" | "find_nearest_bathroom_max_dist_m",
+  ) => void;
+  setPendingInt: (
+    column: UserSettingsNumericColumnName,
     value: number,
-  ) => Promise<void>;
+  ) => void;
 } {
-  const { settings, refresh, setBoolean, setInt } = useUserSettings();
-  return { settings, refresh, setBoolean, setInt };
+  const { pendingSettings, setPendingBoolean, setPendingInt } = useUserSettings();
+  return {
+    settings: pendingSettings,
+    setPendingBoolean,
+    setPendingInt,
+  };
 }

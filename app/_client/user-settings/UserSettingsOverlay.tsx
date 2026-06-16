@@ -7,13 +7,26 @@ import {
   USER_SETTINGS_PAGES,
   type UserSettingsPageId,
   type UserSettingsPageItem,
+  type UserSettingsBooleanColumnName,
+  type UserSettingsNumericColumnName,
 } from "@/app/_shared/user-settings/UserSettingsPageDefinition";
+import type { UserSettingsRow } from "@/app/_shared/user-settings/UserSettingsSchema";
+import { useAlertSystem } from "../viewport2d/AlertSystem";
 import { BooleanSettingRow } from "./BooleanSettingRow";
 import { NumberSliderSettingRow } from "./NumberSliderSettingRow";
 import { SettingsBackButton } from "./SettingsBackButton";
 import { SettingsCloseButton } from "./SettingsCloseButton";
 import { SettingsHeader } from "./SettingsHeader";
+import { SettingsSaveChangesButton } from "./SettingsSaveChangesButton";
 import { SubsettingsRow } from "./SubsettingsRow";
+import {
+  buildUnsavedChangesAlertButtons,
+  resolveSettingsCloseInteraction,
+  resolveSettingsSaveInteraction,
+  shouldShowSaveChangesButton,
+  USER_SETTINGS_MIGRATION_FAILURE_SAVE_ALERT,
+  USER_SETTINGS_UNSAVED_CHANGES_ALERT,
+} from "@/app/_shared/user-settings/UserSettingsOverlayBehavior";
 import { useUserSettings } from "./UserSettingsContext";
 import {
   USER_SETTINGS_BOTTOM_SCROLL_MARGIN_PX,
@@ -21,17 +34,30 @@ import {
   USER_SETTINGS_OVERLAY_Z_INDEX,
   USER_SETTINGS_PAGE_BG,
 } from "./UserSettingsConstants";
-import { useUserSettingsValues } from "./useUserSettingsValues";
 
 function renderSettingItem(
   item: UserSettingsPageItem,
-  settings: NonNullable<ReturnType<typeof useUserSettingsValues>["settings"]>,
+  settings: UserSettingsRow,
   handlers: {
-    setBoolean: ReturnType<typeof useUserSettingsValues>["setBoolean"];
-    setInt: ReturnType<typeof useUserSettingsValues>["setInt"];
+    setPendingBoolean: (
+      column: UserSettingsBooleanColumnName,
+      value: boolean,
+    ) => void;
+    setPendingInt: (
+      column: UserSettingsNumericColumnName,
+      value: number,
+    ) => void;
     pushPage: (pageId: UserSettingsPageId) => void;
+    onBlockedInteraction?: () => void;
+    changesDisabled: boolean;
   },
 ) {
+  const notifyBlocked = () => {
+    if (handlers.changesDisabled) {
+      handlers.onBlockedInteraction?.();
+    }
+  };
+
   switch (item.type) {
     case "boolean":
       return (
@@ -39,8 +65,13 @@ function renderSettingItem(
           key={item.column}
           label={item.label}
           checked={settings[item.column]}
+          disabled={handlers.changesDisabled}
+          onBlockedInteraction={notifyBlocked}
           onChange={(checked) => {
-            void handlers.setBoolean(item.column, checked);
+            if (handlers.changesDisabled) {
+              return;
+            }
+            handlers.setPendingBoolean(item.column, checked);
           }}
         />
       );
@@ -53,8 +84,32 @@ function renderSettingItem(
           min={item.min}
           max={item.max}
           integer
+          disabled={handlers.changesDisabled}
+          onBlockedInteraction={notifyBlocked}
           onChange={(value) => {
-            void handlers.setInt(item.column, value);
+            if (handlers.changesDisabled) {
+              return;
+            }
+            handlers.setPendingInt(item.column, value);
+          }}
+        />
+      );
+    case "slider-float":
+      return (
+        <NumberSliderSettingRow
+          key={item.column}
+          label={item.label}
+          value={settings[item.column]}
+          min={item.min}
+          max={item.max}
+          integer={false}
+          disabled={handlers.changesDisabled}
+          onBlockedInteraction={notifyBlocked}
+          onChange={(value) => {
+            if (handlers.changesDisabled) {
+              return;
+            }
+            handlers.setPendingInt(item.column, value);
           }}
         />
       );
@@ -63,7 +118,14 @@ function renderSettingItem(
         <SubsettingsRow
           key={item.pageId}
           label={item.label}
-          onClick={() => handlers.pushPage(item.pageId)}
+          disabled={handlers.changesDisabled}
+          onBlockedInteraction={notifyBlocked}
+          onClick={() => {
+            if (handlers.changesDisabled) {
+              return;
+            }
+            handlers.pushPage(item.pageId);
+          }}
         />
       );
     default:
@@ -72,9 +134,22 @@ function renderSettingItem(
 }
 
 export function UserSettingsOverlay() {
-  const { isOpen, pageStack, currentPageId, closeSettings, popPage, pushPage } =
-    useUserSettings();
-  const { settings, setBoolean, setInt } = useUserSettingsValues();
+  const {
+    isOpen,
+    pageStack,
+    currentPageId,
+    pendingSettings,
+    hasEditedSettings,
+    isSaving,
+    schemaUpdateHasErrored,
+    closeSettingsWithoutSave,
+    popPage,
+    pushPage,
+    setPendingBoolean,
+    setPendingInt,
+    savePendingChanges,
+  } = useUserSettings();
+  const { showImportantAlert } = useAlertSystem();
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -90,6 +165,39 @@ export function UserSettingsOverlay() {
   const page = USER_SETTINGS_PAGES[currentPageId];
   const headerSegments = userSettingsBreadcrumbSegments(pageStack);
   const showBackButton = pageStack.length > 1;
+  const showSaveButton = shouldShowSaveChangesButton(hasEditedSettings);
+
+  const showMigrationFailureAlert = () => {
+    showImportantAlert({
+      ...USER_SETTINGS_MIGRATION_FAILURE_SAVE_ALERT,
+      positive: false,
+    });
+  };
+
+  const handleClose = () => {
+    const interaction = resolveSettingsCloseInteraction(
+      hasEditedSettings,
+      schemaUpdateHasErrored,
+    );
+    if (interaction.action === "close_immediately") {
+      closeSettingsWithoutSave();
+      return;
+    }
+    showImportantAlert({
+      message: USER_SETTINGS_UNSAVED_CHANGES_ALERT.message,
+      positive: false,
+      buttons: buildUnsavedChangesAlertButtons(closeSettingsWithoutSave),
+    });
+  };
+
+  const handleSave = () => {
+    const interaction = resolveSettingsSaveInteraction(schemaUpdateHasErrored);
+    if (interaction.action === "show_migration_failure_alert") {
+      showMigrationFailureAlert();
+      return;
+    }
+    void savePendingChanges();
+  };
 
   return (
     <div
@@ -114,12 +222,14 @@ export function UserSettingsOverlay() {
         }}
       >
         <SettingsHeader segments={headerSegments} />
-        {settings != null
+        {pendingSettings != null
           ? page.items.map((item) =>
-              renderSettingItem(item, settings, {
-                setBoolean,
-                setInt,
+              renderSettingItem(item, pendingSettings, {
+                setPendingBoolean,
+                setPendingInt,
                 pushPage,
+                changesDisabled: schemaUpdateHasErrored,
+                onBlockedInteraction: showMigrationFailureAlert,
               }),
             )
           : null}
@@ -130,20 +240,28 @@ export function UserSettingsOverlay() {
           right: USER_SETTINGS_CLOSE_BTN_INSET_PX,
           bottom: USER_SETTINGS_CLOSE_BTN_INSET_PX,
           display: "flex",
-          flexDirection: "row",
+          flexDirection: "row-reverse",
           alignItems: "flex-end",
           gap: 12,
           pointerEvents: "none",
         }}
       >
+        <div style={{ pointerEvents: "auto" }}>
+          <SettingsCloseButton onClick={handleClose} />
+        </div>
         {showBackButton ? (
           <div style={{ pointerEvents: "auto" }}>
             <SettingsBackButton onClick={popPage} />
           </div>
         ) : null}
-        <div style={{ pointerEvents: "auto" }}>
-          <SettingsCloseButton onClick={closeSettings} />
-        </div>
+        {showSaveButton ? (
+          <div style={{ pointerEvents: "auto" }}>
+            <SettingsSaveChangesButton
+              isSaving={isSaving}
+              onClick={handleSave}
+            />
+          </div>
+        ) : null}
       </div>
     </div>
   );

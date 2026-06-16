@@ -27,6 +27,9 @@ export type SqliteDb = {
 };
 
 export type SqliteWasm = {
+  config: {
+    warn: (...args: unknown[]) => void;
+  };
   oo1: {
     DB: new (name: string, flags?: string) => SqliteDb;
   };

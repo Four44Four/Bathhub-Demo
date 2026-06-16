@@ -20,6 +20,8 @@ export type NumberSliderSettingRowProps = {
   min: number;
   max: number;
   integer?: boolean;
+  disabled?: boolean;
+  onBlockedInteraction?: () => void;
   onChange: (value: number) => void;
 };
 
@@ -29,6 +31,8 @@ export function NumberSliderSettingRow({
   min,
   max,
   integer = true,
+  disabled = false,
+  onBlockedInteraction,
   onChange,
 }: NumberSliderSettingRowProps) {
   const trackRef = useRef<HTMLDivElement>(null);
@@ -67,9 +71,16 @@ export function NumberSliderSettingRow({
 
   return (
     <div
+      aria-disabled={disabled}
+      onPointerDown={(event) => {
+        if (!disabled) return;
+        event.preventDefault();
+        onBlockedInteraction?.();
+      }}
       style={{
         padding: "14px 16px",
         borderBottom: `1px solid ${USER_SETTINGS_ROW_BORDER_COLOR}`,
+        opacity: disabled ? 0.55 : 1,
       }}
     >
       <div
@@ -158,7 +169,11 @@ export function NumberSliderSettingRow({
           max={max}
           step={integer ? 1 : (max - min) / 100}
           value={displayValue}
-          onChange={(event) => handleChange(Number(event.target.value))}
+          readOnly={disabled}
+          onChange={(event) => {
+            if (disabled) return;
+            handleChange(Number(event.target.value));
+          }}
           aria-label={label}
           style={{
             position: "absolute",
@@ -167,7 +182,7 @@ export function NumberSliderSettingRow({
             height: "100%",
             margin: 0,
             opacity: 0,
-            cursor: "pointer",
+            cursor: disabled ? "default" : "pointer",
           }}
         />
       </div>

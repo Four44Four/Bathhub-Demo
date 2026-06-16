@@ -26,3 +26,6 @@ export const USER_SETTINGS_SUBPAGE_CHEVRON_COLOR = "#B5B5C4";
 export const USER_SETTINGS_CLOSE_BTN_FILL = Shared.NEGATIVE_COLOR;
 export const USER_SETTINGS_CLOSE_BTN_INTERACT_FILL = "#C85A75";
 export const USER_SETTINGS_CLOSE_BTN_TEXT = "#FFFFFF";
+/** Copied by value from Alerts.NEGATIVE_ACCENT_COLOR (negative important-alert ok button). */
+export const USER_SETTINGS_DANGER_BAND_BG_COLOR = "#EC3968";
+export const USER_SETTINGS_DANGER_BAND_TEXT_COLOR = "#FFFFFF";

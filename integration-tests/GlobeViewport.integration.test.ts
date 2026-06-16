@@ -1,7 +1,8 @@
 import { Globe as GlobeConsts } from "../app/_client/ComponentConstants";
 import { createUserSettingsDbSqlite } from "../app/_client/user-settings-db/UserSettingsDbSqlite";
-import { resolveGlobeMovementSmooth } from "../app/_client/user-settings/useGlobeMovementSmooth";
+import { USER_SETTINGS_MIGRATION_V0_TO_V1 } from "../app/_shared/user-settings/migrations/v0-to-v1";
 import { USER_SETTINGS_DEFAULTS } from "../app/_shared/user-settings/UserSettingsSchema";
+import { resolveGlobeMovementSmooth } from "../app/_client/user-settings/useGlobeMovementSmooth";
 import {
   createGlobeOrbitHarness,
   expectedInitTargetRangeM,
@@ -317,8 +318,12 @@ describe("Globe viewport Cesium integration (GlobeViewport + user settings specs
         initSqliteWasm: loadSqliteWasmModule,
       });
       await db.init();
-      await db.updateIntSetting("camera_init_surface_offset_m", 3200);
-      const settings = await db.getSettings();
+      await db.runForwardMigration(USER_SETTINGS_MIGRATION_V0_TO_V1.forwardSql);
+      await db.saveSettingsToDb({
+        ...USER_SETTINGS_DEFAULTS,
+        camera_init_surface_offset_m: 3200,
+      });
+      const settings = await db.readSettingsFromDb();
       expect(settings.camera_init_surface_offset_m).toBe(3200);
 
       withHarness(
@@ -401,8 +406,12 @@ describe("Globe viewport Cesium integration (GlobeViewport + user settings specs
         initSqliteWasm: loadSqliteWasmModule,
       });
       await db.init();
-      await db.updateBooleanSetting("globe_movement_smooth", false);
-      const settings = await db.getSettings();
+      await db.runForwardMigration(USER_SETTINGS_MIGRATION_V0_TO_V1.forwardSql);
+      await db.saveSettingsToDb({
+        ...USER_SETTINGS_DEFAULTS,
+        globe_movement_smooth: false,
+      });
+      const settings = await db.readSettingsFromDb();
       expect(resolveGlobeMovementSmooth(settings)).toBe(false);
       expect(resolveGlobeMovementSmooth(null)).toBe(
         USER_SETTINGS_DEFAULTS.globe_movement_smooth,

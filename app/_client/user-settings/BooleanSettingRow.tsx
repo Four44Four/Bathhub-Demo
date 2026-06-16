@@ -13,12 +13,16 @@ const TRACK_PADDING_PX = (TRACK_HEIGHT_PX - KNOB_SIZE_PX) / 2;
 export type BooleanSettingRowProps = {
   label: string;
   checked: boolean;
+  disabled?: boolean;
+  onBlockedInteraction?: () => void;
   onChange: (checked: boolean) => void;
 };
 
 export function BooleanSettingRow({
   label,
   checked,
+  disabled = false,
+  onBlockedInteraction,
   onChange,
 }: BooleanSettingRowProps) {
   const knobOffsetPx = booleanToggleKnobOffsetPx(
@@ -30,6 +34,12 @@ export function BooleanSettingRow({
 
   return (
     <label
+      aria-disabled={disabled}
+      onPointerDown={(event) => {
+        if (!disabled) return;
+        event.preventDefault();
+        onBlockedInteraction?.();
+      }}
       style={{
         display: "flex",
         alignItems: "center",
@@ -37,7 +47,8 @@ export function BooleanSettingRow({
         gap: 12,
         padding: "14px 16px",
         borderBottom: `1px solid ${USER_SETTINGS_ROW_BORDER_COLOR}`,
-        cursor: "pointer",
+        cursor: disabled ? "default" : "pointer",
+        opacity: disabled ? 0.55 : 1,
       }}
     >
       <span
@@ -63,7 +74,11 @@ export function BooleanSettingRow({
         <input
           type="checkbox"
           checked={checked}
-          onChange={(event) => onChange(event.target.checked)}
+          readOnly={disabled}
+          onChange={(event) => {
+            if (disabled) return;
+            onChange(event.target.checked);
+          }}
           style={{
             position: "absolute",
             inset: 0,

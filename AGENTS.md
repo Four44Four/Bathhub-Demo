@@ -18,5 +18,11 @@ This version has breaking changes — APIs, conventions, and file structure may 
  - When creating unit or integration tests:
     - Use as much of the logic from the source code
     - The tests are intended to test logic from the source code, not invent new application logic solely for the test
+    - If an integration test fails:
+       - Check to see if any corresponding/related unit test is actually testing the big-picture/architectural functionality, not just localized behaviors
+    - If a unit test fails:
+       - Check to see if any corresponding/related integration test should be revised to account for any changes that will be made to the failing unit test, while ensuring the intended purpose of the integration test 
  - All files in ./specifications are the intended technical specifications of the project so far
     - Do not treat them as reflective of what is currently implemented in the source code
+    - If code is encountered that does not match the tecnical specifications:
+       - Create a notification when outputting the summary of the changes is made indicating that some part of the implementation is/might not be functioning as intended, but do not modify it unless explicitly instructed to

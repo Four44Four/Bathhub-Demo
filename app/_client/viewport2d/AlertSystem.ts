@@ -29,12 +29,16 @@ import {
   alertSystemShowPositional,
   EMPTY_ALERT_SYSTEM_STATE,
   type AlertSystemState,
+  type ImportantAlertButton,
   type ImportantAlertRecord,
   type PositionalAlertRecord,
+  resolveImportantAlertButtons,
 } from "../pure/viewport2d/AlertSystemState";
 import { ImportantAlert } from "./alerts/ImportantAlert";
 import { PositionalAlert } from "./alerts/PositionalAlert";
 import { type Rect } from "../Utils";
+
+export type { ImportantAlertButton } from "../pure/viewport2d/AlertSystemState";
 
 export type PositionalAlertSide = "up" | "down";
 
@@ -49,6 +53,7 @@ export type ShowImportantAlertOptions = {
   okLabel?: string;
   positive?: boolean;
   onDismiss?: () => void;
+  buttons?: ImportantAlertButton[];
 };
 
 export type AlertSystemApi = {
@@ -111,12 +116,9 @@ function AlertSystemOverlay({
       ? createElement(ImportantAlert, {
           key: "important",
           message: important.message,
-          okLabel: important.okLabel,
           positive: important.positive,
-          onDismiss: () => {
-            important.onDismiss?.();
-            onDismissImportant();
-          },
+          buttons: important.buttons,
+          onDismissImportant,
         })
       : null,
   );
@@ -195,9 +197,15 @@ export function AlertSystemProvider({
       okLabel = "Ok",
       positive = false,
       onDismiss,
+      buttons,
     }: ShowImportantAlertOptions) => {
+      const resolvedButtons = resolveImportantAlertButtons({
+        okLabel,
+        onDismiss,
+        buttons,
+      });
       setState((prev) =>
-        alertSystemShowImportant(prev, message, okLabel, positive, onDismiss),
+        alertSystemShowImportant(prev, message, positive, resolvedButtons),
       );
     },
     [],

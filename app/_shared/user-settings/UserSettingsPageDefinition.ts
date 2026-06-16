@@ -14,6 +14,14 @@ export type UserSettingsIntSliderItem = {
   max: number;
 };
 
+export type UserSettingsFloatSliderItem = {
+  type: "slider-float";
+  column: Exclude<UserSettingsColumnName, "globe_movement_smooth">;
+  label: string;
+  min: number;
+  max: number;
+};
+
 export type UserSettingsSubpageItem = {
   type: "subpage";
   pageId: UserSettingsPageId;
@@ -23,7 +31,16 @@ export type UserSettingsSubpageItem = {
 export type UserSettingsPageItem =
   | UserSettingsBooleanItem
   | UserSettingsIntSliderItem
+  | UserSettingsFloatSliderItem
   | UserSettingsSubpageItem;
+
+/** Boolean setting columns referenced by page definitions. */
+export type UserSettingsBooleanColumnName = UserSettingsBooleanItem["column"];
+
+/** Numeric slider columns referenced by page definitions. */
+export type UserSettingsNumericColumnName =
+  | UserSettingsIntSliderItem["column"]
+  | UserSettingsFloatSliderItem["column"];
 
 export type UserSettingsPageId = "root" | "bathroom";
 
@@ -40,6 +57,19 @@ export const USER_SETTINGS_PAGES: Record<
   UserSettingsPageId,
   UserSettingsPageDefinition
 > = {
+  bathroom: {
+    id: "bathroom",
+    title: "Bathroom settings",
+    items: [
+      {
+        type: "slider-int",
+        column: "find_nearest_bathroom_max_dist_m",
+        label: "Find nearest bathroom max. distance (meters)",
+        min: 0,
+        max: 10000,
+      },
+    ],
+  },
   root: {
     id: "root",
     title: "Settings",
@@ -56,11 +86,11 @@ export const USER_SETTINGS_PAGES: Record<
         min: 500,
         max: 10000,
       },
+      {
+        type: "subpage",
+        pageId: "bathroom",
+        label: "Bathroom settings",
+      },
     ],
-  },
-  bathroom: {
-    id: "bathroom",
-    title: "Bathroom settings",
-    items: [],
   },
 };

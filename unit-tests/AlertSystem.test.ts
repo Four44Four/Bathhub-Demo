@@ -6,6 +6,7 @@ import {
   alertSystemShowImportant,
   alertSystemShowPositional,
   EMPTY_ALERT_SYSTEM_STATE,
+  resolveImportantAlertButtons,
 } from "../app/_client/pure/viewport2d/AlertSystemState";
 
 describe("AlertSystemState", () => {
@@ -22,15 +23,27 @@ describe("AlertSystemState", () => {
 
   test("show and dismiss important alert", () => {
     let state = EMPTY_ALERT_SYSTEM_STATE;
-    state = alertSystemShowImportant(state, "Fatal error", "Ok", false);
+    const buttons = resolveImportantAlertButtons({ okLabel: "Ok" });
+    state = alertSystemShowImportant(state, "Fatal error", false, buttons);
     expect(state.important).toEqual({
       message: "Fatal error",
-      okLabel: "Ok",
       positive: false,
-      onDismiss: undefined,
+      buttons: [{ label: "Ok", style: "accent", onClick: undefined }],
     });
     state = alertSystemDismissImportant(state);
     expect(state.important).toBeNull();
+  });
+
+  test("resolveImportantAlertButtons uses explicit buttons when provided", () => {
+    const buttons = resolveImportantAlertButtons({
+      buttons: [
+        { label: "Exit anyways", style: "accent", onClick: () => {} },
+        { label: "Don't exit", style: "background" },
+      ],
+    });
+    expect(buttons).toHaveLength(2);
+    expect(buttons[0].label).toBe("Exit anyways");
+    expect(buttons[1].style).toBe("background");
   });
 });
 

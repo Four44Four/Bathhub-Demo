@@ -1,8 +1,12 @@
-import { USER_SETTINGS_MAX_SCHEMA_VERSION } from "./UserSettingsSchema";
+import {
+  USER_SETTINGS_MAX_SCHEMA_VERSION,
+  type UserSettingsRow,
+} from "./UserSettingsSchema";
 
 export type UserSettingsSchemaMigrationScripts = {
   forwardSql: readonly string[];
-  reverseSql: readonly string[];
+  /** Defaults for the target schema version after this migration completes. */
+  defaults: UserSettingsRow;
 };
 
 export type UserSettingsSchemaMigrationSuccess = {
@@ -10,7 +14,7 @@ export type UserSettingsSchemaMigrationSuccess = {
   fromVersion: number;
   toVersion: number;
   forwardSql: readonly string[];
-  reverseSql: readonly string[];
+  defaults: UserSettingsRow;
 };
 
 export type UserSettingsSchemaMigrationErrorCode =
@@ -26,16 +30,6 @@ export type UserSettingsSchemaMigrationFailure = {
 export type UserSettingsSchemaMigrationResult =
   | UserSettingsSchemaMigrationSuccess
   | UserSettingsSchemaMigrationFailure;
-
-export function formatUserSettingsSchemaVersionMismatchMessage(
-  persistentVersion: number,
-  frontendVersion: number,
-): string {
-  return (
-    `User settings schema version mismatch: persistent DB schema version is ${persistentVersion}, ` +
-    `in-memory frontend schema version is ${frontendVersion}.`
-  );
-}
 
 /**
  * Resolves the single-step migration from `fromVersion` to `fromVersion + 1`.
@@ -79,6 +73,6 @@ export function resolveUserSettingsSchemaMigration(
     fromVersion,
     toVersion: fromVersion + 1,
     forwardSql: step.forwardSql,
-    reverseSql: step.reverseSql,
+    defaults: step.defaults,
   };
 }

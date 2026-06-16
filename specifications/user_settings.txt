@@ -24,9 +24,11 @@ General:
           - Do not save anything, just close the user settings page
        - Else:
           - Don't close the user settings page
-          - Display a negative important alert with the text "You have unsaved changes" with the button text "Exit anyways"
+          - Display a negative important alert with the text "You have unsaved changes" with 2 buttons, one has the accent color with text "Exit anyways", the other has the background color with text "Don't exit"
           - If the user interacts with "Exit anyways":
              - The page closes and nothing is written to the in-memory user settings datastructures or the persistent SQLite DB containing the user settings
+          - If the user interacts with "Don't exit":
+             - The alert closes and user remains on settings page
     - If USER_SETTING_SCHEMA_UPDATE_HAS_ERRORED is true:
        - Don't do anything
        - Display a negative important alert with the text "Due to a settings data migration failure, saving is currently disabled" with the button text "Ok"
@@ -52,7 +54,7 @@ General:
        - If the header gets too long to fit on the screen:
           - Only show the tail end of the header and cut off everything before it with an ellipsis
              - EXAMPLE: "Settings > SubsettingsPage0 > SubsettingsPage1 > SubsettingsPage2" could be "...ubsettingsPage2"
-       - Make the ">" symbol have a value half as bright much as the rest of the header text
+       - Make the ">" symbol have a value that is a specified fraction as bright much as the rest of the header text
  - Settings will be stored in dedicated datastructures which should be synced with a dedicated table in a local persistent SQLite db (the in-memory DB should **not** be a in-memory SQLite)
     - The datastructures representing the user settings should synchronize with the dedicated persistent SQLite table on app open (or page load for web-app demo)
     - The persistent SQLite table should only be written to during user settings migrations and user triggering explicit saves through the settings page's "Save changes" button
@@ -67,11 +69,13 @@ General:
           - Respond notifying the client that they are already at the maximum current version
        - These can be accessed from the client, as long as the client specifies which version they are upgrading **FROM**
        - The schema migration should change the client's persistent schema number to be equivalent to the incremented schema number (from the schema number that the client sent up)
-       - The schema migration should be reversable and atomic, so that a partial migration can always be reverted in the future
+       - The schema migration must be atomic
+         - It must be able to revert to the pre-migration state if a failure occurs during the migration
+         - There should not be a scenario where the DB is left in a partially migrated state
        - The schema migration should only be from one version to the version directly after it, never skipping any versions
           - This will prevent user setting data from being unintentionally lost if the client falls behind very far on their local user setting schema version
        - The schema migration should always fill new columns with default values
-       - The schema migration should always make UPDATE statements to coerce all potentially newly invalid values to be some valid value if a new CHECK constraint is added or if an existing CHECK constraint is updated         
+       - The schema migration should always make UPDATE statements to coerce all potentially newly invalid values to be some valid value if a new CHECK constraint is added or if an existing CHECK constraint is updated
     - The client will have a dedicated and persistent key-value pair named SCHEMA_VERSION with a number value stored in their SQLite DB for the last schema version that the client has installed
     - The client's frontend code will store the valid schema number that is needed to make the frontend of the app work
        - This is not stored and queried from the server as the client may be using an out of date version of the app and relying on purely the server will lead to the out of date app breaking the moment a client migrates their local user settings DB schema
@@ -100,7 +104,7 @@ General:
                             - The client leaves the "schema out of date" screen
                             - The client returns to seeing whatever screen they were looking at before the user settings config request to the server succeeded
                    - If the client encounters an error when processing the migration SQL code:
-                      - Rollback all user setting config changes to previous version
+                      - The client's user setting configs should be left unchanged from pre-migration state
                       - Send a server message with a USER_SETTING_SCHEMA_UPDATE_ERROR with the current client schema version, as well as the offending error strings
                       - Set the variable USER_SETTING_SCHEMA_UPDATE_HAS_ERRORED to true
                       - Set SCHEMA_OUT_OF_DATE to false (temporarily)
@@ -138,3 +142,11 @@ Settings:
        - SQL Name: find_nearest_bathroom_max_dist_m
        - SQL Type: INTEGER
        - SQL Restrictions: CHECK (find_nearest_bathroom_max_dist_m >= <Min-value-for-this-setting> AND find_nearest_bathroom_max_dist_m <= <Max-value-for-this-setting>)
+Integration tests:
+ - Migrations between every sequential pair of user setting schema versions should be tested
+    - If a new user setting schema version is published or added:
+       - Add a test between the previous most up to date schema version and the new one
+    - Any failure in the migration should result in the entire integration test failing + notify which pair of versions failed to migrate
+    - There should be migration tests between each version from v0 all the way up to v<current-schema-version>
+    - Each migration schema version test should not just run without errors, but also verify that each schema version's table contains the expected values
+       - This should be able to verify that user setting data isn't corrupted or lost when altering the schema of the table like renaming a column or merging columns

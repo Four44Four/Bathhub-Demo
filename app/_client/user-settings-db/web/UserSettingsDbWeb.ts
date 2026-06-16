@@ -10,8 +10,6 @@ import {
 } from "./UserSettingsDiskStorage";
 import { isSqliteDatabaseBytes } from "../../pure/bathroom/SqliteDatabaseBytes";
 
-let backupTimer: ReturnType<typeof setTimeout> | null = null;
-
 async function readOnDiskUserSettingsBytes(): Promise<Uint8Array | null> {
   const fromOpfs = await readUserSettingsDbBytesFromOpfs();
   if (fromOpfs) {
@@ -19,16 +17,6 @@ async function readOnDiskUserSettingsBytes(): Promise<Uint8Array | null> {
     await deleteUserSettingsDbFromOpfs();
   }
   return null;
-}
-
-function scheduleDiskBackup(db: SqliteDb, sqlite3: SqliteWasm): void {
-  if (backupTimer !== null) {
-    clearTimeout(backupTimer);
-  }
-  backupTimer = setTimeout(() => {
-    backupTimer = null;
-    void flushDiskBackup(db, sqlite3);
-  }, 250);
 }
 
 async function flushDiskBackup(db: SqliteDb, sqlite3: SqliteWasm): Promise<void> {
@@ -45,7 +33,7 @@ export function createUserSettingsDbWeb(): UserSettingsDbPort {
   return createUserSettingsDbSqlite({
     hydrateFromBytes: readOnDiskUserSettingsBytes,
     onInvalidHydrateBytes: () => deleteUserSettingsDbFromOpfs(),
-    onAfterMutate: scheduleDiskBackup,
+    onAfterPersist: flushDiskBackup,
   });
 }
 

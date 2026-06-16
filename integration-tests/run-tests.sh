@@ -103,4 +103,8 @@ echo "run-tests: running Globe viewport Cesium orbit integration checks..."
 NODE_OPTIONS="${NODE_OPTIONS:+$NODE_OPTIONS }--experimental-vm-modules" \
   npx jest --runInBand --verbose "$SCRIPT_DIR/GlobeViewport.integration.test.ts"
 
+echo "run-tests: running user settings SQLite persistence and migration checks..."
+NODE_OPTIONS="${NODE_OPTIONS:+$NODE_OPTIONS }--experimental-vm-modules" \
+  npx jest --runInBand --verbose "$SCRIPT_DIR/UserSettingsDbSqlite.integration.test.ts"
+
 echo "run-tests: SUCCESS"

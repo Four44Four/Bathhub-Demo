@@ -9,14 +9,29 @@ import {
 
 export type SubsettingsRowProps = {
   label: string;
+  disabled?: boolean;
+  onBlockedInteraction?: () => void;
   onClick: () => void;
 };
 
-export function SubsettingsRow({ label, onClick }: SubsettingsRowProps) {
+export function SubsettingsRow({
+  label,
+  disabled = false,
+  onBlockedInteraction,
+  onClick,
+}: SubsettingsRowProps) {
   return (
     <button
       type="button"
-      onClick={onClick}
+      aria-disabled={disabled}
+      onClick={(event) => {
+        if (disabled) {
+          event.preventDefault();
+          onBlockedInteraction?.();
+          return;
+        }
+        onClick();
+      }}
       style={{
         display: "flex",
         alignItems: "center",
@@ -27,8 +42,9 @@ export function SubsettingsRow({ label, onClick }: SubsettingsRowProps) {
         border: "none",
         borderBottom: `1px solid ${USER_SETTINGS_ROW_BORDER_COLOR}`,
         background: "transparent",
-        cursor: "pointer",
+        cursor: disabled ? "default" : "pointer",
         textAlign: "left",
+        opacity: disabled ? 0.55 : 1,
       }}
     >
       <span

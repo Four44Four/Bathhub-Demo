@@ -6,30 +6,79 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useReducer,
   useState,
   type ReactNode,
 } from "react";
 
-import type { UserSettingsPageId } from "@/app/_shared/user-settings/UserSettingsPageDefinition";
-import type { UserSettingsRow } from "@/app/_shared/user-settings/UserSettingsSchema";
+import type {
+  UserSettingsPageId,
+  UserSettingsBooleanColumnName,
+  UserSettingsNumericColumnName,
+} from "@/app/_shared/user-settings/UserSettingsPageDefinition";
+import {
+  USER_SETTINGS_DEFAULTS,
+  type UserSettingsRow,
+} from "@/app/_shared/user-settings/UserSettingsSchema";
+import { cloneUserSettingsRow } from "@/app/_shared/user-settings/UserSettingsRowUtils";
+import type { UserSettingsSchemaBootstrapPhase } from "@/app/_shared/user-settings/UserSettingsSchemaBootstrap";
+import {
+  shouldEnterSchemaOutOfDateDuringBootstrap,
+  shouldScheduleUserSettingsBootstrapRetry,
+} from "@/app/_shared/user-settings/UserSettingsBootstrapOrchestration";
+import {
+  resolveSettingsCloseInteraction,
+  shouldAllowPendingSettingsMutation,
+} from "@/app/_shared/user-settings/UserSettingsOverlayBehavior";
+import {
+  initialUserSettingsUiState,
+  reduceUserSettingsUiState,
+} from "@/app/_shared/user-settings/UserSettingsProviderState";
 import { getUserSettingsDb } from "../user-settings-db/web/UserSettingsDbWeb";
+import {
+  getActiveUserSettings,
+  setActiveUserSettings,
+} from "./UserSettingsMemoryStore";
+import {
+  attemptUserSettingsSchemaBootstrap,
+  finishUserSettingsBootstrapReady,
+} from "./UserSettingsBootstrapAttempt";
+import { currentUserSettingsPageId } from "@/app/_shared/user-settings/UserSettingsPageStack";
+import {
+  saveActiveUserSettingsToPersistentDb,
+  USER_SETTINGS_SCHEMA_RETRY_INTERVAL_MS,
+} from "./UserSettingsSchemaMigrationRunner";
+import { USER_SETTINGS_FRONTEND_SCHEMA_VERSION } from "./UserSettingsSchemaVersion";
+
+export type UserSettingsBootstrapPhase =
+  | "loading"
+  | UserSettingsSchemaBootstrapPhase;
 
 export type UserSettingsContextValue = {
+  bootstrapPhase: UserSettingsBootstrapPhase;
+  schemaUpdateHasErrored: boolean;
   isOpen: boolean;
   pageStack: UserSettingsPageId[];
   currentPageId: UserSettingsPageId;
-  settings: UserSettingsRow | null;
-  refresh: () => Promise<void>;
-  setBoolean: (
-    column: "globe_movement_smooth",
+  /** In-memory settings used by application logic. */
+  settings: UserSettingsRow;
+  /** Pending edits in the settings UI; null while settings are closed. */
+  pendingSettings: UserSettingsRow | null;
+  hasEditedSettings: boolean;
+  isSaving: boolean;
+  refreshFromMemory: () => void;
+  setPendingBoolean: (
+    column: UserSettingsBooleanColumnName,
     value: boolean,
-  ) => Promise<void>;
-  setInt: (
-    column: "camera_init_surface_offset_m" | "find_nearest_bathroom_max_dist_m",
+  ) => void;
+  setPendingInt: (
+    column: UserSettingsNumericColumnName,
     value: number,
-  ) => Promise<void>;
+  ) => void;
+  savePendingChanges: () => Promise<void>;
   openSettings: () => void;
-  closeSettings: () => void;
+  requestCloseSettings: () => boolean;
+  closeSettingsWithoutSave: () => void;
   pushPage: (pageId: UserSettingsPageId) => void;
   popPage: () => void;
 };
@@ -41,92 +90,205 @@ export type UserSettingsProviderProps = {
 };
 
 export function UserSettingsProvider({ children }: UserSettingsProviderProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [pageStack, setPageStack] = useState<UserSettingsPageId[]>(["root"]);
-  const [settings, setSettings] = useState<UserSettingsRow | null>(null);
+  const [bootstrapPhase, setBootstrapPhase] =
+    useState<UserSettingsBootstrapPhase>("loading");
+  const [settings, setSettings] = useState<UserSettingsRow>(
+    () => getActiveUserSettings(),
+  );
+  const [uiState, dispatchUi] = useReducer(
+    reduceUserSettingsUiState,
+    initialUserSettingsUiState,
+  );
+  const {
+    isOpen,
+    pageStack,
+    pendingSettings,
+    hasEditedSettings,
+    isSaving,
+  } = uiState;
 
-  const refresh = useCallback(async () => {
-    const db = getUserSettingsDb();
-    await db.init();
-    setSettings(await db.getSettings());
+  const refreshFromMemory = useCallback(() => {
+    setSettings(getActiveUserSettings());
   }, []);
 
   useEffect(() => {
-    void refresh();
-  }, [refresh]);
+    let cancelled = false;
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
 
-  const setBoolean = useCallback(
-    async (column: "globe_movement_smooth", value: boolean) => {
+    const clearRetry = () => {
+      if (retryTimer != null) {
+        clearTimeout(retryTimer);
+        retryTimer = null;
+      }
+    };
+
+    const finishReady = async (migrationHasErrored: boolean) => {
       const db = getUserSettingsDb();
-      await db.updateBooleanSetting(column, value);
-      setSettings(await db.getSettings());
+      const phase = await finishUserSettingsBootstrapReady(
+        db,
+        migrationHasErrored,
+      );
+      if (cancelled) return;
+      refreshFromMemory();
+      setBootstrapPhase(phase);
+    };
+
+    const attemptBootstrap = async () => {
+      const db = getUserSettingsDb();
+      await db.init();
+      if (cancelled) return "retry" as const;
+
+      const persistentVersion = await db.getPersistentSchemaVersion();
+      if (
+        shouldEnterSchemaOutOfDateDuringBootstrap(
+          persistentVersion,
+          USER_SETTINGS_FRONTEND_SCHEMA_VERSION,
+        )
+      ) {
+        setBootstrapPhase("schema_out_of_date");
+      }
+
+      const outcome = await attemptUserSettingsSchemaBootstrap(
+        db,
+        finishReady,
+        USER_SETTINGS_FRONTEND_SCHEMA_VERSION,
+      );
+      if (cancelled) return "retry" as const;
+      return outcome;
+    };
+
+    const loop = async () => {
+      clearRetry();
+      try {
+        const outcome = await attemptBootstrap();
+        if (!shouldScheduleUserSettingsBootstrapRetry(outcome, cancelled)) {
+          return;
+        }
+        retryTimer = setTimeout(() => {
+          void loop();
+        }, USER_SETTINGS_SCHEMA_RETRY_INTERVAL_MS);
+      } catch {
+        if (!cancelled) {
+          setBootstrapPhase("schema_out_of_date");
+          retryTimer = setTimeout(() => {
+            void loop();
+          }, USER_SETTINGS_SCHEMA_RETRY_INTERVAL_MS);
+        }
+      }
+    };
+
+    void loop();
+
+    return () => {
+      cancelled = true;
+      clearRetry();
+    };
+  }, [refreshFromMemory]);
+
+  const schemaUpdateHasErrored = bootstrapPhase === "migration_errored";
+
+  const setPendingBoolean = useCallback(
+    (column: UserSettingsBooleanColumnName, value: boolean) => {
+      if (!shouldAllowPendingSettingsMutation(schemaUpdateHasErrored)) return;
+      dispatchUi({ type: "set_pending_boolean", column, value });
     },
-    [],
+    [schemaUpdateHasErrored],
   );
 
-  const setInt = useCallback(
-    async (
-      column: "camera_init_surface_offset_m" | "find_nearest_bathroom_max_dist_m",
-      value: number,
-    ) => {
-      const db = getUserSettingsDb();
-      await db.updateIntSetting(column, value);
-      setSettings(await db.getSettings());
+  const setPendingInt = useCallback(
+    (column: UserSettingsNumericColumnName, value: number) => {
+      if (!shouldAllowPendingSettingsMutation(schemaUpdateHasErrored)) return;
+      dispatchUi({ type: "set_pending_int", column, value });
     },
-    [],
+    [schemaUpdateHasErrored],
   );
+
+  const savePendingChanges = useCallback(async () => {
+    if (pendingSettings == null || schemaUpdateHasErrored) return;
+    dispatchUi({ type: "save_start" });
+    try {
+      const db = getUserSettingsDb();
+      await saveActiveUserSettingsToPersistentDb(db, pendingSettings);
+      setActiveUserSettings(pendingSettings);
+      refreshFromMemory();
+      dispatchUi({ type: "save_success" });
+    } finally {
+      dispatchUi({ type: "save_end" });
+    }
+  }, [pendingSettings, refreshFromMemory, schemaUpdateHasErrored]);
 
   const openSettings = useCallback(() => {
-    setPageStack(["root"]);
-    setIsOpen(true);
-  }, []);
-
-  const closeSettings = useCallback(() => {
-    setIsOpen(false);
-    setPageStack(["root"]);
-  }, []);
-
-  const pushPage = useCallback((pageId: UserSettingsPageId) => {
-    setPageStack((stack) => [...stack, pageId]);
-  }, []);
-
-  const popPage = useCallback(() => {
-    setPageStack((stack) => {
-      if (stack.length <= 1) {
-        setIsOpen(false);
-        return ["root"];
-      }
-      return stack.slice(0, -1);
+    dispatchUi({
+      type: "open",
+      settings: cloneUserSettingsRow(getActiveUserSettings()),
     });
   }, []);
 
-  const currentPageId = pageStack[pageStack.length - 1] ?? "root";
+  const closeSettingsWithoutSave = useCallback(() => {
+    dispatchUi({ type: "close_without_save" });
+  }, []);
+
+  const requestCloseSettings = useCallback(() => {
+    const interaction = resolveSettingsCloseInteraction(
+      hasEditedSettings,
+      schemaUpdateHasErrored,
+    );
+    if (interaction.action === "close_immediately") {
+      closeSettingsWithoutSave();
+      return true;
+    }
+    return false;
+  }, [closeSettingsWithoutSave, hasEditedSettings, schemaUpdateHasErrored]);
+
+  const pushPage = useCallback((pageId: UserSettingsPageId) => {
+    dispatchUi({ type: "push_page", pageId });
+  }, []);
+
+  const popPage = useCallback(() => {
+    dispatchUi({ type: "pop_page" });
+  }, []);
+
+  const currentPageId = currentUserSettingsPageId(pageStack);
 
   const value = useMemo<UserSettingsContextValue>(
     () => ({
+      bootstrapPhase,
+      schemaUpdateHasErrored,
       isOpen,
       pageStack,
       currentPageId,
       settings,
-      refresh,
-      setBoolean,
-      setInt,
+      pendingSettings,
+      hasEditedSettings,
+      isSaving,
+      refreshFromMemory,
+      setPendingBoolean,
+      setPendingInt,
+      savePendingChanges,
       openSettings,
-      closeSettings,
+      requestCloseSettings,
+      closeSettingsWithoutSave,
       pushPage,
       popPage,
     }),
     [
-      closeSettings,
+      bootstrapPhase,
+      closeSettingsWithoutSave,
       currentPageId,
+      hasEditedSettings,
       isOpen,
+      isSaving,
       openSettings,
       pageStack,
+      pendingSettings,
       popPage,
       pushPage,
-      refresh,
-      setBoolean,
-      setInt,
+      refreshFromMemory,
+      requestCloseSettings,
+      savePendingChanges,
+      schemaUpdateHasErrored,
+      setPendingBoolean,
+      setPendingInt,
       settings,
     ],
   );
@@ -144,4 +306,9 @@ export function useUserSettings(): UserSettingsContextValue {
     throw new Error("useUserSettings must be used within UserSettingsProvider.");
   }
   return ctx;
+}
+
+export function useUserSettingsOrDefaults(): UserSettingsRow {
+  const { settings } = useUserSettings();
+  return settings ?? USER_SETTINGS_DEFAULTS;
 }

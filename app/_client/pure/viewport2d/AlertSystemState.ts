@@ -6,11 +6,18 @@ export type PositionalAlertRecord = {
   side: PositionalAlertSide;
 };
 
+export type ImportantAlertButtonStyle = "accent" | "background";
+
+export type ImportantAlertButton = {
+  label: string;
+  style: ImportantAlertButtonStyle;
+  onClick?: () => void;
+};
+
 export type ImportantAlertRecord = {
   message: string;
-  okLabel: string;
   positive: boolean;
-  onDismiss?: () => void;
+  buttons: ImportantAlertButton[];
 };
 
 export type AlertSystemState = {
@@ -51,16 +58,32 @@ export function alertSystemDismissAllPositional(
   return { ...state, positional: [] };
 }
 
+export function resolveImportantAlertButtons(options: {
+  okLabel?: string;
+  onDismiss?: () => void;
+  buttons?: ImportantAlertButton[];
+}): ImportantAlertButton[] {
+  if (options.buttons != null && options.buttons.length > 0) {
+    return options.buttons;
+  }
+  return [
+    {
+      label: options.okLabel ?? "Ok",
+      style: "accent",
+      onClick: options.onDismiss,
+    },
+  ];
+}
+
 export function alertSystemShowImportant(
   state: AlertSystemState,
   message: string,
-  okLabel: string,
   positive: boolean,
-  onDismiss?: () => void,
+  buttons: ImportantAlertButton[],
 ): AlertSystemState {
   return {
     ...state,
-    important: { message, okLabel, positive, onDismiss },
+    important: { message, positive, buttons },
   };
 }
 

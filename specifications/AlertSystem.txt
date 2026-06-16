@@ -7,3 +7,9 @@
     - Alerts are considered major if they warrant stopping the client from making further inputs until they acknowledge and dismiss the alert
     - Important alerts consists of a popup window with text detailing the alert and a large Ok button for dismissing the alert 
        - It also darkens the background and blocks input on the Globe viewport until it is dismissed
+    - Can be a negative or positive alert
+       - Negative alerts will have a different accent color for the button (reddish color) than the positive alert (greenish color)
+    - Can have 1 or more buttons of the same size in a row
+       - EXAMPLE: If there is 1 button, it expands to the entire width, if there are 3 buttons, each button occupies a 3rd of the width
+       - Each button can either have the accent color or have the same fill color as the background, but with a slightly darker border color
+       - Each button has a callback to run when the button is interacted with

@@ -1,8 +1,10 @@
 import {
-  formatUserSettingsSchemaVersionMismatchMessage,
   resolveUserSettingsSchemaMigration,
 } from "../app/_shared/user-settings/UserSettingsSchemaMigration";
-import { USER_SETTINGS_SCHEMA_MIGRATIONS } from "../app/_shared/user-settings/migrations/v0-to-v1";
+import {
+  USER_SETTINGS_MIGRATION_V0_TO_V1_DEFAULTS,
+  USER_SETTINGS_SCHEMA_MIGRATIONS,
+} from "../app/_shared/user-settings/migrations/v0-to-v1";
 
 describe("resolveUserSettingsSchemaMigration", () => {
   test("rejects versions below 0 or above max", () => {
@@ -43,19 +45,10 @@ describe("resolveUserSettingsSchemaMigration", () => {
 
     expect(result.fromVersion).toBe(0);
     expect(result.toVersion).toBe(1);
-    expect(result.forwardSql[0]).toBe("BEGIN;");
+    expect(result.defaults).toEqual(USER_SETTINGS_MIGRATION_V0_TO_V1_DEFAULTS);
     expect(result.forwardSql.join("\n")).toContain("CREATE TABLE IF NOT EXISTS user_settings");
     expect(result.forwardSql.join("\n")).toContain(
       "INSERT OR REPLACE INTO user_settings_meta",
-    );
-    expect(result.reverseSql.join("\n")).toContain("DROP TABLE IF EXISTS user_settings");
-  });
-});
-
-describe("formatUserSettingsSchemaVersionMismatchMessage", () => {
-  test("includes both schema version numbers", () => {
-    expect(formatUserSettingsSchemaVersionMismatchMessage(0, 1)).toBe(
-      "User settings schema version mismatch: persistent DB schema version is 0, in-memory frontend schema version is 1.",
     );
   });
 });

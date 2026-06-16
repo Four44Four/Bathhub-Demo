@@ -16,8 +16,3 @@ export function userSettingsBreadcrumbSegments(
   }
   return segments;
 }
-
-/** Builds the settings header breadcrumb for a page stack (root omitted from trail). */
-export function userSettingsBreadcrumbTitle(pageStack: UserSettingsPageId[]): string {
-  return userSettingsBreadcrumbSegments(pageStack).join(" > ");
-}

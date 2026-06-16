@@ -3,29 +3,31 @@
 import type { CSSProperties } from "react";
 
 import { Alerts as AlertConsts, Menus as MenuConsts } from "../../ComponentConstants";
+import type { ImportantAlertButton } from "../../pure/viewport2d/AlertSystemState";
 import { Button } from "../Button";
 import { TextWeight } from "../../Utils";
 
 const IMPORTANT_ALERT_PANEL_BG_COLOR = "#ffffff";
 const IMPORTANT_ALERT_TEXT_COLOR = "#0E0F11";
-const IMPORTANT_ALERT_OK_TEXT_COLOR = AlertConsts.TEXT_COLOR;
-/** Ok button width as a percentage of the alert panel background width (edge to edge). */
-const IMPORTANT_ALERT_OK_BUTTON_WIDTH_PERCENTAGE = 90;
+const IMPORTANT_ALERT_ACCENT_BUTTON_TEXT_COLOR = AlertConsts.TEXT_COLOR;
+const IMPORTANT_ALERT_SECONDARY_BUTTON_BORDER_COLOR = "#E4E4FF";
+/** Button row width as a percentage of the alert panel background width (edge to edge). */
+const IMPORTANT_ALERT_BUTTON_ROW_WIDTH_PERCENTAGE = 90;
 
 export type ImportantAlertProps = {
   message: string;
-  okLabel?: string;
   positive: boolean;
-  onDismiss: () => void;
+  buttons: ImportantAlertButton[];
+  onDismissImportant: () => void;
 };
 
 export function ImportantAlert({
   message,
-  okLabel = "Ok",
   positive,
-  onDismiss,
+  buttons,
+  onDismissImportant,
 }: ImportantAlertProps) {
-  const okAccentColor = positive
+  const accentColor = positive
     ? AlertConsts.POSITIVE_ACCENT_COLOR
     : AlertConsts.NEGATIVE_ACCENT_COLOR;
 
@@ -49,6 +51,11 @@ export function ImportantAlert({
     boxShadow: "0 12px 40px rgba(0, 0, 0, 0.28)",
     boxSizing: "border-box",
     pointerEvents: "auto",
+  };
+
+  const handleButtonClick = (button: ImportantAlertButton) => {
+    button.onClick?.();
+    onDismissImportant();
   };
 
   return (
@@ -77,22 +84,50 @@ export function ImportantAlert({
             marginTop: 18,
             marginLeft: "auto",
             marginRight: "auto",
-            width: `${IMPORTANT_ALERT_OK_BUTTON_WIDTH_PERCENTAGE}%`,
-            position: "relative",
-            height: 40,
+            width: `${IMPORTANT_ALERT_BUTTON_ROW_WIDTH_PERCENTAGE}%`,
+            display: "flex",
+            flexDirection: "row",
+            gap: 8,
           }}
         >
-          <Button
-            x={0}
-            y={0}
-            width="100%"
-            text={okLabel}
-            textWeight={TextWeight.BOLD}
-            fillColor={okAccentColor}
-            outlineColor={okAccentColor}
-            textColor={IMPORTANT_ALERT_OK_TEXT_COLOR}
-            onClick={onDismiss}
-          />
+          {buttons.map((button) => {
+            const isAccent = button.style === "accent";
+            return (
+              <div
+                key={button.label}
+                style={{
+                  flex: 1,
+                  minWidth: 0,
+                  position: "relative",
+                  height: 40,
+                }}
+              >
+                <Button
+                  x={0}
+                  y={0}
+                  width="100%"
+                  text={button.label}
+                  textWeight={TextWeight.BOLD}
+                  fillColor={
+                    isAccent
+                      ? accentColor
+                      : IMPORTANT_ALERT_PANEL_BG_COLOR
+                  }
+                  outlineColor={
+                    isAccent
+                      ? accentColor
+                      : IMPORTANT_ALERT_SECONDARY_BUTTON_BORDER_COLOR
+                  }
+                  textColor={
+                    isAccent
+                      ? IMPORTANT_ALERT_ACCENT_BUTTON_TEXT_COLOR
+                      : IMPORTANT_ALERT_TEXT_COLOR
+                  }
+                  onClick={() => handleButtonClick(button)}
+                />
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>

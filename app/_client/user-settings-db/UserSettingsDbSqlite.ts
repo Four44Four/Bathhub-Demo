@@ -1,33 +1,29 @@
+import { execUserSettingsMigrationScripts } from "@/app/_shared/user-settings/execUserSettingsMigrationScripts";
 import {
-  USER_SETTINGS_DEFAULTS,
   USER_SETTINGS_META_TABLE_NAME,
   USER_SETTINGS_SCHEMA_VERSION_META_KEY,
   USER_SETTINGS_TABLE_NAME,
-  type UserSettingsColumnName,
   type UserSettingsRow,
 } from "@/app/_shared/user-settings/UserSettingsSchema";
-import { USER_SETTINGS_MIGRATION_V0_TO_V1 } from "@/app/_shared/user-settings/migrations/v0-to-v1";
 import { isSqliteDatabaseBytes } from "../pure/bathroom/SqliteDatabaseBytes";
 import type { SqliteDb, SqliteWasm } from "../local-db/web/LocalDbSqlite";
 
 export type UserSettingsDbPort = {
   init(): Promise<void>;
   getPersistentSchemaVersion(): Promise<number | null>;
-  getSettings(): Promise<UserSettingsRow>;
-  updateBooleanSetting(
-    column: Extract<UserSettingsColumnName, "globe_movement_smooth">,
-    value: boolean,
-  ): Promise<void>;
-  updateIntSetting(
-    column: Exclude<UserSettingsColumnName, "globe_movement_smooth">,
-    value: number,
-  ): Promise<void>;
+  readSettingsFromDb(): Promise<UserSettingsRow>;
+  saveSettingsToDb(settings: UserSettingsRow): Promise<void>;
+  runForwardMigration(forwardSql: readonly string[]): Promise<void>;
+  persistToDisk(): Promise<void>;
 };
 
 export type UserSettingsDbSqliteOptions = {
   hydrateFromBytes?: () => Promise<Uint8Array | null>;
   onInvalidHydrateBytes?: () => void | Promise<void>;
-  onAfterMutate?: (db: SqliteDb, sqlite3: SqliteWasm) => void;
+  onAfterPersist?: (
+    db: SqliteDb,
+    sqlite3: SqliteWasm,
+  ) => void | Promise<void>;
   initSqliteWasm?: () => Promise<SqliteWasm>;
 };
 
@@ -40,7 +36,7 @@ function listTableNames(db: SqliteDb): string[] {
     .filter((name): name is string => typeof name === "string");
 }
 
-function isUserSettingsSchemaReady(tableNames: string[]): boolean {
+export function isUserSettingsSchemaReady(tableNames: string[]): boolean {
   return (
     tableNames.includes(USER_SETTINGS_META_TABLE_NAME) &&
     tableNames.includes(USER_SETTINGS_TABLE_NAME)
@@ -48,9 +44,9 @@ function isUserSettingsSchemaReady(tableNames: string[]): boolean {
 }
 
 function execMigrationScripts(db: SqliteDb, scripts: readonly string[]): void {
-  for (const sql of scripts) {
+  execUserSettingsMigrationScripts((sql) => {
     db.exec(sql);
-  }
+  }, scripts);
 }
 
 function readMetaValue(db: SqliteDb, key: string): string | null {
@@ -86,7 +82,7 @@ function readSettingsRow(db: SqliteDb): UserSettingsRow {
     WHERE id = 1`,
   );
   if (rows.length === 0) {
-    return { ...USER_SETTINGS_DEFAULTS };
+    throw new Error("User settings row is missing from persistent SQLite.");
   }
   return rowToUserSettings(rows[0]!);
 }
@@ -96,36 +92,28 @@ export function loadUserSettingsBytesIntoMemoryDb(
   db: SqliteDb,
   bytes: Uint8Array,
 ): void {
+  if (!db.pointer) {
+    throw new Error("User settings database pointer is unavailable.");
+  }
   if (!isSqliteDatabaseBytes(bytes)) {
     throw new Error("User settings hydrate bytes are not a SQLite database.");
   }
 
   const pointer = sqlite3.wasm.allocFromTypedArray(bytes);
-  try {
-    const flags =
-      (sqlite3.capi.SQLITE_DESERIALIZE_READWRITE ?? 2) |
-      (sqlite3.capi.SQLITE_DESERIALIZE_RESIZEABLE ?? 4);
-    const rc = sqlite3.capi.sqlite3_deserialize(
-      db.pointer,
-      "main",
-      pointer,
-      bytes.byteLength,
-      bytes.byteLength,
-      flags,
-    );
-    if (rc !== 0) {
-      throw new Error(`sqlite3_deserialize failed with code ${rc}`);
-    }
-  } finally {
+  const resizeableFlag = sqlite3.capi.SQLITE_DESERIALIZE_RESIZEABLE ?? 2;
+  const rc = sqlite3.capi.sqlite3_deserialize(
+    db.pointer,
+    "main",
+    pointer,
+    bytes.byteLength,
+    bytes.byteLength,
+    resizeableFlag,
+  );
+  if (rc !== 0) {
     sqlite3.wasm.dealloc(pointer);
+    throw new Error(`sqlite3_deserialize failed with code ${rc}`);
   }
-}
-
-function ensureFreshSchema(db: SqliteDb): void {
-  if (isUserSettingsSchemaReady(listTableNames(db))) {
-    return;
-  }
-  execMigrationScripts(db, USER_SETTINGS_MIGRATION_V0_TO_V1.forwardSql);
+  // sqlite-wasm keeps referencing this allocation for the DB lifetime; do not dealloc.
 }
 
 export function createUserSettingsDbSqlite(
@@ -147,8 +135,11 @@ export function createUserSettingsDbSqlite(
     return { db, sqlite3: sqlite3Module };
   };
 
-  const afterMutate = (activeDb: SqliteDb, sqlite3: SqliteWasm): void => {
-    options.onAfterMutate?.(activeDb, sqlite3);
+  const afterPersist = async (
+    activeDb: SqliteDb,
+    sqlite3: SqliteWasm,
+  ): Promise<void> => {
+    await options.onAfterPersist?.(activeDb, sqlite3);
   };
 
   return {
@@ -189,7 +180,6 @@ export function createUserSettingsDbSqlite(
 
           if (!hydratedFromDisk) {
             memoryDb.exec("PRAGMA journal_mode=WAL");
-            ensureFreshSchema(memoryDb);
           }
         } catch (error) {
           initPromise = null;
@@ -204,32 +194,47 @@ export function createUserSettingsDbSqlite(
 
     async getPersistentSchemaVersion(): Promise<number | null> {
       const { db: activeDb } = await ensureDb();
+      if (!isUserSettingsSchemaReady(listTableNames(activeDb))) {
+        return null;
+      }
       return parseSchemaVersion(
         readMetaValue(activeDb, USER_SETTINGS_SCHEMA_VERSION_META_KEY),
       );
     },
 
-    async getSettings(): Promise<UserSettingsRow> {
+    async readSettingsFromDb(): Promise<UserSettingsRow> {
       const { db: activeDb } = await ensureDb();
       return readSettingsRow(activeDb);
     },
 
-    async updateBooleanSetting(column, value): Promise<void> {
+    async saveSettingsToDb(settings): Promise<void> {
       const { db: activeDb, sqlite3 } = await ensureDb();
       activeDb.exec(
-        `UPDATE ${USER_SETTINGS_TABLE_NAME} SET ${column} = ? WHERE id = 1`,
-        { bind: [value ? 1 : 0] },
+        `UPDATE ${USER_SETTINGS_TABLE_NAME}
+         SET globe_movement_smooth = ?,
+             camera_init_surface_offset_m = ?,
+             find_nearest_bathroom_max_dist_m = ?
+         WHERE id = 1`,
+        {
+          bind: [
+            settings.globe_movement_smooth ? 1 : 0,
+            settings.camera_init_surface_offset_m,
+            settings.find_nearest_bathroom_max_dist_m,
+          ],
+        },
       );
-      afterMutate(activeDb, sqlite3);
+      await afterPersist(activeDb, sqlite3);
     },
 
-    async updateIntSetting(column, value): Promise<void> {
+    async runForwardMigration(forwardSql): Promise<void> {
       const { db: activeDb, sqlite3 } = await ensureDb();
-      activeDb.exec(
-        `UPDATE ${USER_SETTINGS_TABLE_NAME} SET ${column} = ? WHERE id = 1`,
-        { bind: [value] },
-      );
-      afterMutate(activeDb, sqlite3);
+      execMigrationScripts(activeDb, forwardSql);
+      await afterPersist(activeDb, sqlite3);
+    },
+
+    async persistToDisk(): Promise<void> {
+      const { db: activeDb, sqlite3 } = await ensureDb();
+      await afterPersist(activeDb, sqlite3);
     },
 
     async getSqliteDbForTests(): Promise<SqliteDb> {

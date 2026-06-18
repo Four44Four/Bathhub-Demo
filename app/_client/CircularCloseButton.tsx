@@ -5,8 +5,8 @@ import { useState, type CSSProperties } from "react";
 import {
   BtnInteractAnim,
   CircularCloseButton as CircularCloseButtonConsts,
-  Shared,
 } from "./ComponentConstants";
+import { multiplyHexColorBrightness } from "./pure/viewport2d/ButtonInteractColor";
 import { circularCloseButtonFontSizePx } from "./pure/CircularCloseButtonLayout";
 import { TextWeight } from "./Utils";
 
@@ -26,16 +26,23 @@ export function CircularCloseButton({
   const [isPressed, setIsPressed] = useState(false);
   const isHighlighted = isHovered || isPressed;
   const interactTransition = `${BtnInteractAnim.BTN_INTERACT_DURA_MS}ms ease`;
+  const brightnessMult = isHighlighted
+    ? BtnInteractAnim.BTN_COLOR_VALUE_FACTOR_MULT
+    : 1;
 
   const buttonStyle: CSSProperties = {
     width: sizePx,
     height: sizePx,
     borderRadius: "50%",
     border: "none",
-    backgroundColor: isHighlighted
-      ? CircularCloseButtonConsts.INTERACT_FILL
-      : CircularCloseButtonConsts.FILL,
-    color: CircularCloseButtonConsts.TEXT_COLOR,
+    backgroundColor: multiplyHexColorBrightness(
+      CircularCloseButtonConsts.FILL,
+      brightnessMult,
+    ),
+    color: multiplyHexColorBrightness(
+      CircularCloseButtonConsts.TEXT_COLOR,
+      brightnessMult,
+    ),
     fontSize: circularCloseButtonFontSizePx(sizePx),
     lineHeight: 1,
     cursor: "pointer",
@@ -44,15 +51,8 @@ export function CircularCloseButton({
     justifyContent: "center",
     boxShadow: CircularCloseButtonConsts.BOX_SHADOW,
     zIndex: 1,
-    transition: `background-color ${interactTransition}`,
+    transition: `background-color ${interactTransition}, color ${interactTransition}`,
     padding: 0,
-  };
-
-  const interactFgBrightness = isHighlighted ? Shared.FG_COLOR_VALUE_FACTOR : 1;
-
-  const contentStyle: CSSProperties = {
-    filter: `brightness(${interactFgBrightness})`,
-    transition: `filter ${interactTransition}`,
   };
 
   return (
@@ -71,7 +71,7 @@ export function CircularCloseButton({
       onPointerUp={() => setIsPressed(false)}
       onPointerCancel={() => setIsPressed(false)}
     >
-      <span style={contentStyle}>×</span>
+      ×
     </button>
   );
 }

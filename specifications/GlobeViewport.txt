@@ -41,6 +41,7 @@ Viewport2d:
        - Circular button
        - Has image public/find_bathroom_icon.svg
        - Located at the bottom right corner
+       - Only appears when the geolocation of the client is detected (and permissions are granted)
        - When interacted with:
           - See specifications/find_nearest_bathroom_logic.txt
  - If the user has clicked or tapped on the Globe and a valid ClickedIndicator exists:

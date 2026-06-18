@@ -3,7 +3,10 @@
 import { useState, type CSSProperties, type MouseEventHandler, type ReactNode } from "react";
 
 import { BtnInteractAnim, Button as ButtonConsts } from "../ComponentConstants";
-import { viewportButtonInteractColors } from "../pure/viewport2d/ButtonInteractColor";
+import {
+  viewportButtonBrightnessInteractColors,
+  viewportButtonInteractColors,
+} from "../pure/viewport2d/ButtonInteractColor";
 import {
   areViewportClicksSuppressed,
   useSwipeMenuBlocksViewport,
@@ -38,6 +41,8 @@ export type ButtonProps = {
   circular?: boolean;
   /** Padding on every side when `circular` is true. Defaults to 0. */
   circularPaddingPx?: number;
+  /** When set, dims fill/outline/text via brightness multiply on hover/press instead of HSL invert. */
+  interactBrightnessMult?: number;
   onClick?: MouseEventHandler<HTMLButtonElement>;
 };
 
@@ -130,6 +135,7 @@ export function Button({
   imageSizePx = 24,
   circular = false,
   circularPaddingPx = 0,
+  interactBrightnessMult,
   onClick,
 }: ButtonProps) {
   const viewportPointerBlocked = useSwipeMenuBlocksViewport();
@@ -142,12 +148,21 @@ export function Button({
     fillColor: resolvedFillColor,
     outlineColor: resolvedOutlineColor,
     textColor: resolvedTextColor,
-  } = viewportButtonInteractColors(
-    fillColor,
-    outlineColor,
-    textColor,
-    isHighlighted,
-  );
+  } =
+    interactBrightnessMult != null
+      ? viewportButtonBrightnessInteractColors(
+          fillColor,
+          outlineColor,
+          textColor,
+          isHighlighted,
+          interactBrightnessMult,
+        )
+      : viewportButtonInteractColors(
+          fillColor,
+          outlineColor,
+          textColor,
+          isHighlighted,
+        );
 
   const { isSvg, normalSrc, invertedSrc } = useButtonSvgInteractSrc(imageSrc);
 
@@ -230,7 +245,7 @@ export function Button({
     borderColor: resolvedOutlineColor,
     cursor: "pointer",
     boxSizing: "border-box",
-    transition: `background-color ${interactTransition}, border-color ${interactTransition}`,
+    transition: `background-color ${interactTransition}, border-color ${interactTransition}, color ${interactTransition}`,
   };
 
   const layoutStyle: CSSProperties = useCircularLayout

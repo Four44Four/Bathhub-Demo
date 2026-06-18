@@ -11,7 +11,6 @@ export const Shared = {
     POSITIVE_COLOR: "#6CE0D1",
     /** Icon color on tinted viewport2d action buttons (cancel, confirm, exit). */
     ICON_ON_TINTED_BUTTON_COLOR: "#ffffff",
-    FG_COLOR_VALUE_FACTOR: 0.7,
 } as const;
 
 export const Button = {
@@ -24,13 +23,14 @@ export const Button = {
 
 export const BtnInteractAnim = {
     BTN_INTERACT_DURA_MS: 500,
+    /** Multiplier applied to button colors' brightness while hovered or pressed. */
+    BTN_COLOR_VALUE_FACTOR_MULT: 0.7,
 } as const;
 
 /** Circular dismiss control (user settings close, exit find-bathroom mode, etc.). */
 export const CircularCloseButton = {
     SIZE_PX: 44,
     FILL: Shared.NEGATIVE_COLOR,
-    INTERACT_FILL: "#C85A75",
     TEXT_COLOR: "#FFFFFF",
     FONT_SIZE_PX: 22,
     BOX_SHADOW: "0 2px 8px rgba(18, 18, 47, 0.25)",

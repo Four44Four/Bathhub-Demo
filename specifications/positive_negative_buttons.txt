@@ -1,0 +1,8 @@
+ - Positive and negative buttons are buttons that indicate confirmation, rejection, exiting, or other similar functions
+    - Exiting and rejections are negative
+    - Confirmation and accepting are positive
+ - Positive buttons should have some specified greenish color
+ - Negative buttons should have some specified reddish color
+ - They should all have white text/icon colors
+ - They should all have the same hover and interaction animation
+    - Their brightness values should be multipied by a specified factor below 1.0 to dim them when hovered or interacted with

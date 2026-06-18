@@ -1,8 +1,55 @@
 import {
   invertHexHslValue,
   invertSvgMarkupHexColors,
+  multiplyHexColorBrightness,
+  viewportButtonBrightnessInteractColors,
   viewportButtonInteractColors,
 } from "../app/_client/pure/viewport2d/ButtonInteractColor";
+
+describe("multiplyHexColorBrightness", () => {
+  test("returns the same color when factor is 1", () => {
+    expect(multiplyHexColorBrightness("#E06C89", 1)).toBe("#e06c89");
+  });
+
+  test("dims rgb channels by the factor", () => {
+    expect(multiplyHexColorBrightness("#FFFFFF", 0.7)).toBe("#b3b3b3");
+    expect(multiplyHexColorBrightness("#E06C89", 0.7)).toBe("#9d4c60");
+  });
+});
+
+describe("viewportButtonBrightnessInteractColors", () => {
+  test("returns base colors when not highlighted", () => {
+    expect(
+      viewportButtonBrightnessInteractColors(
+        "#111111",
+        "#222222",
+        "#333333",
+        false,
+        0.7,
+      ),
+    ).toEqual({
+      fillColor: "#111111",
+      outlineColor: "#222222",
+      textColor: "#333333",
+    });
+  });
+
+  test("dims all colors when highlighted", () => {
+    expect(
+      viewportButtonBrightnessInteractColors(
+        "#E06C89",
+        "#E06C89",
+        "#FFFFFF",
+        true,
+        0.7,
+      ),
+    ).toEqual({
+      fillColor: "#9d4c60",
+      outlineColor: "#9d4c60",
+      textColor: "#b3b3b3",
+    });
+  });
+});
 
 describe("invertHexHslValue", () => {
   test("inverts black to white", () => {

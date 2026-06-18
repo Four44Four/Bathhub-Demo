@@ -1,5 +1,28 @@
 import { hexToRgb, hslToRgb, rgbToHex, rgbToHsl } from "../../Utils";
 
+/** Multiplies RGB channels, matching CSS `filter: brightness(factor)`. */
+export function multiplyHexColorBrightness(hex: string, factor: number): string {
+  const { r, g, b } = hexToRgb(hex);
+  return rgbToHex(r * factor, g * factor, b * factor);
+}
+
+export function viewportButtonBrightnessInteractColors(
+  fillColor: string,
+  outlineColor: string,
+  textColor: string,
+  isHighlighted: boolean,
+  brightnessFactorMult: number,
+): { fillColor: string; outlineColor: string; textColor: string } {
+  if (!isHighlighted) {
+    return { fillColor, outlineColor, textColor };
+  }
+  return {
+    fillColor: multiplyHexColorBrightness(fillColor, brightnessFactorMult),
+    outlineColor: multiplyHexColorBrightness(outlineColor, brightnessFactorMult),
+    textColor: multiplyHexColorBrightness(textColor, brightnessFactorMult),
+  };
+}
+
 /** Inverts HSL lightness while preserving hue and saturation. */
 export function invertHexHslValue(hex: string): string {
   const { r, g, b } = hexToRgb(hex);

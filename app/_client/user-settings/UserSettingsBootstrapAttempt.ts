@@ -3,6 +3,7 @@ import {
   resolveUserSettingsSchemaBootstrapPhase,
 } from "@/app/_shared/user-settings/UserSettingsSchemaBootstrap";
 import type { UserSettingsDbPort } from "../user-settings-db/UserSettingsDbSqlite";
+import { installInitialUserSettingsDbFromServer } from "../user-settings-db/installInitialUserSettingsDbFromServer";
 import { USER_SETTINGS_FRONTEND_SCHEMA_VERSION } from "./UserSettingsSchemaVersion";
 import {
   loadActiveUserSettingsFromPersistentDbIfAllowed,
@@ -22,7 +23,12 @@ export async function attemptUserSettingsSchemaBootstrap(
 ): Promise<UserSettingsBootstrapAttemptOutcome> {
   await db.init();
 
-  const persistentVersion = await db.getPersistentSchemaVersion();
+  let persistentVersion = await db.getPersistentSchemaVersion();
+  const initialInstall = await installInitialUserSettingsDbFromServer(db);
+  if (initialInstall.ok) {
+    persistentVersion = await db.getPersistentSchemaVersion();
+  }
+
   const initialPhase = resolveUserSettingsSchemaBootstrapPhase(
     persistentVersion,
     frontendVersion,

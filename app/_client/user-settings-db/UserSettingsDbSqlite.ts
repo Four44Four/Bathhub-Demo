@@ -15,6 +15,8 @@ export type UserSettingsDbPort = {
   saveSettingsToDb(settings: UserSettingsRow): Promise<void>;
   runForwardMigration(forwardSql: readonly string[]): Promise<void>;
   persistToDisk(): Promise<void>;
+  hadLocalPersistentDbAtStartup(): Promise<boolean>;
+  replaceDbFromBytes(bytes: Uint8Array): Promise<void>;
 };
 
 export type UserSettingsDbSqliteOptions = {
@@ -124,6 +126,7 @@ export function createUserSettingsDbSqlite(
   let db: SqliteDb | null = null;
   let sqlite3Module: SqliteWasm | null = null;
   let initPromise: Promise<void> | null = null;
+  let localPersistentDbPresentAtStartup = false;
 
   const ensureDb = async (): Promise<{ db: SqliteDb; sqlite3: SqliteWasm }> => {
     if (initPromise) {
@@ -168,6 +171,7 @@ export function createUserSettingsDbSqlite(
                 throw new Error("User settings on-disk schema is incomplete.");
               }
               hydratedFromDisk = true;
+              localPersistentDbPresentAtStartup = true;
             } catch {
               memoryDb = new sqlite3.oo1.DB(":memory:");
               await options.onInvalidHydrateBytes?.();
@@ -235,6 +239,22 @@ export function createUserSettingsDbSqlite(
     async persistToDisk(): Promise<void> {
       const { db: activeDb, sqlite3 } = await ensureDb();
       await afterPersist(activeDb, sqlite3);
+    },
+
+    async hadLocalPersistentDbAtStartup(): Promise<boolean> {
+      await ensureDb();
+      return localPersistentDbPresentAtStartup;
+    },
+
+    async replaceDbFromBytes(bytes): Promise<void> {
+      const { sqlite3 } = await ensureDb();
+      const replacementDb = new sqlite3.oo1.DB(":memory:");
+      loadUserSettingsBytesIntoMemoryDb(sqlite3, replacementDb, bytes);
+      if (!isUserSettingsSchemaReady(listTableNames(replacementDb))) {
+        throw new Error("Replacement user settings database schema is incomplete.");
+      }
+      db = replacementDb;
+      await afterPersist(replacementDb, sqlite3);
     },
 
     async getSqliteDbForTests(): Promise<SqliteDb> {

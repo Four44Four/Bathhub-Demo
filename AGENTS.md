@@ -33,6 +33,9 @@ This version has breaking changes — APIs, conventions, and file structure may 
        - Check to see if any corresponding/related unit test is actually testing the big-picture/architectural functionality, not just localized behaviors
     - If a unit test fails:
        - Check to see if any corresponding/related integration test should be revised to account for any changes that will be made to the failing unit test, while ensuring the intended purpose of the integration test 
+ - Whenever new user settings are added/created:
+    - Create a new schema version to migrate the clients' SQLite DB tables for persistently storing the user settings with the new user settings and any defaults
+    - Create a new DB snapshot for initializing clients with no user setting DBs in .app/_server/user-settings/snapshot/default-user-settings.sqlite by running all the migrations up to the newest one
  - All files in ./specifications are the intended technical specifications of the project so far
     - Do not treat them as reflective of what is currently implemented in the source code
     - If code is encountered that does not match the tecnical specifications:

@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "npm run build:user-settings-db && next build",
+    "build:user-settings-db": "node integration-tests/run-build-default-user-settings-db.mjs",
     "start": "next start",
     "lint": "eslint",
     "unit-tests": "jest --verbose ./unit-tests",

@@ -115,8 +115,16 @@ General:
        - This way, mismatches will not occur during the loading process for an out of date user settings config
     - If USER_SETTING_SCHEMA_UPDATE_HAS_ERRORED is true:
        - The client will have a reddish band (same color as the negative important alert's button background color, but copy the constant by value into a new constant) at the top of the screen with white text saying "Danger: user settings cannot be changed"
+    - Whenever a new schema version is created/added:
+       - On server:
+          - Run all migrations from v0 to v<new-version> to initialize a complete default user settings table/DB
+          - If successful:
+             - Store the resulting SQLite DB in an appropriate folder on the server
+             - There should only ever be 1 SQLite test DB on the server
+                - This should only be changed/replaced if all the cumulative migrations ran without errors
+          - Should be tested in integration tests to ensure that all cumulative migrations will produce a valid default user settings tabel/DB
     - If the user visits the app without an SQLite DB for the user settings:
-       - Retrieve from the server and run the migration from schema version 0 to schema version 1 while following the other specifications for migration timing in relation to application loading and init, as well as all error handling specifications listed above
+       - Retrieve the complete default user settings DB from the server and load it onto the client as their initial user settings DB
  - There will be a margin at the bottom of the settings and subsettings pages to allow for the "X" button for exiting the settings pages to be displayed without covering up any settings options 
  - There should never be a complete teardown of the Cesium Globe when changing user settings unless doing so is explicitly stated in the specification for any user setting
  - DO NOT IMPLEMENT THIS NOW, THIS IS JUST A PROPOSAL:

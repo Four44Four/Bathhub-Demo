@@ -40,6 +40,10 @@ function createMockDb(
       schemaVersion = 1;
     }),
     persistToDisk: jest.fn(async () => {}),
+    hadLocalPersistentDbAtStartup: jest.fn(async () => false),
+    replaceDbFromBytes: jest.fn(async () => {
+      schemaVersion = 1;
+    }),
     ...overrides,
   };
 }

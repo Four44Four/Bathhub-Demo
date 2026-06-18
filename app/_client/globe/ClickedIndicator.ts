@@ -5,9 +5,6 @@ import { installGlobeImage } from "./GlobeImage";
 
 type ClickedIndicatorApi = {
   setLatLonDegrees: (lat: number, lon: number) => void;
-  /** Current marker position in degrees, or `null` if cleared / never set. */
-  getLatLonDegrees: () => { lat: number; lon: number } | null;
-  clear: () => void;
   destroy: () => void;
 };
 
@@ -43,15 +40,6 @@ export function installClickedIndicator(
       lonDeg = lon;
       recompute();
       globeImage.setVisible(true);
-      request();
-    },
-    getLatLonDegrees: () => {
-      if (!hasPoint) return null;
-      return { lat: latDeg, lon: lonDeg };
-    },
-    clear: () => {
-      hasPoint = false;
-      globeImage.setVisible(false);
       request();
     },
     destroy: () => {

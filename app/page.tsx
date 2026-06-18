@@ -11,7 +11,6 @@ import {
 import { Recenter } from "./_client/viewport2d/buttons/Recenter";
 import { FindNearestBathroom } from "./_client/viewport2d/buttons/FindNearestBathroom";
 import { ExitFindBathroom } from "./_client/viewport2d/buttons/ExitFindBathroom";
-import { TestPathfind } from "./_client/viewport2d/buttons/testing/TestPathfind";
 import {
   GlobeViewport,
   type GlobeViewportHandle,
@@ -77,8 +76,8 @@ let isClientGeoGranted = false;
  * client has no geolocation permission (or denies the prompt). Updated to the
  * client's current position whenever geolocation data becomes available.
  *
- * Kept at module scope so geolocation callbacks and pathfinding helpers can read
- * the latest fix without prop drilling. Camera moves are driven imperatively via
+ * Kept at module scope so geolocation callbacks can read the latest fix without
+ * prop drilling. Camera moves are driven imperatively via
  * `globeRef` — changing these does not re-init the Cesium viewer.
  */
 let mapInitLat = 0.0;
@@ -206,11 +205,6 @@ function HomeContent({
       backdropOpacity: 0,
       menuHeightPx: SwipeMenuConsts.INACTIVE_HEIGHT_PX,
     });
-  // Bumped when module-level `mapInitLat` / `mapInitLong` / `isClientGeoGranted`
-  // update so consumers like `<TestPathfind>` re-render with fresh coordinates.
-  const [, setPathfindDepsEpoch] = useState(0);
-  const bumpPathfindDeps = () => setPathfindDepsEpoch((n) => n + 1);
-
   const syncClientGeo = (lat: number, lng: number, granted = true) => {
     isClientGeoGranted = granted;
     mapInitLat = lat;
@@ -220,14 +214,12 @@ function HomeContent({
       mapInitLat: lat,
       mapInitLong: lng,
     });
-    bumpPathfindDeps();
   };
 
   const revokeClientGeoAccess = () => {
     isClientGeoGranted = false;
     patchClientGeo({ isClientGeoGranted: false });
     setShowRecenterButton(false);
-    bumpPathfindDeps();
   };
 
   const syncMapMarkerFallbackCoords = (lat: number, lng: number) => {
@@ -543,12 +535,6 @@ function HomeContent({
                 y={zoomIndicator.y}
                 pulse={zoomIndicator.pulse}
                 hidden={zoomIndicator.pulse === 0}
-              />
-              <TestPathfind
-                globeRef={globeRef}
-                isClientGeoGranted={isClientGeoGranted}
-                mapInitLat={mapInitLat}
-                mapInitLong={mapInitLong}
               />
             </>
           ) : null}

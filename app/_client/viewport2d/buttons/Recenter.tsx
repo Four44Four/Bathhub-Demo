@@ -14,7 +14,7 @@ export const BTN_OFFSET_PX = 15;
 export const BTN_IMG_SIZE_PX = 40;
 /** Padding inside the circular control on every side (`Button` circular mode). Uses 0 so the circle matches the image plus border. */
 export const BTN_CIRCULAR_PADDING_PX = 5;
-/** Distance from the left edge of the phone frame (matches `TestPathfind` `BTN_X`). */
+/** Distance from the left edge of the phone frame. */
 export const BTN_X = 16;
 
 /** `top` coordinate so the button sits `offsetAboveMenuPx` above the swipe menu collapsed top edge. */

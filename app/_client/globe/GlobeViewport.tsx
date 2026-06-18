@@ -166,8 +166,6 @@ export type GlobeViewportHandle = {
    * (no active sampler-busy animation or gesture).
    */
   subscribeCameraMotionIdle: (listener: CameraMotionIdleListener) => () => void;
-  /** Lat/long of the tap/click marker on the globe, if the user has clicked. */
-  getClickedIndicatorLatLon: () => Point | null;
   /**
    * Authoritative "you are here" push from `page.tsx`'s geolocation watcher.
    * Immediately flips MapMarker from the 2D static overlay to the 3D billboard
@@ -306,9 +304,6 @@ export function GlobeViewport({
   const pendingSnapToRef = useRef<{ lat: number; long: number } | null>(null);
   const viewerRef = useRef<CesiumTypes.Viewer | null>(null);
   const cesiumNsRef = useRef<typeof import("cesium") | null>(null);
-  const clickedIndicatorApiRef = useRef<
-    ReturnType<typeof installClickedIndicator> | null
-  >(null);
   const pathHandleRef = useRef<PathHandle | null>(null);
   /** Shared cache for `getViewportCenterLatLon`, MapMarker viewport-follow mode, and callers like `getStartPos`. */
   const viewportCenterLatLonRef = useRef<Point | null>(null);
@@ -439,13 +434,6 @@ export function GlobeViewport({
         return () => {
           cameraMotionIdleListeners.delete(listener);
         };
-      },
-      getClickedIndicatorLatLon: () => {
-        const api = clickedIndicatorApiRef.current;
-        if (!api) return null;
-        const p = api.getLatLonDegrees();
-        if (!p) return null;
-        return { latitude: p.lat, longitude: p.lon };
       },
       setMapMarkerUserLatLon: (lat, long) => {
         userGeoLatLonRef.current = { latitude: lat, longitude: long };
@@ -673,7 +661,6 @@ export function GlobeViewport({
       viewer.imageryLayers.addImageryProvider(provider);
 
       const clickedIndicator = installClickedIndicator(Cesium, viewer);
-      clickedIndicatorApiRef.current = clickedIndicator;
 
       const pathHandle = installPath(Cesium, viewer, ellipsoid);
       pathHandleRef.current = pathHandle;
@@ -1071,7 +1058,6 @@ export function GlobeViewport({
       viewer?.destroy();
       viewerRef.current = null;
       cesiumNsRef.current = null;
-      clickedIndicatorApiRef.current = null;
       viewportCenterLatLonRef.current = null;
       viewportBoundsLatLonRef.current = null;
       cameraHeightMRef.current = Number.POSITIVE_INFINITY;

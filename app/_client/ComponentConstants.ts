@@ -212,6 +212,8 @@ export const NearestBathroom = {
     BATHROOM_PATH_UPDATE_DEBOUNCE_MS: 3_000,
     /** Minimum client movement before re-requesting path data (meters). */
     BATHROOM_PATH_UPDATE_MIN_DISTANCE_M: 10,
+    /** Debounce before rebuilding path LOD geometry after the client becomes idle (milliseconds). */
+    PATH_REBUILD_LOD_GEOM_DEBOUNCE_MS: 500,
     /** Distance from target bathroom that ends active navigation (meters). */
     BATHROOM_ARRIVAL_DISTANCE_M: 10,
     /** Duration to show the reached-target band at the top of the screen (milliseconds). */

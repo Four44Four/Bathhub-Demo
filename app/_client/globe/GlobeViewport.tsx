@@ -10,7 +10,7 @@ import {
 } from "react";
 import type * as CesiumTypes from "cesium";
 
-import { Globe as GlobeConsts, MapMarker as MapMarkerConsts } from "../ComponentConstants";
+import { Globe as GlobeConsts, MapMarker as MapMarkerConsts, NearestBathroom as NearestBathroomConsts } from "../ComponentConstants";
 import { loadCesium } from "./loadCesium";
 import * as Utils from "../Utils";
 import * as ServerDebug from "../../_server/Debug";
@@ -24,6 +24,7 @@ import { installOrbitCameraControls, type InstalledOrbitCameraControls } from ".
 import { globeLodVisualStateFromCameraHeightM } from "../pure/globe/GlobeLayerLod";
 import { TwoToneTileProcessor } from "./TwoToneTileProcessor";
 import { dimensionCss } from "../pure/globe/GlobeViewportCss";
+import { shouldSchedulePathLodRebuildOnIdle } from "../pure/globe/PathLodRebuildPolicy";
 import * as GeoArrival from "../pure/globe/GeoArrivalCameraLock";
 import {
   computeViewportBoundsLatLon,
@@ -330,6 +331,11 @@ export function GlobeViewport({
    */
   const userGeoLatLonRef = useRef<Point | null>(null);
   const geoArrivalLockStateRef = useRef(GeoArrival.initialGeoArrivalLockState());
+  const pathLodStateRef = useRef({
+    lastRebuiltOrbitCenterDistanceM: null as number | null,
+    debounceTimerId: null as number | null,
+    pendingRebuildAfterMotion: false,
+  });
 
   useEffect(() => {
     cameraControlsRef.current?.setCameraInitSurfaceOffsetM(cameraInitSurfaceOffsetM);
@@ -451,9 +457,21 @@ export function GlobeViewport({
       },
       setPathFromLatLonPoints: (points) => {
         pathHandleRef.current?.setPath(points);
+        pathLodStateRef.current.lastRebuiltOrbitCenterDistanceM =
+          cameraControlsRef.current?.getOrbitCenterDistanceM() ??
+          Number.POSITIVE_INFINITY;
+        if (cameraControlsRef.current?.isGlobeViewportSamplerBusy()) {
+          pathLodStateRef.current.pendingRebuildAfterMotion = true;
+        }
       },
       clearPath: () => {
         pathHandleRef.current?.clearPath();
+        pathLodStateRef.current.lastRebuiltOrbitCenterDistanceM = null;
+        pathLodStateRef.current.pendingRebuildAfterMotion = false;
+        if (pathLodStateRef.current.debounceTimerId !== null) {
+          window.clearTimeout(pathLodStateRef.current.debounceTimerId);
+          pathLodStateRef.current.debounceTimerId = null;
+        }
       },
     }),
     [],
@@ -663,8 +681,61 @@ export function GlobeViewport({
 
       const pathHandle = installPath(Cesium, viewer, ellipsoid);
       pathHandleRef.current = pathHandle;
-      const rebuildPathLodOnClientIdle = () => {
+
+      const cancelPathLodDebounce = () => {
+        if (pathLodStateRef.current.debounceTimerId !== null) {
+          window.clearTimeout(pathLodStateRef.current.debounceTimerId);
+          pathLodStateRef.current.debounceTimerId = null;
+        }
+      };
+
+      const readPathLodOrbitCenterDistanceM = () =>
+        cameraControls.getOrbitCenterDistanceM();
+
+      const runPathLodRebuildNow = () => {
+        if (cancelled || !viewer) return;
+        cancelPathLodDebounce();
         pathHandle.rebuildActivePath();
+        pathLodStateRef.current.lastRebuiltOrbitCenterDistanceM =
+          readPathLodOrbitCenterDistanceM();
+      };
+
+      const schedulePathLodRebuildDebounced = () => {
+        if (cancelled || !viewer) return;
+        cancelPathLodDebounce();
+        pathLodStateRef.current.debounceTimerId = window.setTimeout(() => {
+          pathLodStateRef.current.debounceTimerId = null;
+          runPathLodRebuildNow();
+        }, NearestBathroomConsts.PATH_REBUILD_LOD_GEOM_DEBOUNCE_MS);
+      };
+
+      const runPendingPathLodRebuildAfterMotion = () => {
+        if (!pathLodStateRef.current.pendingRebuildAfterMotion) return;
+        pathLodStateRef.current.pendingRebuildAfterMotion = false;
+        if (
+          !shouldSchedulePathLodRebuildOnIdle({
+            currentOrbitCenterDistanceM: readPathLodOrbitCenterDistanceM(),
+            lastRebuiltOrbitCenterDistanceM:
+              pathLodStateRef.current.lastRebuiltOrbitCenterDistanceM,
+          })
+        ) {
+          return;
+        }
+        runPathLodRebuildNow();
+      };
+
+      const maybeSchedulePathLodRebuildOnClientIdle = () => {
+        if (cancelled || !viewer) return;
+        if (
+          !shouldSchedulePathLodRebuildOnIdle({
+            currentOrbitCenterDistanceM: readPathLodOrbitCenterDistanceM(),
+            lastRebuiltOrbitCenterDistanceM:
+              pathLodStateRef.current.lastRebuiltOrbitCenterDistanceM,
+          })
+        ) {
+          return;
+        }
+        schedulePathLodRebuildDebounced();
       };
 
       // Ensure Cesium never handles double-click / double-tap camera actions.
@@ -742,6 +813,7 @@ export function GlobeViewport({
         onZoomIndicatorPulse,
         onGlobeViewportInteraction: () => {
           isClientIdle = false;
+          cancelPathLodDebounce();
           viewportSamplerIdleCallbacks.armIdleDetection?.();
           viewportSamplerWakeRef.ensureBusy?.();
         },
@@ -831,6 +903,7 @@ export function GlobeViewport({
         if (cancelled || !viewer) return;
         runViewportCenterSample();
         armIdleDetection();
+        runPendingPathLodRebuildAfterMotion();
         notifyCameraMotionIdleListeners();
       };
 
@@ -850,7 +923,7 @@ export function GlobeViewport({
           }
           isClientIdle = true;
           scheduleNextViewportCenterSample();
-          rebuildPathLodOnClientIdle();
+          maybeSchedulePathLodRebuildOnClientIdle();
         }, GlobeConsts.VIEWPORT_DETECT_IDLE_MS);
       };
 
@@ -867,6 +940,7 @@ export function GlobeViewport({
           busySamplingActive = false;
           armIdleDetection();
           if (!cameraControls.isGlobeViewportSamplerBusy()) {
+            runPendingPathLodRebuildAfterMotion();
             notifyCameraMotionIdleListeners();
           }
         }
@@ -1055,6 +1129,10 @@ export function GlobeViewport({
 
     return () => {
       cancelled = true;
+      if (pathLodStateRef.current.debounceTimerId !== null) {
+        window.clearTimeout(pathLodStateRef.current.debounceTimerId);
+        pathLodStateRef.current.debounceTimerId = null;
+      }
       cleanup?.stopViewportSampler();
       cleanup?.cancelLodRaf();
       if (cleanup) {

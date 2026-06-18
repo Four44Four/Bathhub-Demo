@@ -70,6 +70,12 @@ export const DebugCrosshair = {
 
 export const Globe = {    
     ANIMATE_ON_INIT_DURA: 1500,
+    /**
+     * Wall-clock time for user mouse-wheel smooth zoom to reach the target in log-range space
+     * (altitude-independent). Programmatic zoom uses {@link Globe.ANIMATE_ON_INIT_DURA} unless
+     * a duration is passed explicitly.
+     */
+    MOUSE_SCROLL_WHEEL_LERP_TIME_MS: 1000,
 
     WATER_COLOR: "#41457E",
     LAND_COLOR: "#323255",
@@ -78,11 +84,6 @@ export const Globe = {
     ROTATE_MIN: 0.00005,
     ZOOM_MIN: 0.00005,
     ZOOM_DECAY_FACTOR: 1.0,
-    /**
-     * Exponential pan/zoom animations snap to the target once the per-frame delta
-     * (meters) would fall below this — avoids a long tail of imperceptible motion.
-     */
-    EXP_PAN_ZOOM_FRAME_DELTA_FLOOR_M: 0.5,
 
     // Minimum clearance above the globe surface (meters). Smaller => you can zoom closer.
     MIN_SURFACE_CLEARANCE_M: 250,

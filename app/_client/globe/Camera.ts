@@ -240,13 +240,17 @@ export function installOrbitCameraControls({
     wheelZoomFromUserInput = false;
     if (typeof durationMs === "number" && Number.isFinite(durationMs) && durationMs > 0) {
       const durS = Math.max(0.001, durationMs / 1000);
-      wheelZoomLerpRate = OrbitCam.wheelZoomLerpRateForApprox99PercentInDuration(durS);
+      wheelZoomLerpRate = OrbitCam.wheelZoomLerpRateForFullDuration(durS);
+      wheelZoomAnimDurationMs = durationMs;
     } else {
-      wheelZoomLerpRate = defaultWheelZoomLerpRate;
+      wheelZoomLerpRate = defaultProgrammaticZoomLerpRate;
+      wheelZoomAnimDurationMs = GlobeConsts.ANIMATE_ON_INIT_DURA;
     }
     clearZoomAim();
     wheelZoomLastClient = null;
     wheelZoomTargetRange = targetRange;
+    wheelZoomAnimStartRangeM = range;
+    wheelZoomAnimStartMs = performance.now();
     startWheelZoomLoop();
   };
 
@@ -682,10 +686,16 @@ export function installOrbitCameraControls({
   let wheelZoomRaf: number | null = null;
   let wheelZoomLastT = 0;
   let wheelZoomLastPulseT = 0;
-  const defaultWheelZoomLerpRate = OrbitCam.defaultWheelZoomSmoothLerpRateMs(
+  let wheelZoomAnimStartMs = 0;
+  let wheelZoomAnimStartRangeM = range;
+  let wheelZoomAnimDurationMs: number = GlobeConsts.MOUSE_SCROLL_WHEEL_LERP_TIME_MS;
+  const userWheelZoomLerpRate = OrbitCam.defaultWheelZoomSmoothLerpRateMs(
+    GlobeConsts.MOUSE_SCROLL_WHEEL_LERP_TIME_MS,
+  );
+  const defaultProgrammaticZoomLerpRate = OrbitCam.defaultWheelZoomSmoothLerpRateMs(
     GlobeConsts.ANIMATE_ON_INIT_DURA,
   );
-  let wheelZoomLerpRate = defaultWheelZoomLerpRate; // higher = faster convergence
+  let wheelZoomLerpRate = userWheelZoomLerpRate; // higher = faster convergence
 
   // Programmatic orbit-rotation animation (used by `animateTo`). Rotates `theta`/`phi`
   // toward a target without touching `range`. Always cancellable by user input.
@@ -719,8 +729,6 @@ export function installOrbitCameraControls({
     const startT =
       typeof performance !== "undefined" ? performance.now() : Date.now();
     const dur = Math.max(1, durationMs);
-    let prevTheta = startTheta;
-    let prevPhi = startPhi;
 
     const tick = (now: number) => {
       const step = OrbitCam.orbitRotateAnimStep({
@@ -731,16 +739,10 @@ export function installOrbitCameraControls({
         startPhiRad: startPhi,
         targetThetaRad: targetTheta,
         targetPhiRad: targetPhi,
-        prevThetaRad: prevTheta,
-        prevPhiRad: prevPhi,
-        sphereRadiusM: radius,
-        frameDeltaFloorM: GlobeConsts.EXP_PAN_ZOOM_FRAME_DELTA_FLOOR_M,
         latEps: EPS,
       });
       theta = step.thetaRad;
       phi = step.phiRad;
-      prevTheta = step.thetaRad;
-      prevPhi = step.phiRad;
       applyOrbit();
       if (step.done) {
         rotateAnimRaf = null;
@@ -762,8 +764,10 @@ export function installOrbitCameraControls({
   };
 
   const startWheelZoomLoop = () => {
-    if (wheelZoomRaf != null) return;
-    wheelZoomLastT = performance.now();
+    const now = performance.now();
+    if (wheelZoomRaf == null) {
+      wheelZoomLastT = now;
+    }
 
     const tick = (tNow: number) => {
       const orbitRangeClamp = {
@@ -777,10 +781,12 @@ export function installOrbitCameraControls({
         tNowMs: tNow,
         wheelZoomLastTMs: wheelZoomLastT,
         rangeM: range,
+        zoomAnimStartRangeM: wheelZoomAnimStartRangeM,
         wheelZoomTargetRangeM: wheelZoomTargetRange,
         lerpRate: wheelZoomLerpRate,
         orbitRangeClamp,
-        frameDeltaFloorM: GlobeConsts.EXP_PAN_ZOOM_FRAME_DELTA_FLOOR_M,
+        zoomAnimStartMs: wheelZoomAnimStartMs,
+        zoomAnimDurationMs: wheelZoomAnimDurationMs,
         zoomAimStartRangeM: zoomAim?.startRange ?? null,
         wheelZoomLastPulseTMs: wheelZoomLastPulseT,
         hasWheelZoomLastClient: wheelZoomLastClient != null,
@@ -800,7 +806,7 @@ export function installOrbitCameraControls({
         }
         if (step.clearZoomAimIfNearStart) clearZoomAim();
         wheelZoomRaf = null;
-        if (step.resetDefaultLerpRate) wheelZoomLerpRate = defaultWheelZoomLerpRate;
+        if (step.resetDefaultLerpRate) wheelZoomLerpRate = userWheelZoomLerpRate;
         notifyCameraMotionSettledIfFullyIdle();
         return;
       }
@@ -822,7 +828,9 @@ export function installOrbitCameraControls({
       wheelZoomRaf = requestAnimationFrame(tick);
     };
 
-    wheelZoomRaf = requestAnimationFrame(tick);
+    if (wheelZoomRaf == null) {
+      wheelZoomRaf = requestAnimationFrame(tick);
+    }
   };
 
   const onContextMenu = (e: Event) => e.preventDefault();
@@ -1088,6 +1096,10 @@ export function installOrbitCameraControls({
     wheelZoomLastClient = { x: e.clientX, y: e.clientY };
     pulseZoomIndicator(e.clientX, e.clientY);
     wheelZoomLastPulseT = performance.now();
+    wheelZoomAnimStartRangeM = range;
+    wheelZoomAnimStartMs = performance.now();
+    wheelZoomAnimDurationMs = GlobeConsts.MOUSE_SCROLL_WHEEL_LERP_TIME_MS;
+    wheelZoomLerpRate = userWheelZoomLerpRate;
     if (appliedScale < 1) {
       ensureZoomAimForClientXY(e.clientX, e.clientY);
     }

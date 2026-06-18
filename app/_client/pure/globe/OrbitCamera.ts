@@ -59,42 +59,6 @@ export function orbitLatLonSurfaceDistanceMeters(args: {
   return 2 * args.sphereRadiusM * Math.asin(Math.min(1, Math.sqrt(haversine)));
 }
 
-/**
- * Tail snap for exponential zoom: finish when within the floor of the target, or when
- * a positive per-frame step would be imperceptible. Zero delta at loop start (dt = 0)
- * must not trigger snap.
- */
-export function shouldSnapExpZoomToTarget(args: {
-  frameDeltaM: number;
-  remainingToTargetM: number;
-  floorM: number;
-}): boolean {
-  return (
-    args.remainingToTargetM < args.floorM ||
-    (args.frameDeltaM > 0 && args.frameDeltaM < args.floorM)
-  );
-}
-
-/**
- * Tail snap for eased pan (`animateTo`): smoothstep ease-in also produces sub-floor
- * frame deltas while still far from the target, so frame-delta snap requires remaining
- * to be near the target as well.
- */
-export function shouldSnapExpPanToTarget(args: {
-  frameDeltaM: number;
-  remainingToTargetM: number;
-  floorM: number;
-}): boolean {
-  if (args.remainingToTargetM < args.floorM) {
-    return true;
-  }
-  return (
-    args.frameDeltaM > 0 &&
-    args.frameDeltaM < args.floorM &&
-    args.remainingToTargetM < args.floorM * 2
-  );
-}
-
 /** One frame of the programmatic rotate-only animation in `Camera.animateTo`. */
 export function orbitRotateAnimStep(args: {
   nowMs: number;
@@ -104,10 +68,6 @@ export function orbitRotateAnimStep(args: {
   startPhiRad: number;
   targetThetaRad: number;
   targetPhiRad: number;
-  prevThetaRad: number;
-  prevPhiRad: number;
-  sphereRadiusM: number;
-  frameDeltaFloorM: number;
   latEps: number;
 }): { thetaRad: number; phiRad: number; done: boolean } {
   const targetPhi = clampOrbitLatitudeRad(args.targetPhiRad, args.latEps);
@@ -127,31 +87,6 @@ export function orbitRotateAnimStep(args: {
     linearProgress01: u,
     latEps: args.latEps,
   });
-
-  const frameDeltaM = orbitLatLonSurfaceDistanceMeters({
-    sphereRadiusM: args.sphereRadiusM,
-    fromLatRad: args.prevPhiRad,
-    fromLonRad: args.prevThetaRad,
-    toLatRad: sample.phiRad,
-    toLonRad: sample.thetaRad,
-  });
-  const remainingM = orbitLatLonSurfaceDistanceMeters({
-    sphereRadiusM: args.sphereRadiusM,
-    fromLatRad: sample.phiRad,
-    fromLonRad: sample.thetaRad,
-    toLatRad: targetPhi,
-    toLonRad: args.targetThetaRad,
-  });
-
-  if (
-    shouldSnapExpPanToTarget({
-      frameDeltaM,
-      remainingToTargetM: remainingM,
-      floorM: args.frameDeltaFloorM,
-    })
-  ) {
-    return { thetaRad: args.targetThetaRad, phiRad: targetPhi, done: true };
-  }
 
   return { thetaRad: sample.thetaRad, phiRad: sample.phiRad, done: false };
 }
@@ -414,6 +349,24 @@ export function wheelZoomExponentialBlendAlpha(
   return 1 - Math.exp(-dtSeconds * lerpRate);
 }
 
+/**
+ * Interpolate orbit center distance in log-space: `range * (target/range)^α`.
+ * With exponential `α` per frame, convergence time is ~independent of altitude for a given
+ * multiplicative wheel target (same as {@link linearSymmetricWheelZoomScale}).
+ */
+export function wheelSmoothZoomLogSpaceLerpM(
+  rangeM: number,
+  targetRangeM: number,
+  alpha01: number,
+): number {
+  if (alpha01 <= 0) return rangeM;
+  if (alpha01 >= 1) return targetRangeM;
+  const r = Math.max(1e-6, rangeM);
+  const t = Math.max(1e-6, targetRangeM);
+  if (Math.abs(t - r) < 1e-9) return r;
+  return r * Math.pow(t / r, alpha01);
+}
+
 /** Same dt cap as `Camera.ts` wheel RAF: seconds since last tick, floored at 0, capped at 50ms. */
 export function wheelZoomLoopDtSecondsClamped(
   tNowMs: number,
@@ -423,13 +376,43 @@ export function wheelZoomLoopDtSecondsClamped(
 }
 
 /**
+ * λ in the normalized exponential ease `(1 - exp(-λu)) / (1 - exp(-λ))` used for wheel/programmatic
+ * zoom. Same constant as the legacy per-frame exponential rate (`ln(100)`).
+ */
+export const WHEEL_ZOOM_LERP_LAMBDA = 4.605170186;
+
+/**
+ * Normalized exponential ease: 0 at u=0, 1 at u=1, same character as legacy per-frame exponential
+ * zoom but reaches the target exactly at the configured duration.
+ */
+export function normalizedExpPanZoomEase01(linearProgress01: number, lambda: number): number {
+  const u = Utils.clamp(linearProgress01, 0, 1);
+  if (u <= 0) return 0;
+  if (u >= 1) return 1;
+  const denom = 1 - Math.exp(-lambda);
+  if (Math.abs(denom) < 1e-15) return u;
+  return (1 - Math.exp(-lambda * u)) / denom;
+}
+
+/** λ derived from the per-second lerp rate and session duration (see {@link WHEEL_ZOOM_LERP_LAMBDA}). */
+export function wheelZoomLerpLambdaFromRate(args: {
+  lerpRatePerSecond: number;
+  durationMs: number;
+}): number {
+  return args.lerpRatePerSecond * (Math.max(1, args.durationMs) / 1000);
+}
+
+/**
  * One frame of the exponential smooth-zoom RAF loop (wheel / programmatic zoom-to-init).
- * Side effects (`applyOrbit`, pulse UI) stay in `Camera.ts`.
+ * Range is lerped in log-space vs wall-clock progress so zoom finishes exactly at the configured
+ * duration (altitude-independent). Side effects (`applyOrbit`, pulse UI) stay in `Camera.ts`.
  */
 export function wheelSmoothZoomLerpTick(args: {
   tNowMs: number;
   wheelZoomLastTMs: number;
   rangeM: number;
+  /** Orbit center distance when the current smooth-zoom session started. */
+  zoomAnimStartRangeM: number;
   wheelZoomTargetRangeM: number;
   lerpRate: number;
   orbitRangeClamp: {
@@ -438,10 +421,11 @@ export function wheelSmoothZoomLerpTick(args: {
     maxOrbitCenterDistanceM: number;
   };
   /**
-   * When set, snap to target when the exponential per-frame range delta would be
-   * below this (meters). Pass `null` to use the tight programmatic stop threshold.
+   * Wall-clock start of the current smooth-zoom session (updated when the target changes).
    */
-  frameDeltaFloorM: number | null;
+  zoomAnimStartMs: number;
+  /** Configured duration for this smooth-zoom session (ms). */
+  zoomAnimDurationMs: number;
   /** `zoomAim.startRange` when a zoom-aim session exists, else `null`. */
   zoomAimStartRangeM: number | null;
   wheelZoomLastPulseTMs: number;
@@ -458,8 +442,15 @@ export function wheelSmoothZoomLerpTick(args: {
   wheelZoomLastPulseTMs: number;
 } {
   const wheelZoomLastTMs = args.tNowMs;
-  const dt = wheelZoomLoopDtSecondsClamped(args.tNowMs, args.wheelZoomLastTMs);
+  const durationMs = Math.max(1, args.zoomAnimDurationMs);
+  const elapsedMs = args.tNowMs - args.zoomAnimStartMs;
   const remaining = Math.abs(args.wheelZoomTargetRangeM - args.rangeM);
+  const clampedTargetRangeM = clampOrbitCenterDistanceMeters({
+    centerDistanceM: args.wheelZoomTargetRangeM,
+    sphereRadiusM: args.orbitRangeClamp.sphereRadiusM,
+    minSurfaceClearanceM: args.orbitRangeClamp.minSurfaceClearanceM,
+    maxOrbitCenterDistanceM: args.orbitRangeClamp.maxOrbitCenterDistanceM,
+  });
   const finishZoom = (rangeM: number) => ({
     wheelZoomLastTMs,
     rangeM,
@@ -476,31 +467,21 @@ export function wheelSmoothZoomLerpTick(args: {
     return finishZoom(args.rangeM);
   }
 
-  const alpha = wheelZoomExponentialBlendAlpha(dt, args.lerpRate);
-  const prevRange = args.rangeM;
-  const lerped = Utils.lerp(args.rangeM, args.wheelZoomTargetRangeM, alpha);
-
-  if (args.frameDeltaFloorM !== null && args.frameDeltaFloorM > 0) {
-    const frameDeltaM = Math.abs(lerped - args.rangeM);
-    if (
-      shouldSnapExpZoomToTarget({
-        frameDeltaM,
-        remainingToTargetM: remaining,
-        floorM: args.frameDeltaFloorM,
-      })
-    ) {
-      return finishZoom(
-        clampOrbitCenterDistanceMeters({
-          centerDistanceM: args.wheelZoomTargetRangeM,
-          sphereRadiusM: args.orbitRangeClamp.sphereRadiusM,
-          minSurfaceClearanceM: args.orbitRangeClamp.minSurfaceClearanceM,
-          maxOrbitCenterDistanceM: args.orbitRangeClamp.maxOrbitCenterDistanceM,
-        }),
-      );
-    }
-  } else if (remaining < 0.01) {
-    return finishZoom(args.rangeM);
+  if (elapsedMs >= durationMs) {
+    return finishZoom(clampedTargetRangeM);
   }
+
+  const lambda = wheelZoomLerpLambdaFromRate({
+    lerpRatePerSecond: args.lerpRate,
+    durationMs,
+  });
+  const alpha = normalizedExpPanZoomEase01(elapsedMs / durationMs, lambda);
+  const prevRange = args.rangeM;
+  const lerped = wheelSmoothZoomLogSpaceLerpM(
+    args.zoomAnimStartRangeM,
+    args.wheelZoomTargetRangeM,
+    alpha,
+  );
 
   const nextRangeM = clampOrbitCenterDistanceMeters({
     centerDistanceM: lerped,
@@ -528,20 +509,17 @@ export function wheelSmoothZoomLerpTick(args: {
   };
 }
 
-/** Rate such that `1 - exp(-rate * durationS) ≈ 0.99` (same constant as Camera.ts). */
-export function wheelZoomLerpRateForApprox99PercentInDuration(durationSeconds: number): number {
-  return 4.605170186 / Math.max(0.001, durationSeconds);
+/** Per-second lerp rate paired with {@link normalizedExpPanZoomEase01} for full-duration zoom. */
+export function wheelZoomLerpRateForFullDuration(durationSeconds: number): number {
+  return WHEEL_ZOOM_LERP_LAMBDA / Math.max(0.001, durationSeconds);
 }
 
 /**
- * Default exponential lerp rate for user wheel smooth-zoom. Matches geo-arrival programmatic
- * zoom for the same duration (e.g. `Globe.ANIMATE_ON_INIT_DURA`) so scroll-wheel zoom feels
- * the same whether the camera snapped or animated to the init target.
+ * Exponential log-space lerp rate for smooth wheel zoom: reaches 100% of the log-range delta in
+ * `durationMs`. Pair with {@link wheelSmoothZoomLogSpaceLerpM} and `Globe.MOUSE_SCROLL_WHEEL_LERP_TIME_MS`.
  */
 export function defaultWheelZoomSmoothLerpRateMs(durationMs: number): number {
-  return wheelZoomLerpRateForApprox99PercentInDuration(
-    Math.max(1, durationMs) / 1000,
-  );
+  return wheelZoomLerpRateForFullDuration(Math.max(1, durationMs) / 1000);
 }
 
 /** `exp(±L)` hits reciprocal scale bounds; clamping **raw** exponent to `[-L, L]` keeps `scale(δ)*scale(−δ)===1` (clamping `exp` output does not). */

@@ -1,5 +1,6 @@
 import * as OrbitCam from "../app/_client/pure/globe/OrbitCamera";
 import * as Utils from "../app/_client/Utils";
+import { Globe as GlobeConsts } from "../app/_client/ComponentConstants";
 
 describe("orbitCameraMath", () => {
     test("smoothstep endpoints", () => {
@@ -58,17 +59,33 @@ describe("orbitCameraMath", () => {
       expect(a.dPhi).toBe(0);
     });
   
-    test("wheelZoomLerpRateForApprox99PercentInDuration", () => {
-      const r = OrbitCam.wheelZoomLerpRateForApprox99PercentInDuration(1);
-      expect(r).toBeCloseTo(4.605170186, 5);
+    test("wheelZoomLerpRateForFullDuration", () => {
+      const r = OrbitCam.wheelZoomLerpRateForFullDuration(1);
+      expect(r).toBeCloseTo(OrbitCam.WHEEL_ZOOM_LERP_LAMBDA, 5);
     });
 
-    test("defaultWheelZoomSmoothLerpRateMs matches 99% rate for the reference duration", () => {
-      const ms = 1500;
+    test("defaultWheelZoomSmoothLerpRateMs matches full-duration rate for the reference duration", () => {
+      const ms = GlobeConsts.MOUSE_SCROLL_WHEEL_LERP_TIME_MS;
       expect(OrbitCam.defaultWheelZoomSmoothLerpRateMs(ms)).toBeCloseTo(
-        OrbitCam.wheelZoomLerpRateForApprox99PercentInDuration(ms / 1000),
+        OrbitCam.wheelZoomLerpRateForFullDuration(ms / 1000),
         10,
       );
+    });
+
+    test("normalizedExpPanZoomEase01: endpoints and u=1 reaches exactly 1", () => {
+      const lambda = OrbitCam.WHEEL_ZOOM_LERP_LAMBDA;
+      expect(OrbitCam.normalizedExpPanZoomEase01(0, lambda)).toBe(0);
+      expect(OrbitCam.normalizedExpPanZoomEase01(1, lambda)).toBe(1);
+      expect(OrbitCam.normalizedExpPanZoomEase01(0.5, lambda)).toBeGreaterThan(0.5);
+    });
+
+    test("wheelSmoothZoomLogSpaceLerpM: α=0/1 endpoints and multiplicative step", () => {
+      const range = 20_000_000;
+      const target = 10_000_000;
+      expect(OrbitCam.wheelSmoothZoomLogSpaceLerpM(range, target, 0)).toBe(range);
+      expect(OrbitCam.wheelSmoothZoomLogSpaceLerpM(range, target, 1)).toBe(target);
+      const half = OrbitCam.wheelSmoothZoomLogSpaceLerpM(range, target, 0.5);
+      expect(half).toBeCloseTo(Math.sqrt(range * target), 4);
     });
 
     test("orbitRangeMetersWheelDampingFromSurfacePathMidpoint: average clearance matches average center distance", () => {
@@ -333,27 +350,11 @@ describe("orbitCameraMath", () => {
       expect(sm.thetaRad).toBeCloseTo(2 * e, 8);
     });
 
-    test("shouldSnapExpZoomToTarget: zero frame delta at start does not snap", () => {
-      expect(
-        OrbitCam.shouldSnapExpZoomToTarget({
-          frameDeltaM: 0,
-          remainingToTargetM: 5_000_000,
-          floorM: 1.0,
-        }),
-      ).toBe(false);
-    });
+    const panAnimArgs = {
+      latEps: 1e-3,
+    };
 
-    test("shouldSnapExpPanToTarget: smoothstep ease-in sub-floor step does not snap far from target", () => {
-      expect(
-        OrbitCam.shouldSnapExpPanToTarget({
-          frameDeltaM: 0.4,
-          remainingToTargetM: 500_000,
-          floorM: 1.0,
-        }),
-      ).toBe(false);
-    });
-
-    test("orbitRotateAnimStep: first frame at u=0 does not snap when far from target", () => {
+    test("orbitRotateAnimStep: first frame at u=0 does not complete when far from target", () => {
       const out = OrbitCam.orbitRotateAnimStep({
         nowMs: 0,
         startMs: 0,
@@ -362,18 +363,14 @@ describe("orbitCameraMath", () => {
         startPhiRad: 0,
         targetThetaRad: OrbitCam.degreesToRadians(10),
         targetPhiRad: OrbitCam.degreesToRadians(5),
-        prevThetaRad: 0,
-        prevPhiRad: 0,
-        sphereRadiusM: 6_371_000,
-        frameDeltaFloorM: 1.0,
-        latEps: 1e-3,
+        ...panAnimArgs,
       });
       expect(out.done).toBe(false);
       expect(out.thetaRad).toBe(0);
       expect(out.phiRad).toBe(0);
     });
 
-    test("orbitRotateAnimStep: ease-in sub-floor step does not snap when far from target", () => {
+    test("orbitRotateAnimStep: early elapsed time does not complete when far from target", () => {
       const out = OrbitCam.orbitRotateAnimStep({
         nowMs: 16,
         startMs: 0,
@@ -382,20 +379,14 @@ describe("orbitCameraMath", () => {
         startPhiRad: 0,
         targetThetaRad: OrbitCam.degreesToRadians(10),
         targetPhiRad: OrbitCam.degreesToRadians(5),
-        prevThetaRad: 0,
-        prevPhiRad: 0,
-        sphereRadiusM: 6_371_000,
-        frameDeltaFloorM: 1.0,
-        latEps: 1e-3,
+        ...panAnimArgs,
       });
       expect(out.done).toBe(false);
     });
 
-    test("orbitRotateAnimStep: long pan advances gradually without early snap", () => {
+    test("orbitRotateAnimStep: long pan advances gradually without early completion", () => {
       const targetTheta = OrbitCam.degreesToRadians(45);
       const targetPhi = OrbitCam.degreesToRadians(30);
-      let prevTheta = 0;
-      let prevPhi = 0;
       let theta = 0;
       let phi = 0;
       let done = false;
@@ -408,18 +399,12 @@ describe("orbitCameraMath", () => {
           startPhiRad: 0,
           targetThetaRad: targetTheta,
           targetPhiRad: targetPhi,
-          prevThetaRad: prevTheta,
-          prevPhiRad: prevPhi,
-          sphereRadiusM: 6_371_000,
-          frameDeltaFloorM: 1.0,
-          latEps: 1e-3,
+          ...panAnimArgs,
         });
         theta = step.thetaRad;
         phi = step.phiRad;
         done = step.done;
         if (done) break;
-        prevTheta = theta;
-        prevPhi = phi;
       }
       expect(done).toBe(false);
       expect(Math.abs(theta)).toBeGreaterThan(0);
@@ -428,46 +413,23 @@ describe("orbitCameraMath", () => {
       expect(Math.abs(phi - targetPhi)).toBeGreaterThan(0.01);
     });
 
-    test("orbitRotateAnimStep: snaps pan to target when frame delta falls below floor", () => {
-      const radius = 6_371_000;
-      const floorM = 1.0;
+    test("orbitRotateAnimStep: reaches target at duration end", () => {
       const durationMs = 1500;
-      const startTheta = 0;
-      const startPhi = 0;
       const targetTheta = OrbitCam.degreesToRadians(10);
       const targetPhi = OrbitCam.degreesToRadians(5);
-      let prevTheta = startTheta;
-      let prevPhi = startPhi;
-      let lastStep = { thetaRad: startTheta, phiRad: startPhi, done: false };
-      for (let nowMs = 16; nowMs <= 5000; nowMs += 16) {
-        lastStep = OrbitCam.orbitRotateAnimStep({
-          nowMs,
-          startMs: 0,
-          durationMs,
-          startThetaRad: startTheta,
-          startPhiRad: startPhi,
-          targetThetaRad: targetTheta,
-          targetPhiRad: targetPhi,
-          prevThetaRad: prevTheta,
-          prevPhiRad: prevPhi,
-          sphereRadiusM: radius,
-          frameDeltaFloorM: floorM,
-          latEps: 1e-3,
-        });
-        prevTheta = lastStep.thetaRad;
-        prevPhi = lastStep.phiRad;
-        if (lastStep.done) break;
-      }
-      expect(lastStep.done).toBe(true);
-      expect(
-        OrbitCam.orbitLatLonSurfaceDistanceMeters({
-          sphereRadiusM: radius,
-          fromLatRad: lastStep.phiRad,
-          fromLonRad: lastStep.thetaRad,
-          toLatRad: targetPhi,
-          toLonRad: targetTheta,
-        }),
-      ).toBeLessThan(floorM + 1e-6);
+      const out = OrbitCam.orbitRotateAnimStep({
+        nowMs: durationMs,
+        startMs: 0,
+        durationMs,
+        startThetaRad: 0,
+        startPhiRad: 0,
+        targetThetaRad: targetTheta,
+        targetPhiRad: targetPhi,
+        ...panAnimArgs,
+      });
+      expect(out.done).toBe(true);
+      expect(out.thetaRad).toBeCloseTo(targetTheta, 8);
+      expect(out.phiRad).toBeCloseTo(targetPhi, 8);
     });
 
     test("orbitRotateAnimStep: completes at duration end", () => {
@@ -481,11 +443,7 @@ describe("orbitCameraMath", () => {
         startPhiRad: 0,
         targetThetaRad: targetTheta,
         targetPhiRad: targetPhi,
-        prevThetaRad: 0.9,
-        prevPhiRad: 0.3,
-        sphereRadiusM: 6_371_000,
-        frameDeltaFloorM: 1.0,
-        latEps: 1e-3,
+        ...panAnimArgs,
       });
       expect(out.done).toBe(true);
       expect(out.thetaRad).toBeCloseTo(targetTheta, 8);
@@ -587,15 +545,22 @@ describe("orbitCameraMath", () => {
       expect(OrbitCam.wheelZoomLoopDtSecondsClamped(2000, 1000)).toBe(0.05);
     });
 
-    test("wheelSmoothZoomLerpTick: zero-dt first frame does not snap when far from target", () => {
+    const wheelAnimArgs = {
+      zoomAnimStartMs: 0,
+      zoomAnimDurationMs: GlobeConsts.MOUSE_SCROLL_WHEEL_LERP_TIME_MS,
+    };
+
+    test("wheelSmoothZoomLerpTick: zero-dt first frame does not complete when far from target", () => {
       const out = OrbitCam.wheelSmoothZoomLerpTick({
         tNowMs: 1000,
         wheelZoomLastTMs: 1000,
         rangeM: 20_000_000,
+        zoomAnimStartRangeM: 20_000_000,
         wheelZoomTargetRangeM: 15_000_000,
         lerpRate: 18,
         orbitRangeClamp: earthClamp,
-        frameDeltaFloorM: 1.0,
+        ...wheelAnimArgs,
+        zoomAnimStartMs: 1000,
         zoomAimStartRangeM: null,
         wheelZoomLastPulseTMs: 0,
         hasWheelZoomLastClient: false,
@@ -604,41 +569,26 @@ describe("orbitCameraMath", () => {
       expect(out.rangeM).toBe(20_000_000);
     });
 
-    test("wheelSmoothZoomLerpTick: snaps to target when frame delta would fall below floor (null floor uses tight stop)", () => {
+    test("wheelSmoothZoomLerpTick: finishes at configured duration wall-clock", () => {
       const r = 15_000_000;
-      const t = r + 0.005;
+      const t = r + 5_000_000;
+      const durationMs = 10_000;
       const outTight = OrbitCam.wheelSmoothZoomLerpTick({
-        tNowMs: 5000,
-        wheelZoomLastTMs: 4000,
-        rangeM: r,
+        tNowMs: durationMs,
+        wheelZoomLastTMs: durationMs - 16,
+        rangeM: r + 100,
+        zoomAnimStartRangeM: r,
         wheelZoomTargetRangeM: t,
         lerpRate: 18,
         orbitRangeClamp: earthClamp,
-        frameDeltaFloorM: null,
+        zoomAnimStartMs: 0,
+        zoomAnimDurationMs: durationMs,
         zoomAimStartRangeM: null,
         wheelZoomLastPulseTMs: 0,
         hasWheelZoomLastClient: true,
       });
       expect(outTight.stopLoop).toBe(true);
-      expect(outTight.rangeM).toBe(r);
-
-      const floorM = 1.0;
-      const outSnap = OrbitCam.wheelSmoothZoomLerpTick({
-        tNowMs: 5000,
-        wheelZoomLastTMs: 4000,
-        rangeM: r,
-        wheelZoomTargetRangeM: t,
-        lerpRate: 18,
-        orbitRangeClamp: earthClamp,
-        frameDeltaFloorM: floorM,
-        zoomAimStartRangeM: null,
-        wheelZoomLastPulseTMs: 0,
-        hasWheelZoomLastClient: true,
-      });
-      expect(outSnap.stopLoop).toBe(true);
-      expect(outSnap.resetDefaultLerpRate).toBe(true);
-      expect(outSnap.rangeM).toBe(t);
-      expect(outSnap.clearZoomAimIfNearStart).toBe(false);
+      expect(outTight.rangeM).toBe(t);
     });
 
     test("wheelSmoothZoomLerpTick: clearZoomAimIfNearStart when zoom aim start is near current range", () => {
@@ -648,10 +598,12 @@ describe("orbitCameraMath", () => {
         tNowMs: 100,
         wheelZoomLastTMs: 0,
         rangeM: range,
+        zoomAnimStartRangeM: range,
         wheelZoomTargetRangeM: range,
         lerpRate: 18,
         orbitRangeClamp: earthClamp,
-        frameDeltaFloorM: null,
+        zoomAnimStartMs: 0,
+        zoomAnimDurationMs: 10_000,
         zoomAimStartRangeM: startRange,
         wheelZoomLastPulseTMs: 0,
         hasWheelZoomLastClient: false,
@@ -660,26 +612,39 @@ describe("orbitCameraMath", () => {
       expect(out.clearZoomAimIfNearStart).toBe(true);
     });
 
-    test("wheelSmoothZoomLerpTick: one step matches exponential lerp + orbit clamp", () => {
+    test("wheelSmoothZoomLerpTick: one step matches time-based log-space lerp + orbit clamp", () => {
       const rangeM = 15_000_000;
       const wheelZoomTargetRangeM = 14_000_000;
-      const t0 = 1000;
+      const zoomAnimStartMs = 1000;
       const t1 = 1160;
-      const dt = OrbitCam.wheelZoomLoopDtSecondsClamped(t1, t0);
+      const durationMs = 10_000;
       const lerpRate = 18;
-      const alpha = OrbitCam.wheelZoomExponentialBlendAlpha(dt, lerpRate);
+      const lambda = OrbitCam.wheelZoomLerpLambdaFromRate({
+        lerpRatePerSecond: lerpRate,
+        durationMs,
+      });
+      const alpha = OrbitCam.normalizedExpPanZoomEase01(
+        (t1 - zoomAnimStartMs) / durationMs,
+        lambda,
+      );
       const expected = OrbitCam.clampOrbitCenterDistanceMeters({
-        centerDistanceM: Utils.lerp(rangeM, wheelZoomTargetRangeM, alpha),
+        centerDistanceM: OrbitCam.wheelSmoothZoomLogSpaceLerpM(
+          rangeM,
+          wheelZoomTargetRangeM,
+          alpha,
+        ),
         ...earthClamp,
       });
       const out = OrbitCam.wheelSmoothZoomLerpTick({
         tNowMs: t1,
-        wheelZoomLastTMs: t0,
+        wheelZoomLastTMs: 1000,
         rangeM,
+        zoomAnimStartRangeM: rangeM,
         wheelZoomTargetRangeM,
         lerpRate,
         orbitRangeClamp: earthClamp,
-        frameDeltaFloorM: null,
+        zoomAnimStartMs,
+        zoomAnimDurationMs: durationMs,
         zoomAimStartRangeM: null,
         wheelZoomLastPulseTMs: 0,
         hasWheelZoomLastClient: true,
@@ -697,7 +662,8 @@ describe("orbitCameraMath", () => {
         wheelZoomTargetRangeM: 14_000_000,
         lerpRate: 18,
         orbitRangeClamp: clamp,
-        frameDeltaFloorM: null,
+        ...wheelAnimArgs,
+        zoomAnimStartRangeM: 16_000_000,
         zoomAimStartRangeM: null,
         wheelZoomLastPulseTMs: 0,
         hasWheelZoomLastClient: true,
@@ -712,7 +678,8 @@ describe("orbitCameraMath", () => {
         wheelZoomTargetRangeM: 14_000_000,
         lerpRate: 18,
         orbitRangeClamp: clamp,
-        frameDeltaFloorM: null,
+        ...wheelAnimArgs,
+        zoomAnimStartRangeM: 16_000_000,
         zoomAimStartRangeM: null,
         wheelZoomLastPulseTMs: 200,
         hasWheelZoomLastClient: true,
@@ -727,7 +694,8 @@ describe("orbitCameraMath", () => {
         wheelZoomTargetRangeM: 16_000_000,
         lerpRate: 18,
         orbitRangeClamp: clamp,
-        frameDeltaFloorM: null,
+        ...wheelAnimArgs,
+        zoomAnimStartRangeM: 14_000_000,
         zoomAimStartRangeM: null,
         wheelZoomLastPulseTMs: 0,
         hasWheelZoomLastClient: true,
@@ -735,24 +703,27 @@ describe("orbitCameraMath", () => {
       expect(outStep.shouldPulseZoomIndicator).toBe(false);
     });
 
-    test("wheelSmoothZoomLerpTick: simulating RAF steps approaches target with exp pan/zoom snap floor", () => {
+    test("wheelSmoothZoomLerpTick: finishes at configured duration wall-clock over full loop", () => {
       let rangeM = 20_000_000;
       const target = 15_000_000;
       let lastT = 0;
       let pulseT = 0;
       const lerpRate = 18;
       const stepMs = 16;
-      const floorM = 1.0;
+      const durationMs = GlobeConsts.MOUSE_SCROLL_WHEEL_LERP_TIME_MS;
+      let stopAt = 0;
       for (let i = 0; i < 400; i++) {
         const tNow = (i + 1) * stepMs;
         const out = OrbitCam.wheelSmoothZoomLerpTick({
           tNowMs: tNow,
           wheelZoomLastTMs: lastT,
           rangeM,
+          zoomAnimStartRangeM: 20_000_000,
           wheelZoomTargetRangeM: target,
           lerpRate,
           orbitRangeClamp: earthClamp,
-          frameDeltaFloorM: floorM,
+          zoomAnimStartMs: 0,
+          zoomAnimDurationMs: durationMs,
           zoomAimStartRangeM: null,
           wheelZoomLastPulseTMs: pulseT,
           hasWheelZoomLastClient: false,
@@ -760,8 +731,63 @@ describe("orbitCameraMath", () => {
         lastT = out.wheelZoomLastTMs;
         pulseT = out.wheelZoomLastPulseTMs;
         rangeM = out.rangeM;
-        if (out.stopLoop) break;
+        if (out.stopLoop) {
+          stopAt = tNow;
+          break;
+        }
       }
-      expect(Math.abs(rangeM - target)).toBeLessThan(floorM);
+      expect(stopAt).toBeGreaterThanOrEqual(durationMs);
+      expect(stopAt).toBeLessThanOrEqual(durationMs + stepMs);
+      expect(rangeM).toBe(target);
+    });
+
+    test("wheelSmoothZoomLerpTick: log-space lerp reaches target in similar time at low and high altitude", () => {
+      const lerpRate = OrbitCam.defaultWheelZoomSmoothLerpRateMs(
+        GlobeConsts.MOUSE_SCROLL_WHEEL_LERP_TIME_MS,
+      );
+      const targetMs = GlobeConsts.MOUSE_SCROLL_WHEEL_LERP_TIME_MS;
+      const scale = 0.9;
+      const lowStart = 8_000_000;
+      const highStart = 20_000_000;
+      const lowTarget = lowStart * scale;
+      const highTarget = highStart * scale;
+      expect(lowTarget).toBeGreaterThan(earthClamp.sphereRadiusM + earthClamp.minSurfaceClearanceM);
+      const stepMs = 16;
+
+      const timeToStop = (start: number, target: number) => {
+        let rangeM = start;
+        let lastT = 0;
+        for (let i = 0; i < 500; i++) {
+          const tNow = (i + 1) * stepMs;
+          const out = OrbitCam.wheelSmoothZoomLerpTick({
+            tNowMs: tNow,
+            wheelZoomLastTMs: lastT,
+            rangeM,
+            zoomAnimStartRangeM: start,
+            wheelZoomTargetRangeM: target,
+            lerpRate,
+            orbitRangeClamp: earthClamp,
+            zoomAnimStartMs: 0,
+            zoomAnimDurationMs: targetMs,
+            zoomAimStartRangeM: null,
+            wheelZoomLastPulseTMs: 0,
+            hasWheelZoomLastClient: false,
+          });
+          lastT = out.wheelZoomLastTMs;
+          rangeM = out.rangeM;
+          if (out.stopLoop) {
+            return tNow;
+          }
+        }
+        return Number.POSITIVE_INFINITY;
+      };
+
+      const lowMs = timeToStop(lowStart, lowTarget);
+      const highMs = timeToStop(highStart, highTarget);
+      expect(lowMs).toBeGreaterThanOrEqual(targetMs);
+      expect(lowMs).toBeLessThanOrEqual(targetMs + stepMs);
+      expect(highMs).toBeGreaterThanOrEqual(targetMs);
+      expect(highMs).toBeLessThanOrEqual(targetMs + stepMs);
+      expect(lowMs).toBe(highMs);
     });
 });

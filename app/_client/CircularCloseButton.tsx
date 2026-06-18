@@ -2,41 +2,47 @@
 
 import { useState, type CSSProperties } from "react";
 
-import { BtnInteractAnim, Shared } from "../ComponentConstants";
-import { TextWeight } from "../Utils";
 import {
-  USER_SETTINGS_CLOSE_BTN_FILL,
-  USER_SETTINGS_CLOSE_BTN_INTERACT_FILL,
-  USER_SETTINGS_CLOSE_BTN_SIZE_PX,
-  USER_SETTINGS_CLOSE_BTN_TEXT,
-} from "./UserSettingsConstants";
+  BtnInteractAnim,
+  CircularCloseButton as CircularCloseButtonConsts,
+  Shared,
+} from "./ComponentConstants";
+import { circularCloseButtonFontSizePx } from "./pure/CircularCloseButtonLayout";
+import { TextWeight } from "./Utils";
 
-export type SettingsCloseButtonProps = {
+export type CircularCloseButtonProps = {
+  ariaLabel: string;
   onClick: () => void;
+  /** Outer width/height in CSS px. Defaults to {@link CircularCloseButtonConsts.SIZE_PX}. */
+  sizePx?: number;
 };
 
-export function SettingsCloseButton({ onClick }: SettingsCloseButtonProps) {
+export function CircularCloseButton({
+  ariaLabel,
+  onClick,
+  sizePx = CircularCloseButtonConsts.SIZE_PX,
+}: CircularCloseButtonProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [isPressed, setIsPressed] = useState(false);
   const isHighlighted = isHovered || isPressed;
   const interactTransition = `${BtnInteractAnim.BTN_INTERACT_DURA_MS}ms ease`;
 
   const buttonStyle: CSSProperties = {
-    width: USER_SETTINGS_CLOSE_BTN_SIZE_PX,
-    height: USER_SETTINGS_CLOSE_BTN_SIZE_PX,
+    width: sizePx,
+    height: sizePx,
     borderRadius: "50%",
     border: "none",
     backgroundColor: isHighlighted
-      ? USER_SETTINGS_CLOSE_BTN_INTERACT_FILL
-      : USER_SETTINGS_CLOSE_BTN_FILL,
-    color: USER_SETTINGS_CLOSE_BTN_TEXT,
-    fontSize: 22,
+      ? CircularCloseButtonConsts.INTERACT_FILL
+      : CircularCloseButtonConsts.FILL,
+    color: CircularCloseButtonConsts.TEXT_COLOR,
+    fontSize: circularCloseButtonFontSizePx(sizePx),
     lineHeight: 1,
     cursor: "pointer",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    boxShadow: "0 2px 8px rgba(18, 18, 47, 0.25)",
+    boxShadow: CircularCloseButtonConsts.BOX_SHADOW,
     zIndex: 1,
     transition: `background-color ${interactTransition}`,
     padding: 0,
@@ -52,7 +58,7 @@ export function SettingsCloseButton({ onClick }: SettingsCloseButtonProps) {
   return (
     <button
       type="button"
-      aria-label="Close settings"
+      aria-label={ariaLabel}
       onClick={onClick}
       className={TextWeight.BOLD}
       style={buttonStyle}

@@ -15,7 +15,7 @@ import { useAlertSystem } from "../viewport2d/AlertSystem";
 import { BooleanSettingRow } from "./BooleanSettingRow";
 import { NumberSliderSettingRow } from "./NumberSliderSettingRow";
 import { SettingsBackButton } from "./SettingsBackButton";
-import { SettingsCloseButton } from "./SettingsCloseButton";
+import { CircularCloseButton } from "../CircularCloseButton";
 import { SettingsHeader } from "./SettingsHeader";
 import { SettingsSaveChangesButton } from "./SettingsSaveChangesButton";
 import { SubsettingsRow } from "./SubsettingsRow";
@@ -247,7 +247,10 @@ export function UserSettingsOverlay() {
         }}
       >
         <div style={{ pointerEvents: "auto" }}>
-          <SettingsCloseButton onClick={handleClose} />
+          <CircularCloseButton
+            ariaLabel="Close settings"
+            onClick={handleClose}
+          />
         </div>
         {showBackButton ? (
           <div style={{ pointerEvents: "auto" }}>

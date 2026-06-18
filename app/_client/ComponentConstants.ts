@@ -26,6 +26,16 @@ export const BtnInteractAnim = {
     BTN_INTERACT_DURA_MS: 500,
 } as const;
 
+/** Circular dismiss control (user settings close, exit find-bathroom mode, etc.). */
+export const CircularCloseButton = {
+    SIZE_PX: 44,
+    FILL: Shared.NEGATIVE_COLOR,
+    INTERACT_FILL: "#C85A75",
+    TEXT_COLOR: "#FFFFFF",
+    FONT_SIZE_PX: 22,
+    BOX_SHADOW: "0 2px 8px rgba(18, 18, 47, 0.25)",
+} as const;
+
 export const ClickedIndicator = {
     // Screen-space sizing (in CSS pixels). This stays constant regardless of zoom.
     SIZE: 50,
@@ -194,8 +204,6 @@ export const BathroomLocalDB = {
 } as const;
 
 export const NearestBathroom = {
-    /** Icon path for the exit-find-bathroom circular control (spec: X). */
-    EXIT_FIND_BATHROOM_ICON_PATH: "/cross.svg",
     /** Time between every check for if the client's location has changed before rerendering path (milliseconds). */
     PATH_POLL_INTERVAL_MS: 1_000,
     /** Server request timeout when finding the nearest bathroom (milliseconds). */

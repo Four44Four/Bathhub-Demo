@@ -1,6 +1,4 @@
 # Sprint 2 (basic backend)
- - Change the X and checkmark buttons in viewport2d to have white icon color
- - Change the scale of the X in the Exit find nearest bathroom mode to match the X in the Exit user settings page button
  - Fix bottleneck behind path LOD updates
  - Add a schema snapshot system for sending default user settings DB to client if they didnt have a DB prior
  - (for all Bathroom CRUD) Add REMOTE rate limits on all Bathroom DB operations + the pathfinding operation

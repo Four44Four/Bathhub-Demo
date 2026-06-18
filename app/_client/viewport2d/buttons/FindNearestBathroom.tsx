@@ -29,6 +29,18 @@ export function findNearestBathroomButtonBottomPx(
   return collapsedMenuHeightPx + offsetAboveMenuPx;
 }
 
+export function findNearestBathroomButtonOuterSidePx(
+  btnImgSizePx: number = BTN_IMG_SIZE_PX,
+  circularPaddingPx: number = BTN_CIRCULAR_PADDING_PX,
+  outlineThicknessPx: number = ButtonConsts.LINE_THICKNESS,
+): number {
+  return viewportCircularButtonOuterSidePx(
+    btnImgSizePx,
+    circularPaddingPx,
+    outlineThicknessPx,
+  );
+}
+
 export type FindNearestBathroomProps = {
   btnOffsetPx?: number;
   btnImgSizePx?: number;
@@ -50,7 +62,7 @@ export function FindNearestBathroom({
     btnOffsetPx,
   );
   const outlineThicknessPx = ButtonConsts.LINE_THICKNESS;
-  const outerSidePx = viewportCircularButtonOuterSidePx(
+  const outerSidePx = findNearestBathroomButtonOuterSidePx(
     btnImgSizePx,
     BTN_CIRCULAR_PADDING_PX,
     outlineThicknessPx,

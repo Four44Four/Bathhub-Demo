@@ -4,6 +4,11 @@ import type { RefObject } from "react";
 import { Globe as GlobeConsts } from "../ComponentConstants";
 import * as Utils from "../Utils";
 import * as OrbitCam from "../pure/globe/OrbitCamera";
+import { isGlobeViewportPointerIdle } from "../pure/globe/GlobeViewportPointerIdle";
+import {
+  isGlobeViewportSamplerBusy as isGlobeViewportSamplerBusyState,
+  shouldContinueGlobeViewportCenterSampling,
+} from "../pure/globe/GlobeViewportSamplerState";
 
 export type InstallOrbitCameraOptions = {
   Cesium: typeof import("cesium");
@@ -36,6 +41,11 @@ export type InstallOrbitCameraOptions = {
    * the camera is already at the target).
    */
   onOrbitRotateAnimationEnd?: () => void;
+  /**
+   * Fired when all sampler-relevant camera motion has stopped (user input and programmatic
+   * rotate/zoom animations). Not fired while any motion is still in flight.
+   */
+  onCameraMotionSettled?: () => void;
 };
 
 export type InstalledOrbitCameraControls = {
@@ -43,9 +53,22 @@ export type InstalledOrbitCameraControls = {
   destroy: () => void;
   /**
    * True while the user is dragging/pinching, or a wheel-smooth-zoom / programmatic
-   * rotate-or-zoom animation is in flight. Used to throttle viewport-center sampling.
+   * rotate-or-zoom animation is in flight.
    */
   isGlobeViewportSamplerBusy: () => boolean;
+  /** True while at least one pointer is currently down on the globe canvas. */
+  isGlobePointerInputActive: () => boolean;
+  /**
+   * True when no pointers are down and {@link GlobeConsts.VIEWPORT_DETECT_IDLE_MS}
+   * has elapsed since the last pointer or wheel input.
+   */
+  isGlobeViewportPointerIdle: (idleThresholdMs: number, nowMs?: number) => boolean;
+  /**
+   * True while viewport-center sampling should continue: active user pointer input, or
+   * user wheel-smoothing after the last wheel tick. Programmatic recenter/geolocation
+   * animations do not count (see GlobeViewport spec).
+   */
+  shouldContinueViewportCenterSampling: () => boolean;
   /**
    * Smoothly rotate the orbit camera so the surface point at (latDeg, longDeg)
    * is centered. Does NOT change zoom (range). Any user input (drag/wheel/pinch)
@@ -96,12 +119,18 @@ export function installOrbitCameraControls({
   onGlobeViewportInteraction,
   isUserGlobeOrbitInputAllowed,
   onOrbitRotateAnimationEnd,
+  onCameraMotionSettled,
 }: InstallOrbitCameraOptions): InstalledOrbitCameraControls {
   const EPS = 1e-3;
 
   const allowUserOrbitInput = isUserGlobeOrbitInputAllowed ?? (() => true);
 
-  const notifyGlobeViewportInteraction = () => {
+  let lastPointerInputMs =
+    typeof performance !== "undefined" ? performance.now() : Date.now();
+
+  const recordPointerInput = () => {
+    lastPointerInputMs =
+      typeof performance !== "undefined" ? performance.now() : Date.now();
     try {
       onGlobeViewportInteraction?.();
     } catch {
@@ -180,7 +209,11 @@ export function installOrbitCameraControls({
         viewer.scene.screenSpaceCameraController.maximumZoomDistance ?? radius * 20.0,
     });
 
+  /** Distinguishes user wheel smoothing from programmatic zoom animations (same RAF loop). */
+  let wheelZoomFromUserInput = false;
+
   const animateZoomToRange = (targetRange: number, durationMs?: number) => {
+    wheelZoomFromUserInput = false;
     if (typeof durationMs === "number" && Number.isFinite(durationMs) && durationMs > 0) {
       const durS = Math.max(0.001, durationMs / 1000);
       wheelZoomLerpRate = OrbitCam.wheelZoomLerpRateForApprox99PercentInDuration(durS);
@@ -473,7 +506,7 @@ export function installOrbitCameraControls({
   cesiumGestureHandler.setInputAction(
     (e: { position1: { x: number; y: number }; position2: { x: number; y: number } }) => {
       if (!allowUserOrbitInput()) return;
-      notifyGlobeViewportInteraction();
+      recordPointerInput();
       isPinching = true;
       const mid = OrbitCam.screenMidpoint2D(e.position1, e.position2);
       const midClient = canvasToClient(mid);
@@ -653,6 +686,7 @@ export function installOrbitCameraControls({
 
     if (Math.abs(dTheta) < 1e-6 && Math.abs(dPhi) < 1e-6) {
       onOrbitRotateAnimationEnd?.();
+      notifyCameraMotionSettledIfFullyIdle();
       return;
     }
 
@@ -678,6 +712,7 @@ export function installOrbitCameraControls({
       } else {
         rotateAnimRaf = null;
         onOrbitRotateAnimationEnd?.();
+        notifyCameraMotionSettledIfFullyIdle();
       }
     };
     rotateAnimRaf = requestAnimationFrame(tick);
@@ -720,6 +755,7 @@ export function installOrbitCameraControls({
         if (step.clearZoomAimIfNearStart) clearZoomAim();
         wheelZoomRaf = null;
         if (step.resetDefaultLerpRate) wheelZoomLerpRate = defaultWheelZoomLerpRate;
+        notifyCameraMotionSettledIfFullyIdle();
         return;
       }
 
@@ -751,7 +787,7 @@ export function installOrbitCameraControls({
     // Any user touch/click cancels a programmatic rotation animation.
     cancelRotateAnim();
 
-    notifyGlobeViewportInteraction();
+    recordPointerInput();
 
     try {
       canvas.setPointerCapture(e.pointerId);
@@ -937,6 +973,7 @@ export function installOrbitCameraControls({
     }
 
     if (pointers.size === 0) {
+      recordPointerInput();
       if (mode === "pinchZoom" || mode === "zoomDrag") clearZoomAim();
       mode = "none";
       endPinchZoomSession();
@@ -971,7 +1008,8 @@ export function installOrbitCameraControls({
     // Any user wheel input cancels a programmatic rotation animation.
     cancelRotateAnim();
 
-    notifyGlobeViewportInteraction();
+    wheelZoomFromUserInput = true;
+    recordPointerInput();
 
     const minRange = getMinRange();
     const maxRange =
@@ -1015,11 +1053,55 @@ export function installOrbitCameraControls({
 
   applyOrbit();
 
+  const notifyCameraMotionSettledIfFullyIdle = () => {
+    if (
+      isGlobeViewportSamplerBusyState({
+        pointersDownCount: pointers.size,
+        wheelZoomActive: wheelZoomRaf !== null,
+        rotateAnimActive: rotateAnimRaf !== null,
+      })
+    ) {
+      return;
+    }
+    try {
+      onCameraMotionSettled?.();
+    } catch {
+      // ignore third-party hook failures
+    }
+  };
+
   const isGlobeViewportSamplerBusy = () =>
-    pointers.size > 0 || wheelZoomRaf !== null || rotateAnimRaf !== null;
+    isGlobeViewportSamplerBusyState({
+      pointersDownCount: pointers.size,
+      wheelZoomActive: wheelZoomRaf !== null,
+      rotateAnimActive: rotateAnimRaf !== null,
+    });
+
+  const isGlobePointerInputActive = () => pointers.size > 0;
+
+  const isGlobeViewportPointerIdleFn = (idleThresholdMs: number, nowMs?: number) => {
+    const now =
+      nowMs ??
+      (typeof performance !== "undefined" ? performance.now() : Date.now());
+    return isGlobeViewportPointerIdle({
+      pointersDownCount: pointers.size,
+      msSinceLastPointerInput: now - lastPointerInputMs,
+      idleThresholdMs,
+    });
+  };
+
+  const shouldContinueViewportCenterSampling = () =>
+    shouldContinueGlobeViewportCenterSampling({
+      pointersDownCount: pointers.size,
+      wheelZoomActive: wheelZoomRaf !== null,
+      wheelZoomFromUserInput,
+    });
 
   return {
     isGlobeViewportSamplerBusy,
+    isGlobePointerInputActive,
+    isGlobeViewportPointerIdle: isGlobeViewportPointerIdleFn,
+    shouldContinueViewportCenterSampling,
     animateTo,
     snapTo,
     animateZoomToInitTarget: (durationMs?: number) => {

@@ -65,7 +65,7 @@ Actions after interacting with Find bathroom button:
           - (re)Render the path from the client to the target bathroom with the path data
              - The rendered path will be an anti-aliased line on the Globe with several gradient, shader-based rendering effect options
              - Sharp corners should be smoothed out
-             - At different zoom levels when the client is determined to be idle:
+             - At different zoom levels when the client is determined to be (see specifications/GlobeViewport.txt for definition of "idle"):
                 - The geometry of the line will be updated so that the points will not be within a specified amount of pixels within each other on screen space coordinates
                 - It should be simplified and render the line using less points at distant levels of zoom
                 - It should be detailed and render the line using more points at close levels of zoom

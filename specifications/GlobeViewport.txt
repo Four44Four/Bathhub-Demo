@@ -1,4 +1,6 @@
  - Globe can be rotated/panned by dragging left click, dragging 1 finger across screen, or dragging 2 fingers across screen
+ - User is determined to be idle when there have been no mouse or pointer inputs for a specified duration of time
+    - Globe animations (such as when Recentering) will not invalidate the idle state, only user input
  - Camera facing Globe can be brought closer to Globe's surface by scrolling mouse wheel forward, dragging right click up, or pinching in with 2 fingers
     - Doing those interactions in the opposite direction will bring the Camera farther from the Globe's surface
  - When using 2 fingers on the Globe, panning and zooming can happen simultaneously
@@ -16,7 +18,7 @@
  - With a specified delay, whenever the user is detected to be rotating the Globe or zooming:
     - Repeatedly calculate the 3D point on the Globe that is directly on the GlobeViewport's center
     - Cache this calculated 3D point
-    - If the user stops rotating the Globe or zooming after a specified timeout duration, stop calculating it
+    - When the user is idle: stop calculating it
 Viewport2d:
  - 2D UI at static positions overlayed on the Globe viewport
  - Elements:

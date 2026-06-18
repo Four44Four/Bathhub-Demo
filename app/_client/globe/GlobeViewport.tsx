@@ -32,7 +32,7 @@ import {
 } from "../pure/globe/ViewportSurfacePick";
 import { useSwipeMenuBlocksViewport } from "../swipeup/SwipeMenuInteraction";
 
-/** Set to true once `GLOBE_VIEWPORT_DETECT_IDLE_MS` elapses without move/zoom activity; cleared when activity resumes. */
+/** Set to true once `VIEWPORT_DETECT_IDLE_MS` elapses without mouse or pointer input; cleared when input resumes. */
 let isClientIdle = false;
 
 type ViewportChangeListener = () => void;
@@ -313,8 +313,10 @@ export function GlobeViewport({
     [],
   );
   const requestViewportResyncRef = useRef<(() => void) | null>(null);
-  /** Arms busy viewport sampling so programmatic camera motion can reach idle. */
+  /** Arms repeated viewport-center sampling while the user rotates or zooms. */
   const ensureBusySamplingRef = useRef<(() => void) | null>(null);
+  /** Restarts the pointer-idle countdown after mouse/pointer/wheel input. */
+  const armIdleDetectionRef = useRef<(() => void) | null>(null);
   const [mapMarkerStaticOverlay, setMapMarkerStaticOverlay] = useState(true);
   /**
    * Live MapMarker handle (replaced when the viewer reinits). The imperative
@@ -428,9 +430,6 @@ export function GlobeViewport({
         cameraControlsRef.current?.isGlobeViewportSamplerBusy() ?? false,
       subscribeCameraMotionIdle: (listener) => {
         cameraMotionIdleListeners.add(listener);
-        if (cameraControlsRef.current?.isGlobeViewportSamplerBusy()) {
-          ensureBusySamplingRef.current?.();
-        }
         return () => {
           cameraMotionIdleListeners.delete(listener);
         };
@@ -712,6 +711,8 @@ export function GlobeViewport({
       // Center the camera on the requested init lat/long.
       const radius = ellipsoid.maximumRadius;
       const viewportSamplerWakeRef: { ensureBusy?: () => void } = {};
+      const viewportSamplerIdleCallbacks: { armIdleDetection?: () => void } = {};
+      const cameraMotionSettledRef: { run?: () => void } = {};
       const tickGeoArrivalLock = () => {
         const nowMs = typeof performance !== "undefined" ? performance.now() : Date.now();
         geoArrivalLockStateRef.current = GeoArrival.reduceGeoArrivalLockForTick(
@@ -739,7 +740,11 @@ export function GlobeViewport({
         containerRef,
         zoomIndicatorRootRef,
         onZoomIndicatorPulse,
-        onGlobeViewportInteraction: () => viewportSamplerWakeRef.ensureBusy?.(),
+        onGlobeViewportInteraction: () => {
+          isClientIdle = false;
+          viewportSamplerIdleCallbacks.armIdleDetection?.();
+          viewportSamplerWakeRef.ensureBusy?.();
+        },
         onClickLatLonDegrees: (lat, lon) => {
           const logString = `Lat: ${lat}, Lon: ${lon}`;
           ServerDebug.log(logString);
@@ -751,52 +756,13 @@ export function GlobeViewport({
           tickGeoArrivalLock();
           return GeoArrival.isGlobeOrbitUserInputAllowed(geoArrivalLockStateRef.current);
         },
+        onCameraMotionSettled: () => {
+          cameraMotionSettledRef.run?.();
+        },
       });
 
-      // Publish the controls for the imperative `animateTo` handle. If the
-      // parent already requested an animation while we were initializing
-      // (e.g. geolocation resolved faster than Cesium loaded), replay it now.
+      // Publish the controls for the imperative handle (pending animations replayed below).
       cameraControlsRef.current = cameraControls;
-      const pending = pendingAnimateToRef.current;
-      if (pending) {
-        pendingAnimateToRef.current = null;
-        cameraControls.animateTo(pending.lat, pending.long, pending.durationMs);
-      }
-      const pendingSnap = pendingSnapToRef.current;
-      if (pendingSnap) {
-        pendingSnapToRef.current = null;
-        cameraControls.snapTo(pendingSnap.lat, pendingSnap.long);
-      }
-      const pendingZoom = pendingZoomToInitRef.current;
-      if (pendingZoom) {
-        pendingZoomToInitRef.current = null;
-        if (pendingZoom.snap) cameraControls.snapZoomToInitTarget();
-        else cameraControls.animateZoomToInitTarget(pendingZoom.durationMs);
-      }
-      const pendingZoomHeight = pendingZoomToHeightRef.current;
-      if (pendingZoomHeight) {
-        pendingZoomToHeightRef.current = null;
-        if (pendingZoomHeight.snap) {
-          cameraControls.snapZoomToCameraHeightM(pendingZoomHeight.heightM);
-        } else {
-          cameraControls.animateZoomToCameraHeightM(
-            pendingZoomHeight.heightM,
-            pendingZoomHeight.durationMs,
-          );
-        }
-      }
-      const pendingZoomOrbit = pendingZoomToOrbitRef.current;
-      if (pendingZoomOrbit) {
-        pendingZoomToOrbitRef.current = null;
-        if (pendingZoomOrbit.snap) {
-          cameraControls.snapZoomToOrbitCenterDistanceM(pendingZoomOrbit.centerDistanceM);
-        } else {
-          cameraControls.animateZoomToOrbitCenterDistanceM(
-            pendingZoomOrbit.centerDistanceM,
-            pendingZoomOrbit.durationMs,
-          );
-        }
-      }
 
       const mapMarker = installMapMarker(
         Cesium,
@@ -861,6 +827,13 @@ export function GlobeViewport({
         }, 0);
       };
 
+      cameraMotionSettledRef.run = () => {
+        if (cancelled || !viewer) return;
+        runViewportCenterSample();
+        armIdleDetection();
+        notifyCameraMotionIdleListeners();
+      };
+
       const armIdleDetection = () => {
         if (idleDetectTimer !== null) {
           clearTimeout(idleDetectTimer);
@@ -868,7 +841,13 @@ export function GlobeViewport({
         }
         idleDetectTimer = window.setTimeout(() => {
           idleDetectTimer = null;
-          if (cancelled || !viewer || cameraControls.isGlobeViewportSamplerBusy()) return;
+          if (cancelled || !viewer) return;
+          if (
+            !cameraControls.isGlobeViewportPointerIdle(GlobeConsts.VIEWPORT_DETECT_IDLE_MS)
+          ) {
+            armIdleDetection();
+            return;
+          }
           isClientIdle = true;
           scheduleNextViewportCenterSample();
           rebuildPathLodOnClientIdle();
@@ -882,23 +861,19 @@ export function GlobeViewport({
         }
         tickGeoArrivalLock();
         runViewportCenterSample();
-        if (cameraControls.isGlobeViewportSamplerBusy()) {
+        if (cameraControls.shouldContinueViewportCenterSampling()) {
           viewportSamplerTimer = window.setTimeout(busySamplingTick, GlobeConsts.UPDATE_VIEWPORT_CENTER_DELAY_MS);
         } else {
           busySamplingActive = false;
-          isClientIdle = false;
           armIdleDetection();
-          notifyCameraMotionIdleListeners();
+          if (!cameraControls.isGlobeViewportSamplerBusy()) {
+            notifyCameraMotionIdleListeners();
+          }
         }
       };
 
       const ensureBusySampling = () => {
         if (cancelled) return;
-        isClientIdle = false;
-        if (idleDetectTimer !== null) {
-          clearTimeout(idleDetectTimer);
-          idleDetectTimer = null;
-        }
         if (busySamplingActive) return;
         busySamplingActive = true;
         if (viewportSamplerTimer !== null) {
@@ -913,22 +888,65 @@ export function GlobeViewport({
 
       viewportSamplerWakeRef.ensureBusy = ensureBusySampling;
       ensureBusySamplingRef.current = ensureBusySampling;
+      viewportSamplerIdleCallbacks.armIdleDetection = armIdleDetection;
+      armIdleDetectionRef.current = armIdleDetection;
       requestViewportResyncRef.current = () => {
         ensureBusySampling();
         runViewportCenterSample();
       };
+
+      const replayPendingCameraCommands = () => {
+        const pending = pendingAnimateToRef.current;
+        if (pending) {
+          pendingAnimateToRef.current = null;
+          cameraControls.animateTo(pending.lat, pending.long, pending.durationMs);
+        }
+        const pendingSnap = pendingSnapToRef.current;
+        if (pendingSnap) {
+          pendingSnapToRef.current = null;
+          cameraControls.snapTo(pendingSnap.lat, pendingSnap.long);
+        }
+        const pendingZoom = pendingZoomToInitRef.current;
+        if (pendingZoom) {
+          pendingZoomToInitRef.current = null;
+          if (pendingZoom.snap) cameraControls.snapZoomToInitTarget();
+          else cameraControls.animateZoomToInitTarget(pendingZoom.durationMs);
+        }
+        const pendingZoomHeight = pendingZoomToHeightRef.current;
+        if (pendingZoomHeight) {
+          pendingZoomToHeightRef.current = null;
+          if (pendingZoomHeight.snap) {
+            cameraControls.snapZoomToCameraHeightM(pendingZoomHeight.heightM);
+          } else {
+            cameraControls.animateZoomToCameraHeightM(
+              pendingZoomHeight.heightM,
+              pendingZoomHeight.durationMs,
+            );
+          }
+        }
+        const pendingZoomOrbit = pendingZoomToOrbitRef.current;
+        if (pendingZoomOrbit) {
+          pendingZoomToOrbitRef.current = null;
+          if (pendingZoomOrbit.snap) {
+            cameraControls.snapZoomToOrbitCenterDistanceM(pendingZoomOrbit.centerDistanceM);
+          } else {
+            cameraControls.animateZoomToOrbitCenterDistanceM(
+              pendingZoomOrbit.centerDistanceM,
+              pendingZoomOrbit.durationMs,
+            );
+          }
+        }
+      };
+
+      replayPendingCameraCommands();
 
       const samplerKickOnCameraChanged = () => {
         if (cancelled || !viewer) return;
         tickGeoArrivalLock();
         cameraHeightMRef.current =
           viewer.camera.positionCartographic.height ?? Number.POSITIVE_INFINITY;
-        if (cameraControls.isGlobeViewportSamplerBusy()) {
+        if (cameraControls.shouldContinueViewportCenterSampling()) {
           ensureBusySampling();
-        } else {
-          runViewportCenterSample();
-          isClientIdle = false;
-          armIdleDetection();
         }
       };
 
@@ -1065,6 +1083,7 @@ export function GlobeViewport({
       cameraControlsRef.current = null;
       requestViewportResyncRef.current = null;
       ensureBusySamplingRef.current = null;
+      armIdleDetectionRef.current = null;
     };
   // Re-init only when layout width changes. Init lat/long, snap-to-geo framing, and
   // camera init height are applied at first install and updated at runtime via the

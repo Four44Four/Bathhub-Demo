@@ -85,7 +85,7 @@ export const Globe = {
     /** Sample interval while dragging, pinching, wheel-zoom smoothing, or programmatic camera animation is active. */
     UPDATE_VIEWPORT_CENTER_DELAY_MS: 50,
     /**
-     * After this many milliseconds with no active globe drag/zoom/animation (`isGlobeViewportSamplerBusy`),
+     * After this many milliseconds with no mouse or pointer input on the globe,
      * the client is treated as idle for viewport-center sampling.
      */
     VIEWPORT_DETECT_IDLE_MS: 500,

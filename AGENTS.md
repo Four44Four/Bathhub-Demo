@@ -10,11 +10,22 @@ This version has breaking changes — APIs, conventions, and file structure may 
  - Always extract purely functional/mathematical logic into modular, top level functions
  - Use dependency injection pattern whenever possible
  - Create unit tests whenever new pure functions or logic is added
- - Whenever new Supabase DB interfacing logic is added, create corresponding integration tests in ./integration-tests to ensure DB state will be exactly as intended in a real Supabase DB
+ - Whenever new Supabase DB interfacing logic is added:
+    - Create corresponding integration tests in ./integration-tests to ensure DB state will be exactly as intended in a real Supabase DB
+ - Whenever new features are added:
+    - Analyze codebase for existing utilities and logic that can be reused for implementing the new features
+    - Only implement new utilities and logic if another method is more efficient at doing the same task
+       - In this case: 
+          - Remove the old utilities and logic
+          - Update all parts of the codebase that depend on it
+          - Notify the developer that such a change was made
+ - Whenever client-side constants are implied in a specification:
+    - Insert them as properties of the appropriate exported constant objects in app/_client/ComponentConstants.ts
  - If any database schema changes are prompted:
     - Do not edit old database migration scripts that create the table
     - Create a new migration script instead
-    - All migration scripts (for SQLite or PostgreSQL) should be reversible if a failure occurs during the migration
+    - All migration scripts (for SQLite or PostgreSQL) should be atomic
+       - If a failure occurs during the migration, the DB should not be left in a partially migrated state
  - When creating unit or integration tests:
     - Use as much of the logic from the source code
     - The tests are intended to test logic from the source code, not invent new application logic solely for the test

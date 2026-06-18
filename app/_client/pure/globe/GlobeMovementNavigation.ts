@@ -8,6 +8,8 @@ export type NavigateGlobeToLatLonDeps = {
     | "beginGeoArrivalInteractionLock"
     | "snapTo"
     | "snapZoomToInitTarget"
+    | "subscribeCameraMotionIdle"
+    | "isGlobeViewportSamplerBusy"
   > | null;
   globeMovementSmooth: boolean;
   animationDurationMs: number;
@@ -18,6 +20,7 @@ export function navigateGlobeToLatLon(
   deps: NavigateGlobeToLatLonDeps,
   lat: number,
   long: number,
+  onArrival?: () => void,
 ): void {
   const { globe, globeMovementSmooth, animationDurationMs } = deps;
   if (!globe) return;
@@ -26,9 +29,20 @@ export function navigateGlobeToLatLon(
     globe.beginGeoArrivalInteractionLock();
     globe.animateTo(lat, long, animationDurationMs);
     globe.animateZoomToInitTarget(animationDurationMs);
+    if (onArrival) {
+      const unsubscribe = globe.subscribeCameraMotionIdle(() => {
+        unsubscribe();
+        onArrival();
+      });
+      if (!globe.isGlobeViewportSamplerBusy()) {
+        unsubscribe();
+        onArrival();
+      }
+    }
     return;
   }
 
   globe.snapTo(lat, long);
   globe.snapZoomToInitTarget();
+  onArrival?.();
 }

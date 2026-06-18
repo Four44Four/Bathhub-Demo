@@ -1,4 +1,5 @@
 import { type BathroomDataPrimaryRow } from "../../../_shared/BathroomDataPrimary";
+import { formatSupabaseError } from "../formatSupabaseError";
 
 /** Length of the random `temp_data` placeholder assigned on create. */
 export const TEMP_DATA_LENGTH = 64;
@@ -27,10 +28,6 @@ export type CreateBathroomRpcResult = {
 export type CreateBathroomRpc = (
   params: CreateBathroomRpcParams,
 ) => Promise<CreateBathroomRpcResult>;
-
-export function formatSupabaseError(context: string, message: string): string {
-  return `${context}: ${message}`;
-}
 
 export function isAlphanumericString(value: string): boolean {
   return /^[a-zA-Z0-9]+$/.test(value);

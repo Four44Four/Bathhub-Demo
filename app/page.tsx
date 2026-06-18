@@ -10,6 +10,7 @@ import {
 } from "react";
 import { Recenter } from "./_client/viewport2d/buttons/Recenter";
 import { FindNearestBathroom } from "./_client/viewport2d/buttons/FindNearestBathroom";
+import { ExitFindBathroom } from "./_client/viewport2d/buttons/ExitFindBathroom";
 import { TestPathfind } from "./_client/viewport2d/buttons/testing/TestPathfind";
 import {
   GlobeViewport,
@@ -36,10 +37,29 @@ import {
   AddBathroomModeProvider,
   useAddBathroomMode,
 } from "./_client/viewport2d/add-bathroom-mode";
+import {
+  BathroomActiveNavigation,
+  BathroomNavigationModeProvider,
+  BathroomNavigationPreviewMode,
+  useBathroomNavigationMode,
+  useFindNearestBathroomFlow,
+} from "./_client/viewport2d/bathroom-navigation-mode";
 import { Globe as GlobeConsts, SwipeMenu as SwipeMenuConsts } from "./_client/ComponentConstants";
 import { navigateGlobeToLatLon } from "./_client/pure/globe/GlobeMovementNavigation";
+import {
+  shouldApplyStoredGeoFixOnLoad,
+  shouldDiscardStoredGeoFixOnLoad,
+  type GeolocationPermissionState,
+} from "./_client/pure/globe/ClientGeolocationAccess";
+import { viewport2dChromeHidden } from "./_client/pure/viewport2d/FindNearestBathroomState";
 import { useUserSettings } from "./_client/user-settings/UserSettingsContext";
 import { useGlobeMovementSmoothRef } from "./_client/user-settings/useGlobeMovementSmooth";
+import {
+  ClientGeoProvider,
+  patchClientGeoRef,
+  useClientGeoRef,
+  usePatchClientGeo,
+} from "./_client/globe/ClientGeoContext";
 import { USER_SETTINGS_DEFAULTS } from "./_shared/user-settings/UserSettingsSchema";
 import { BathroomViewportSync } from "./_client/bathroom/BathroomViewportSync";
 import { BathroomLocalDbOnAppOpen } from "./_client/local-db";
@@ -88,6 +108,28 @@ function writeGeoCache(lat: number, lng: number) {
   }
 }
 
+function clearGeoCache() {
+  try {
+    sessionStorage.removeItem(GEO_CACHE_KEY);
+  } catch {
+    // ignore
+  }
+}
+
+async function readGeoPermissionState(): Promise<GeolocationPermissionState> {
+  if (typeof navigator === "undefined" || !navigator.permissions?.query) {
+    return "unknown";
+  }
+  try {
+    const status = await navigator.permissions.query({ name: "geolocation" });
+    if (status.state === "granted") return "granted";
+    if (status.state === "denied") return "denied";
+    return "prompt";
+  } catch {
+    return "unknown";
+  }
+}
+
 type FrozenGlobeInit = {
   lat: number;
   long: number;
@@ -128,6 +170,14 @@ function HomeContent({
   phoneFrameRef: RefObject<HTMLDivElement | null>;
 }) {
   const { isActive: addBathroomModeActive } = useAddBathroomMode();
+  const {
+    isPreviewActive: bathroomNavigationPreviewActive,
+    activeNavigation: bathroomActiveNavigation,
+  } = useBathroomNavigationMode();
+  const viewportChromeHidden = viewport2dChromeHidden({
+    addBathroomModeActive,
+    bathroomNavigationPreviewActive,
+  });
   const { settings } = useUserSettings();
   const cameraInitSurfaceOffsetM =
     settings?.camera_init_surface_offset_m ??
@@ -135,6 +185,9 @@ function HomeContent({
   const globeMovementSmoothRef = useGlobeMovementSmoothRef();
   const globeRootRef = useRef<HTMLDivElement | null>(null);
   const globeRef = useRef<GlobeViewportHandle | null>(null);
+  const clientGeoRef = useClientGeoRef();
+  const patchClientGeo = usePatchClientGeo();
+  const { beginFindNearestBathroom } = useFindNearestBathroomFlow({ globeRef });
   /** SSR-safe on first render; sessionStorage geo is merged in `useLayoutEffect` before Cesium init. */
   const [globeInit, setGlobeInit] = useState<FrozenGlobeInit>(DEFAULT_GLOBE_INIT);
   /**
@@ -158,6 +211,31 @@ function HomeContent({
   const [, setPathfindDepsEpoch] = useState(0);
   const bumpPathfindDeps = () => setPathfindDepsEpoch((n) => n + 1);
 
+  const syncClientGeo = (lat: number, lng: number, granted = true) => {
+    isClientGeoGranted = granted;
+    mapInitLat = lat;
+    mapInitLong = lng;
+    patchClientGeo({
+      isClientGeoGranted: granted,
+      mapInitLat: lat,
+      mapInitLong: lng,
+    });
+    bumpPathfindDeps();
+  };
+
+  const revokeClientGeoAccess = () => {
+    isClientGeoGranted = false;
+    patchClientGeo({ isClientGeoGranted: false });
+    setShowRecenterButton(false);
+    bumpPathfindDeps();
+  };
+
+  const syncMapMarkerFallbackCoords = (lat: number, lng: number) => {
+    mapInitLat = lat;
+    mapInitLong = lng;
+    patchClientGeoRef(clientGeoRef, { mapInitLat: lat, mapInitLong: lng }, patchClientGeo);
+  };
+
   /** Tracks whether the camera has been framed to the user's geo fix (no React state). */
   const globeViewStateRef = useRef({ ...DEFAULT_GLOBE_INIT });
 
@@ -165,16 +243,32 @@ function HomeContent({
     const init = applyGeoCacheFromSession();
     if (!init) return;
 
-    isClientGeoGranted = true;
-    globeViewStateRef.current = {
-      lat: init.lat,
-      long: init.long,
-      snapInitialView: true,
+    let cancelled = false;
+
+    const applyCachedGeo = () => {
+      if (cancelled) return;
+      isClientGeoGranted = true;
+      globeViewStateRef.current = init;
+      setShowRecenterButton(true);
+      setGlobeInit(init);
+      syncClientGeo(init.lat, init.long);
+      snapGlobeToGeoWhenReady(globeRef.current, init.lat, init.long);
     };
-    setShowRecenterButton(true);
-    setGlobeInit(init);
-    bumpPathfindDeps();
-    snapGlobeToGeoWhenReady(globeRef.current, init.lat, init.long);
+
+    void readGeoPermissionState().then((permissionState) => {
+      if (cancelled) return;
+      if (shouldDiscardStoredGeoFixOnLoad(permissionState)) {
+        clearGeoCache();
+        return;
+      }
+      if (shouldApplyStoredGeoFixOnLoad(permissionState)) {
+        applyCachedGeo();
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -185,7 +279,11 @@ function HomeContent({
 
     const onPermissionChange = () => {
       if (cancelled || !geoPermStatus) return;
-      setShowRecenterButton(geoPermStatus.state === "granted");
+      const granted = geoPermStatus.state === "granted";
+      setShowRecenterButton(granted);
+      if (!granted) {
+        revokeClientGeoAccess();
+      }
     };
 
     navigator.permissions
@@ -193,7 +291,11 @@ function HomeContent({
       .then((status) => {
         if (cancelled) return;
         geoPermStatus = status;
-        setShowRecenterButton(status.state === "granted");
+        const granted = status.state === "granted";
+        setShowRecenterButton(granted);
+        if (!granted) {
+          revokeClientGeoAccess();
+        }
         status.addEventListener("change", onPermissionChange);
       })
       .catch(() => {
@@ -233,11 +335,8 @@ function HomeContent({
      * trigger the init animation on a 0,0 globe.
      */
     const applyInstantBootstrapPosition = (lat: number, lng: number) => {
-      isClientGeoGranted = true;
       setShowRecenterButton(true);
-      mapInitLat = lat;
-      mapInitLong = lng;
-      bumpPathfindDeps();
+      syncClientGeo(lat, lng);
       writeGeoCache(lat, lng);
       globeRef.current?.setMapMarkerUserLatLon(lat, lng);
 
@@ -319,11 +418,8 @@ function HomeContent({
 
       const lat = pos.coords.latitude;
       const long = pos.coords.longitude;
-      isClientGeoGranted = true;
       setShowRecenterButton(true);
-      mapInitLat = lat;
-      mapInitLong = long;
-      bumpPathfindDeps();
+      syncClientGeo(lat, long);
       writeGeoCache(lat, long);
       // Switch MapMarker from the 2D static overlay to the 3D billboard FIRST,
       // so the swap is visible from the very first frame of the
@@ -373,6 +469,7 @@ function HomeContent({
       // Hard denial ends the watch; other codes may be transient (Firefox).
       if (err.code === err.PERMISSION_DENIED) {
         clearWatch();
+        revokeClientGeoAccess();
       }
     };
 
@@ -436,9 +533,10 @@ function HomeContent({
             onZoomIndicatorPulse={(x, y) => {
               setZoomIndicator((z) => ({ x, y, pulse: z.pulse + 1 }));
             }}
+            onMapMarkerUserLatLonChange={syncMapMarkerFallbackCoords}
           />
           <BathroomViewportSync globeRef={globeRef} />
-          {!addBathroomModeActive ? (
+          {!viewportChromeHidden ? (
             <>
               <ZoomIndicator
                 x={zoomIndicator.x}
@@ -467,7 +565,7 @@ function HomeContent({
           </div>
         </div>
         <SwipeMenuTopShadow />
-        {!addBathroomModeActive && showRecenterButton ? (
+        {!viewportChromeHidden && showRecenterButton ? (
           <Recenter
             globeRef={globeRef}
             viewportRef={phoneFrameRef}
@@ -476,9 +574,14 @@ function HomeContent({
             mapInitLong={mapInitLong}
           />
         ) : null}
-        {!addBathroomModeActive ? (
-          <FindNearestBathroom />
+        {!viewportChromeHidden && showRecenterButton && bathroomActiveNavigation === null ? (
+          <FindNearestBathroom onClick={beginFindNearestBathroom} />
         ) : null}
+        {!viewportChromeHidden && showRecenterButton && bathroomActiveNavigation !== null ? (
+          <ExitFindBathroom />
+        ) : null}
+        <BathroomNavigationPreviewMode globeRef={globeRef} />
+        <BathroomActiveNavigation globeRef={globeRef} />
         <AddBathroomMode globeRef={globeRef} />
         <div
           className="pointer-events-none absolute inset-0"
@@ -508,11 +611,15 @@ export default function Home() {
   return (
     <AlertSystemProvider phoneViewportRef={phoneFrameRef}>
       <AddBathroomModeProvider>
-        <UserSettingsProvider>
-          <UserSettingsBootstrapGate>
-            <HomeContent phoneFrameRef={phoneFrameRef} />
-          </UserSettingsBootstrapGate>
-        </UserSettingsProvider>
+        <BathroomNavigationModeProvider>
+          <ClientGeoProvider>
+            <UserSettingsProvider>
+              <UserSettingsBootstrapGate>
+                <HomeContent phoneFrameRef={phoneFrameRef} />
+              </UserSettingsBootstrapGate>
+            </UserSettingsProvider>
+          </ClientGeoProvider>
+        </BathroomNavigationModeProvider>
       </AddBathroomModeProvider>
     </AlertSystemProvider>
   );

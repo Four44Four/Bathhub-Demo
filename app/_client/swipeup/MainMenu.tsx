@@ -16,6 +16,7 @@ import {
 
 import { useAnimatedOpacity } from "../useAnimatedOpacity";
 import { addBathroomModeSwipeMenuRestoreTarget } from "../pure/viewport2d/AddBathroomModeState";
+import { viewport2dChromeHidden } from "../pure/viewport2d/FindNearestBathroomState";
 
 import {
   SWIPE_MENU_HANDLE_ATTR,
@@ -41,6 +42,7 @@ import {
   type SwipeMenuInteraction,
 } from "./SwipeMenuInteraction";
 import { useAddBathroomMode } from "../viewport2d/add-bathroom-mode";
+import { useBathroomNavigationMode } from "../viewport2d/bathroom-navigation-mode";
 
 export function swipeMenuPrimaryButtonWidthPx(viewportWidthPx: number): number {
   return Math.max(0, viewportWidthPx - 2 * SwipeMenuConsts.SIDE_PADDING_PX);
@@ -92,6 +94,13 @@ export function MainMenu({
     isActive: addBathroomModeActive,
     registerExitHandler,
   } = useAddBathroomMode();
+  const {
+    isPreviewActive: bathroomNavigationPreviewActive,
+  } = useBathroomNavigationMode();
+  const immersiveModeActive = viewport2dChromeHidden({
+    addBathroomModeActive,
+    bathroomNavigationPreviewActive,
+  });
   const inactiveHeightPx = SwipeMenuConsts.INACTIVE_HEIGHT_PX;
   const dragRef = useRef<{
     pointerId: number;
@@ -119,8 +128,8 @@ export function MainMenu({
     );
   }, [viewportRef, viewportSize.height, inactiveHeightPx]);
 
-  const maxHeightPx = resolveMaxHeightPx();
-  const menuHeightPx = addBathroomModeActive ? 0 : heightPx;
+  const menuHeightPx = immersiveModeActive ? 0 : heightPx;
+  const menuBackdropOpacity = immersiveModeActive ? 0 : backdropOpacity;
   const isOpenAboveCollapsed = swipeMenuIsOpenAboveCollapsed(
     menuHeightPx,
     inactiveHeightPx,
@@ -132,11 +141,17 @@ export function MainMenu({
     const target = viewportRef.current;
     if (!target) return;
     const rect = target.getBoundingClientRect();
+    const nextMaxHeightPx = swipeMenuMaxHeightPx(
+      rect.height,
+      SwipeMenuConsts.MAX_EXPAND_RATIO,
+      inactiveHeightPx,
+    );
     setViewportSize({
       width: rect.width,
       height: rect.height,
     });
-  }, [viewportRef]);
+    setHeightPx((h) => Math.min(Math.max(h, inactiveHeightPx), nextMaxHeightPx));
+  }, [inactiveHeightPx, viewportRef]);
 
   useLayoutEffect(() => {
     measureViewport();
@@ -146,17 +161,6 @@ export function MainMenu({
     ro.observe(target);
     return () => ro.disconnect();
   }, [measureViewport, viewportRef]);
-
-  useLayoutEffect(() => {
-    setHeightPx((h) => Math.min(Math.max(h, inactiveHeightPx), maxHeightPx));
-  }, [inactiveHeightPx, maxHeightPx]);
-
-  useLayoutEffect(() => {
-    if (addBathroomModeActive) {
-      setHeightPx(0);
-      setBackdropOpacityImmediate(0);
-    }
-  }, [addBathroomModeActive, setBackdropOpacityImmediate]);
 
   useEffect(() => {
     return registerExitHandler(({ withNewBathroom }) => {
@@ -181,20 +185,22 @@ export function MainMenu({
   ]);
 
   const collapseIfOpenAboveCollapsedRef = useRef<() => void>(() => {});
-  collapseIfOpenAboveCollapsedRef.current = () => {
-    const dragMaxHeightPx = resolveMaxHeightPx();
-    setHeightPx((current) => {
-      const next = swipeMenuHeightAfterOutsideTap(
-        current,
-        inactiveHeightPx,
-        dragMaxHeightPx,
-      );
-      setBackdropOpacityImmediate(
-        swipeMenuBackdropOpacity(next, inactiveHeightPx, dragMaxHeightPx),
-      );
-      return next;
-    });
-  };
+  useLayoutEffect(() => {
+    collapseIfOpenAboveCollapsedRef.current = () => {
+      const dragMaxHeightPx = resolveMaxHeightPx();
+      setHeightPx((current) => {
+        const next = swipeMenuHeightAfterOutsideTap(
+          current,
+          inactiveHeightPx,
+          dragMaxHeightPx,
+        );
+        setBackdropOpacityImmediate(
+          swipeMenuBackdropOpacity(next, inactiveHeightPx, dragMaxHeightPx),
+        );
+        return next;
+      });
+    };
+  });
 
   useEffect(() => {
     if (!isOpenAboveCollapsed) return;
@@ -214,22 +220,22 @@ export function MainMenu({
   useEffect(() => {
     onInteractionChange?.(
       swipeMenuViewportInteraction(
-        addBathroomModeActive,
+        immersiveModeActive,
         heightPx,
         inactiveHeightPx,
-        backdropOpacity,
+        menuBackdropOpacity,
       ),
     );
   }, [
-    addBathroomModeActive,
-    backdropOpacity,
+    immersiveModeActive,
+    menuBackdropOpacity,
     heightPx,
     inactiveHeightPx,
     onInteractionChange,
   ]);
 
   const onPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
-    if (addBathroomModeActive) return;
+    if (immersiveModeActive) return;
     if (e.button !== 0) return;
     if (swipeMenuPointerTargetIsInteractive(e.target)) return;
     measureViewport();
@@ -315,13 +321,13 @@ export function MainMenu({
     right: 0,
     bottom: 0,
     height: menuHeightPx,
-    minHeight: addBathroomModeActive ? 0 : inactiveHeightPx,
+    minHeight: immersiveModeActive ? 0 : inactiveHeightPx,
     backgroundColor: SwipeMenuConsts.BG_COLOR,
     borderTopLeftRadius: SwipeMenuConsts.TOP_CORNER_RADIUS_PX,
     borderTopRightRadius: SwipeMenuConsts.TOP_CORNER_RADIUS_PX,
     boxSizing: "border-box",
     touchAction: "none",
-    pointerEvents: addBathroomModeActive ? "none" : "auto",
+    pointerEvents: immersiveModeActive ? "none" : "auto",
     overflow: "hidden",
     display: "flex",
     flexDirection: "column",
@@ -360,7 +366,7 @@ export function MainMenu({
 
   return (
     <>
-      {isOpenAboveCollapsed && !addBathroomModeActive ? (
+      {isOpenAboveCollapsed && !immersiveModeActive ? (
         <div
           ref={outsideDismissRef}
           aria-hidden="true"
@@ -379,7 +385,7 @@ export function MainMenu({
       onPointerUp={endDrag}
       onPointerCancel={endDrag}
     >
-      {!addBathroomModeActive ? (
+      {!immersiveModeActive ? (
         <div
           aria-hidden="true"
           style={handleStripStyle}

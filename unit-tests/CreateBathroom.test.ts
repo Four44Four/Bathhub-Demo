@@ -2,12 +2,12 @@ import {
   buildCreateBathroomRpcParams,
   CREATE_BATHROOM_ERROR_CONTEXT,
   createBathroomAt,
-  formatSupabaseError,
   generateTempData,
   isAlphanumericString,
   randomAlphanumericString,
   TEMP_DATA_LENGTH,
 } from "../app/_server/pure/bathroom-data-primary/CreateBathroom";
+import { formatSupabaseError } from "../app/_server/pure/formatSupabaseError";
 import { type BathroomDataPrimaryRow } from "../app/_shared/BathroomDataPrimary";
 
 const sampleRow: BathroomDataPrimaryRow = {

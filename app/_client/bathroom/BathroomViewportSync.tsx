@@ -13,7 +13,10 @@ import {
   BathroomMapMarker,
   BathroomRemoteDB,
 } from "../ComponentConstants";
-import { syncBathroomsInGlobeViewport } from "../Bathroom";
+import {
+  registerForceBathroomViewportSyncHandler,
+  syncBathroomsInGlobeViewport,
+} from "../Bathroom";
 import { type BathroomLocalDbPort } from "../local-db/LocalDbPort";
 import { type GlobeViewportHandle } from "../globe/GlobeViewport";
 import {
@@ -298,9 +301,21 @@ export function BathroomViewportSync({ globeRef }: BathroomViewportSyncProps) {
     }, plan.delayMs);
   };
 
+  const forceLocalViewportSync = () => {
+    if (localDelayTimerRef.current !== null) {
+      clearTimeout(localDelayTimerRef.current);
+      localDelayTimerRef.current = null;
+    }
+    void runLocalViewportSync(++requestSeqRef.current);
+  };
+
   useEffect(() => {
     const globe = globeRef.current;
     if (!globe) return;
+
+    const unregisterForceSync = registerForceBathroomViewportSyncHandler(
+      forceLocalViewportSync,
+    );
 
     let cancelled = false;
     const token = ++markersViewerTokenRef.current;
@@ -318,6 +333,7 @@ export function BathroomViewportSync({ globeRef }: BathroomViewportSyncProps) {
 
     return () => {
       cancelled = true;
+      unregisterForceSync();
       markersRef.current?.destroy();
       markersRef.current = null;
     };

@@ -29,6 +29,7 @@ export type BathroomViewportRenderHandler = (
 ) => void;
 
 let bathroomViewportRenderHandler: BathroomViewportRenderHandler | null = null;
+let forceBathroomViewportSyncHandler: (() => void) | null = null;
 
 /** Registers the callback that renders bathrooms returned from a viewport refresh. */
 export function registerBathroomViewportRenderHandler(
@@ -40,6 +41,26 @@ export function registerBathroomViewportRenderHandler(
       bathroomViewportRenderHandler = null;
     }
   };
+}
+
+/** Registers an immediate local+remote bathroom viewport sync (bypasses query delay). */
+export function registerForceBathroomViewportSyncHandler(
+  handler: () => void,
+): () => void {
+  forceBathroomViewportSyncHandler = handler;
+  return () => {
+    if (forceBathroomViewportSyncHandler === handler) {
+      forceBathroomViewportSyncHandler = null;
+    }
+  };
+}
+
+/** Re-samples viewport bounds then forces an immediate bathroom query for the visible area. */
+export function forceGlobeBathroomViewportQuery(
+  globe: { requestViewportResync?: () => void } | null,
+): void {
+  globe?.requestViewportResync?.();
+  forceBathroomViewportSyncHandler?.();
 }
 
 export async function createBathroomAt(
@@ -81,5 +102,5 @@ export async function syncBathroomsInGlobeViewport(
 export async function refreshBathroomsInGlobeViewport(
   globeRef: RefObject<GlobeViewportHandle | null>,
 ): Promise<void> {
-  globeRef.current?.requestViewportResync();
+  forceGlobeBathroomViewportQuery(globeRef.current);
 }

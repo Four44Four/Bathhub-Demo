@@ -1,10 +1,10 @@
 "use client";
 
 import { Button as ButtonConsts, SwipeMenu as SwipeMenuConsts } from "../../ComponentConstants";
-import * as ServerDebug from "../../../_server/Debug";
 import { VIEWPORT2D_TOP_LAYER_Z_INDEX } from "../../pure/viewport2d/PositionalAlertAnchor";
 import { viewportCircularButtonOuterSidePx } from "../../Utils";
 import { Button } from "../Button";
+import { useBathroomNavigationMode } from "../bathroom-navigation-mode";
 
 export const BTN_IMG_SRC = "/find_bathroom_icon.svg";
 export const BTN_OFFSET_PX = 15;
@@ -34,20 +34,17 @@ export type FindNearestBathroomProps = {
   btnImgSizePx?: number;
   rightInsetPx?: number;
   collapsedMenuHeightPx?: number;
+  onClick?: () => void;
 };
-
-function onFindNearestBathroomClick() {
-  const debugStr = "CHANGE THIS LATER";
-  ServerDebug.log(debugStr);
-  console.log(debugStr);
-}
 
 export function FindNearestBathroom({
   btnOffsetPx = BTN_OFFSET_PX,
   btnImgSizePx = BTN_IMG_SIZE_PX,
   rightInsetPx = BTN_X,
   collapsedMenuHeightPx = SwipeMenuConsts.INACTIVE_HEIGHT_PX,
+  onClick,
 }: FindNearestBathroomProps) {
+  const { beginFindNearestBathroom } = useBathroomNavigationMode();
   const bottomPx = findNearestBathroomButtonBottomPx(
     collapsedMenuHeightPx,
     btnOffsetPx,
@@ -77,7 +74,7 @@ export function FindNearestBathroom({
         circularPaddingPx={BTN_CIRCULAR_PADDING_PX}
         imageSrc={BTN_IMG_SRC}
         imageSizePx={btnImgSizePx}
-        onClick={onFindNearestBathroomClick}
+        onClick={onClick ?? beginFindNearestBathroom}
       />
     </div>
   );

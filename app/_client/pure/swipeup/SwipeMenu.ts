@@ -272,14 +272,14 @@ export type SwipeMenuViewportInteraction = {
   menuHeightPx: number;
 };
 
-/** Globe dimming and pointer blocking come only from the swipe menu, never add-bathroom mode. */
+/** Globe dimming and pointer blocking come only from the swipe menu, never immersive modes. */
 export function swipeMenuViewportInteraction(
-  addBathroomModeActive: boolean,
+  immersiveModeActive: boolean,
   heightPx: number,
   inactiveHeightPx: number,
   menuBackdropOpacity: number,
 ): SwipeMenuViewportInteraction {
-  if (addBathroomModeActive) {
+  if (immersiveModeActive) {
     return { blocksViewportPointer: false, backdropOpacity: 0, menuHeightPx: 0 };
   }
   return {

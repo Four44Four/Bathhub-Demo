@@ -19,6 +19,8 @@ export type MapMarkerHandle = {
    * Idempotent; repeated calls just reposition the billboard.
    */
   setUserLatLonDegrees: (latDeg: number, lonDeg: number) => void;
+  /** Latest device position when geo-locked; null before the first fix. */
+  getUserLatLonDegrees: () => { latitude: number; longitude: number } | null;
   destroy: () => void;
 };
 
@@ -30,6 +32,8 @@ export type MapMarkerInitOptions = {
    * waiting for the in-module watch to refire.
    */
   initialUserLatLonDegrees?: { latitude: number; longitude: number } | null;
+  /** Called whenever the marker locks to a new device position (watch or push). */
+  onUserLatLonChange?: (latDeg: number, lonDeg: number) => void;
 };
 
 const GEO_WATCH_OPTS: PositionOptions = {
@@ -75,6 +79,7 @@ export function installMapMarker(
 
   let geoLocked = false;
   let cancelled = false;
+  let userLatLonDegrees: { latitude: number; longitude: number } | null = null;
 
   const notifyStaticOverlay = (useStatic: boolean) => {
     if (cancelled) return;
@@ -84,9 +89,11 @@ export function installMapMarker(
   const lockToGeolocation = (latDeg: number, lonDeg: number) => {
     if (cancelled) return;
     geoLocked = true;
+    userLatLonDegrees = { latitude: latDeg, longitude: lonDeg };
     globeImage.setLatLonDegrees(latDeg, lonDeg);
     globeImage.setVisible(true);
     notifyStaticOverlay(false);
+    options?.onUserLatLonChange?.(latDeg, lonDeg);
     scene.requestRender();
   };
 
@@ -172,6 +179,7 @@ export function installMapMarker(
       if (cancelled) return;
       lockToGeolocation(latDeg, lonDeg);
     },
+    getUserLatLonDegrees: () => userLatLonDegrees,
     destroy: () => {
       cancelled = true;
       if (permListener) {

@@ -94,6 +94,9 @@ export_supabase_env
 echo "run-tests: running bathroom_data_primary CRUD integration checks..."
 npx jest --runInBand --verbose "$SCRIPT_DIR/Crud.integration.test.ts"
 
+echo "run-tests: running find nearest bathroom integration checks..."
+npx jest --runInBand --verbose "$SCRIPT_DIR/FindNearestBathroom.integration.test.ts"
+
 echo "run-tests: running local cache integration checks against seeded locations.json rows..."
 # sqlite-wasm loads through Node dynamic import; Jest needs VM module support.
 NODE_OPTIONS="${NODE_OPTIONS:+$NODE_OPTIONS }--experimental-vm-modules" \

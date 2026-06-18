@@ -44,6 +44,15 @@ function notifyViewportChangeListeners(): void {
   }
 }
 
+type CameraMotionIdleListener = () => void;
+const cameraMotionIdleListeners = new Set<CameraMotionIdleListener>();
+
+function notifyCameraMotionIdleListeners(): void {
+  for (const listener of cameraMotionIdleListeners) {
+    listener();
+  }
+}
+
 function buildViewportSurfacePickDeps(
   viewer: CesiumTypes.Viewer,
   Cesium: typeof import("cesium"),
@@ -127,6 +136,15 @@ export type GlobeViewportHandle = {
   animateTo: (lat: number, long: number, durationMs?: number) => void;
   animateZoomToInitTarget: (durationMs?: number) => void;
   snapZoomToInitTarget: () => void;
+  animateZoomToCameraHeightM: (heightM: number, durationMs?: number) => void;
+  snapZoomToCameraHeightM: (heightM: number) => void;
+  /** Orbit camera center distance in meters (matches interactive zoom level). */
+  getOrbitCenterDistanceM: () => number;
+  animateZoomToOrbitCenterDistanceM: (
+    centerDistanceM: number,
+    durationMs?: number,
+  ) => void;
+  snapZoomToOrbitCenterDistanceM: (centerDistanceM: number) => void;
   /** Immediately centers the globe on (lat, long) without rotation animation. */
   snapTo: (lat: number, long: number) => void;
   /** Lat/long where the map surface lies under the viewport center (camera look target). */
@@ -141,6 +159,13 @@ export type GlobeViewportHandle = {
   waitForViewer: () => Promise<CesiumTypes.Viewer>;
   /** Re-samples viewport bounds/camera and notifies subscribers immediately. */
   requestViewportResync: () => void;
+  /** True while drag, pinch, wheel smoothing, or programmatic camera animation is active. */
+  isGlobeViewportSamplerBusy: () => boolean;
+  /**
+   * Fired when programmatic or interactive camera motion has fully settled
+   * (no active sampler-busy animation or gesture).
+   */
+  subscribeCameraMotionIdle: (listener: CameraMotionIdleListener) => () => void;
   /** Lat/long of the tap/click marker on the globe, if the user has clicked. */
   getClickedIndicatorLatLon: () => Point | null;
   /**
@@ -151,6 +176,11 @@ export type GlobeViewportHandle = {
    * `animateZoomToInitTarget` so the switch is visible from the first animation frame.
    */
   setMapMarkerUserLatLon: (lat: number, long: number) => void;
+  /**
+   * Latest device position from MapMarker's continuous geolocation watch (or the
+   * last `setMapMarkerUserLatLon` push). Null before the first fix.
+   */
+  getMapMarkerUserLatLon: () => Point | null;
   /**
    * Call immediately before `animateTo` + `animateZoomToInitTarget` for the post-permission
    * geolocation sequence. Orbit pointer/wheel/pinch stays disabled for exactly
@@ -168,8 +198,9 @@ export type GlobeViewportHandle = {
  * Current client geolocation coordinates when permitted; otherwise the surface point under the
  * viewport center, or fallback to map init coordinates if Cesium is not ready.
  *
- * With geolocation granted, coordinates come from successful callbacks (`applyInstantBootstrapPosition`,
- * `applyGeolocationPosition`), kept in sync with `mapInitLat` / `mapInitLong` in callers.
+ * With geolocation granted, coordinates come from MapMarker's continuous watch (via
+ * `getMapMarkerUserLatLon`), falling back to `mapInitLat` / `mapInitLong` before the
+ * first fix.
  */
 export function getStartPos(
   globe: GlobeViewportHandle | null,
@@ -184,6 +215,11 @@ export function getStartPos(
         longitude: mapInitLong,
       }
     );
+  }
+
+  const liveUser = globe?.getMapMarkerUserLatLon();
+  if (liveUser) {
+    return liveUser;
   }
 
   return {
@@ -214,6 +250,11 @@ type GlobeViewportProps = {
    */
   onZoomIndicatorPulse?: (x: number, y: number) => void;
   /**
+   * Called when MapMarker receives a new device position (watch or push). Used to keep
+   * client geo fallback coordinates current without relying on React re-renders.
+   */
+  onMapMarkerUserLatLonChange?: (latitude: number, longitude: number) => void;
+  /**
    * React 19 ref-as-prop. Receives a `GlobeViewportHandle` once the Cesium
    * viewer has finished initializing.
    */
@@ -229,6 +270,7 @@ export function GlobeViewport({
   height,
   zoomIndicatorRootRef,
   onZoomIndicatorPulse,
+  onMapMarkerUserLatLonChange,
   ref,
 }: GlobeViewportProps) {
   const mountRef = useRef<HTMLDivElement | null>(null);
@@ -255,6 +297,12 @@ export function GlobeViewport({
   const cameraControlsRef = useRef<InstalledOrbitCameraControls | null>(null);
   const pendingAnimateToRef = useRef<{ lat: number; long: number; durationMs?: number } | null>(null);
   const pendingZoomToInitRef = useRef<{ durationMs?: number; snap?: boolean } | null>(null);
+  const pendingZoomToHeightRef = useRef<
+    { heightM: number; durationMs?: number; snap?: boolean } | null
+  >(null);
+  const pendingZoomToOrbitRef = useRef<
+    { centerDistanceM: number; durationMs?: number; snap?: boolean } | null
+  >(null);
   const pendingSnapToRef = useRef<{ lat: number; long: number } | null>(null);
   const viewerRef = useRef<CesiumTypes.Viewer | null>(null);
   const cesiumNsRef = useRef<typeof import("cesium") | null>(null);
@@ -270,6 +318,8 @@ export function GlobeViewport({
     [],
   );
   const requestViewportResyncRef = useRef<(() => void) | null>(null);
+  /** Arms busy viewport sampling so programmatic camera motion can reach idle. */
+  const ensureBusySamplingRef = useRef<(() => void) | null>(null);
   const [mapMarkerStaticOverlay, setMapMarkerStaticOverlay] = useState(true);
   /**
    * Live MapMarker handle (replaced when the viewer reinits). The imperative
@@ -315,6 +365,41 @@ export function GlobeViewport({
           pendingZoomToInitRef.current = { snap: true };
         }
       },
+      animateZoomToCameraHeightM: (heightM, durationMs) => {
+        const controls = cameraControlsRef.current;
+        if (controls) {
+          controls.animateZoomToCameraHeightM(heightM, durationMs);
+        } else {
+          pendingZoomToHeightRef.current = { heightM, durationMs, snap: false };
+        }
+      },
+      snapZoomToCameraHeightM: (heightM) => {
+        const controls = cameraControlsRef.current;
+        if (controls) {
+          controls.snapZoomToCameraHeightM(heightM);
+        } else {
+          pendingZoomToHeightRef.current = { heightM, snap: true };
+        }
+      },
+      getOrbitCenterDistanceM: () =>
+        cameraControlsRef.current?.getOrbitCenterDistanceM() ??
+        Number.POSITIVE_INFINITY,
+      animateZoomToOrbitCenterDistanceM: (centerDistanceM, durationMs) => {
+        const controls = cameraControlsRef.current;
+        if (controls) {
+          controls.animateZoomToOrbitCenterDistanceM(centerDistanceM, durationMs);
+        } else {
+          pendingZoomToOrbitRef.current = { centerDistanceM, durationMs, snap: false };
+        }
+      },
+      snapZoomToOrbitCenterDistanceM: (centerDistanceM) => {
+        const controls = cameraControlsRef.current;
+        if (controls) {
+          controls.snapZoomToOrbitCenterDistanceM(centerDistanceM);
+        } else {
+          pendingZoomToOrbitRef.current = { centerDistanceM, snap: true };
+        }
+      },
       snapTo: (lat, long) => {
         const controls = cameraControlsRef.current;
         if (controls) {
@@ -344,6 +429,17 @@ export function GlobeViewport({
       requestViewportResync: () => {
         requestViewportResyncRef.current?.();
       },
+      isGlobeViewportSamplerBusy: () =>
+        cameraControlsRef.current?.isGlobeViewportSamplerBusy() ?? false,
+      subscribeCameraMotionIdle: (listener) => {
+        cameraMotionIdleListeners.add(listener);
+        if (cameraControlsRef.current?.isGlobeViewportSamplerBusy()) {
+          ensureBusySamplingRef.current?.();
+        }
+        return () => {
+          cameraMotionIdleListeners.delete(listener);
+        };
+      },
       getClickedIndicatorLatLon: () => {
         const api = clickedIndicatorApiRef.current;
         if (!api) return null;
@@ -357,6 +453,7 @@ export function GlobeViewport({
         // applied via `initialUserLatLonDegrees` on the next install.
         mapMarkerRef.current?.setUserLatLonDegrees(lat, long);
       },
+      getMapMarkerUserLatLon: () => userGeoLatLonRef.current,
       beginGeoArrivalInteractionLock: () => {
         const now = typeof performance !== "undefined" ? performance.now() : Date.now();
         geoArrivalLockStateRef.current = GeoArrival.beginGeoArrivalLock(
@@ -690,13 +787,43 @@ export function GlobeViewport({
         if (pendingZoom.snap) cameraControls.snapZoomToInitTarget();
         else cameraControls.animateZoomToInitTarget(pendingZoom.durationMs);
       }
+      const pendingZoomHeight = pendingZoomToHeightRef.current;
+      if (pendingZoomHeight) {
+        pendingZoomToHeightRef.current = null;
+        if (pendingZoomHeight.snap) {
+          cameraControls.snapZoomToCameraHeightM(pendingZoomHeight.heightM);
+        } else {
+          cameraControls.animateZoomToCameraHeightM(
+            pendingZoomHeight.heightM,
+            pendingZoomHeight.durationMs,
+          );
+        }
+      }
+      const pendingZoomOrbit = pendingZoomToOrbitRef.current;
+      if (pendingZoomOrbit) {
+        pendingZoomToOrbitRef.current = null;
+        if (pendingZoomOrbit.snap) {
+          cameraControls.snapZoomToOrbitCenterDistanceM(pendingZoomOrbit.centerDistanceM);
+        } else {
+          cameraControls.animateZoomToOrbitCenterDistanceM(
+            pendingZoomOrbit.centerDistanceM,
+            pendingZoomOrbit.durationMs,
+          );
+        }
+      }
 
       const mapMarker = installMapMarker(
         Cesium,
         viewer,
         () => viewportCenterLatLonRef.current,
         setMapMarkerStaticOverlay,
-        { initialUserLatLonDegrees: userGeoLatLonRef.current },
+        {
+          initialUserLatLonDegrees: userGeoLatLonRef.current,
+          onUserLatLonChange: (lat, lon) => {
+            userGeoLatLonRef.current = { latitude: lat, longitude: lon };
+            onMapMarkerUserLatLonChange?.(lat, lon);
+          },
+        },
       );
       mapMarkerRef.current = mapMarker;
       const debugCrosshair = installDebugCrosshair(Cesium, viewer, () => viewportCenterLatLonRef.current);
@@ -774,6 +901,7 @@ export function GlobeViewport({
           busySamplingActive = false;
           isClientIdle = false;
           armIdleDetection();
+          notifyCameraMotionIdleListeners();
         }
       };
 
@@ -797,6 +925,7 @@ export function GlobeViewport({
       };
 
       viewportSamplerWakeRef.ensureBusy = ensureBusySampling;
+      ensureBusySamplingRef.current = ensureBusySampling;
       requestViewportResyncRef.current = () => {
         ensureBusySampling();
         runViewportCenterSample();
@@ -810,7 +939,7 @@ export function GlobeViewport({
         if (cameraControls.isGlobeViewportSamplerBusy()) {
           ensureBusySampling();
         } else {
-          notifyViewportChangeListeners();
+          runViewportCenterSample();
         }
       };
 
@@ -952,6 +1081,7 @@ export function GlobeViewport({
       // destroyed viewer. Future calls will re-queue into pendingAnimateToRef.
       cameraControlsRef.current = null;
       requestViewportResyncRef.current = null;
+      ensureBusySamplingRef.current = null;
     };
   // Re-init only when layout width changes. Init lat/long, snap-to-geo framing, and
   // camera init height are applied at first install and updated at runtime via the

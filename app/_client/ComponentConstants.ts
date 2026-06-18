@@ -190,3 +190,39 @@ export const BathroomLocalDB = {
     CACHE_EXPIRATION_SECS: 86400,
     QUERY_DELAY_MS: 500,
 } as const;
+
+export const NearestBathroom = {
+    /** Icon path for the exit-find-bathroom circular control (spec: X). */
+    EXIT_FIND_BATHROOM_ICON_PATH: "/cross.svg",
+    /** Time between every check for if the client's location has changed before rerendering path (milliseconds). */
+    PATH_POLL_INTERVAL_MS: 1_000,
+    /** Server request timeout when finding the nearest bathroom (milliseconds). */
+    FIND_NEAREST_BATHROOM_REQUEST_TIMEOUT_MS: 15_000,
+    /** Minimum time between path update checks once debounce has elapsed (milliseconds). */
+    BATHROOM_PATH_UPDATE_DEBOUNCE_MS: 3_000,
+    /** Minimum client movement before re-requesting path data (meters). */
+    BATHROOM_PATH_UPDATE_MIN_DISTANCE_M: 10,
+    /** Distance from target bathroom that ends active navigation (meters). */
+    BATHROOM_ARRIVAL_DISTANCE_M: 10,
+    /** Duration to show the reached-target band at the top of the screen (milliseconds). */
+    BATHROOM_REACHED_TARGET_BAND_DURATION_MS: 3_000,
+    /** Copied by value from Alert.POSITIVE_ACCENT_COLOR per find-nearest-bathroom spec. */
+    BATHROOM_REACHED_TARGET_BAND_BG_COLOR: "#7BE3C7",
+    BATHROOM_REACHED_TARGET_BAND_TEXT_COLOR: "#ffffff",
+    BATHROOM_REACHED_TARGET_BAND_MESSAGE: "Reached target bathroom",
+    BATHROOM_REACHED_TARGET_BAND_Z_INDEX: 60,
+    BATHROOM_REACHED_TARGET_BAND_FONT_SIZE_PX: 13,
+    BATHROOM_REACHED_TARGET_BAND_LINE_HEIGHT: 1.3,
+    BATHROOM_REACHED_TARGET_BAND_PADDING: "8px 12px",
+    /** Server request timeout when updating the active-navigation path (milliseconds). */
+    BATHROOM_PATH_UPDATE_REQUEST_TIMEOUT_MS: 15_000,
+    /** Copied by value from Alerts.NEGATIVE_ACCENT_COLOR per find-nearest-bathroom spec. */
+    BATHROOM_PATH_UPDATE_ERROR_BAND_BG_COLOR: "#EC3968",
+    BATHROOM_PATH_UPDATE_ERROR_BAND_TEXT_COLOR: "#ffffff",
+    BATHROOM_PATH_UPDATE_ERROR_BAND_MESSAGE_ERROR: "Error while updating path",
+    BATHROOM_PATH_UPDATE_ERROR_BAND_MESSAGE_TIMEOUT: "Timed out while updating path",
+    BATHROOM_PATH_UPDATE_ERROR_BAND_Z_INDEX: 60,
+    BATHROOM_PATH_UPDATE_ERROR_BAND_FONT_SIZE_PX: 13,
+    BATHROOM_PATH_UPDATE_ERROR_BAND_LINE_HEIGHT: 1.3,
+    BATHROOM_PATH_UPDATE_ERROR_BAND_PADDING: "8px 12px",
+} as const;

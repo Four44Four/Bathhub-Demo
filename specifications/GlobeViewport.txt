@@ -17,9 +17,31 @@
     - Repeatedly calculate the 3D point on the Globe that is directly on the GlobeViewport's center
     - Cache this calculated 3D point
     - If the user stops rotating the Globe or zooming after a specified timeout duration, stop calculating it
+Viewport2d:
+ - 2D UI at static positions overlayed on the Globe viewport
+ - Elements:
+    - Test pathfind button:
+       - Rectangular button
+       - Has text "Test pathfind"
+       - Located at the top left corner
+       - When interacted with:
+          - If the user has clicked or tapped on the Globe and a valid ClickedIndicator exists:
+             - Call the appropriate function from ./app/_server/Pathfind.ts to calculate the path between the clicked point on the Globe and either the 3D point on the Globe directly on the GlobeViewport's center if geolocation permission is denied or yet to be granted, or the user's current geolocation position, if it has been granted
+             - Render this path as an anti-aliased line on the Globe with several gradient, shader-based rendering effect options 
+          - Else:
+             - Render a positional alert below the button
+    - Recenter button:
+       - Circular button
+       - Has image public/crosshairs_center.svg
+       - Located at the bottom left corner
+       - Only appears when the geolocation of the client is detected (and permissions are granted)
+       - When interacted with:
+          - The Globe will play the animation to smoothly ease, or snap if the correct user config option is enabled, the Globe's rotation and camera zoom to the correct level to be directly over the current geolocation position if geolocation permissions were granted 
+    - Find nearest bathroom button:
+       - Circular button
+       - Has image public/find_bathroom_icon.svg
+       - Located at the bottom right corner
+       - When interacted with:
+          - See specifications/find_nearest_bathroom_logic.txt
  - If the user has clicked or tapped on the Globe and a valid ClickedIndicator exists:
     - If the user clicks or taps on the UI button to run a Test pathfind:
-       - Call the appropriate function from ./app/_server/Pathfind.ts to calculate the path between the clicked point on the Globe and either the 3D point on the Globe directly on the GlobeViewport's center if geolocation permission is denied or yet to be granted, or the user's current geolocation position, if it has been granted
-       - Render this path as an anti-aliased line on the Globe with several gradient, shader-based rendering effect options
- - The Recenter button only appears when the geolocation of the client is detected (and permissions are granted)
- - If the user clicks or taps on the Recenter button, the Globe will play the animation to smoothly ease, or snap if the correct config option is enabled, the Globe's rotation and camera zoom to the correct level to be directly over the current geolocation position if geolocation permissions were granted 

@@ -23,10 +23,20 @@ export async function getPathBetweenPoints(
                 predictedDistMeters: OrsPathfind.getPredictedDistanceGeoJson(geoJsonRes)
             }
         };
-    } catch (error: any) {
+    } catch (error: unknown) {
+        const message =
+            error instanceof Error
+                ? error.message
+                : typeof error === "object" &&
+                    error !== null &&
+                    "response" in error &&
+                    typeof (error as { response?: { data?: unknown } }).response?.data ===
+                      "string"
+                  ? (error as { response: { data: string } }).response.data
+                  : String(error);
         return {
           val: null,
-          errorMsg: `Error occurred while calculating route: ${error.response?.data ?? error.message}`
+          errorMsg: `Error occurred while calculating route: ${message}`
         }
     }
 }

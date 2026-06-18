@@ -1,32 +1,9 @@
 # Sprint 2 (basic backend)
-    - (for all Bathroom CRUD) Have REMOTE rate limits on all Bathroom DB operations
-    - (for all Bathroom CRUD) Make integration tests in ./supabase/migrations
- - impl find nearest bathroom button
-    - make it pathfind from the user to the actual nearest bathroom
-    - save the original camera position/zoom level
-    - client will send up their find nearest bathroom settings data/constraints
-    - nearest bathroom is calculated on the remote DB side
-       - there will be a serverside maximum distance on how far away the bathroom can be calculated (should match up with the user setting schema's find nearest bathroom maximum distance)
-       - if it times out (> than specified amt of time):
-          - make a notification to client
-          - calculate it from the cached local bathrooms
-             - respect client's bathroom preferences settings
-    - if no nearest bathroom matching client's bathroom preferences is found:
-       - notify them with an important negative notification
-       - do nothing else
-    - once client has found the nearest bathroom:
-       - enter into Bathroom nevigation mode:
-          - similar to Add bathroom mode, where most viewport2d elements + swipe-up menu are removed
-          - has X and checkmark buttons at bottom to reject navigation or start navigating
-          - camera animates (depending on config option) over found bathroom at same zoom level as when client loads into the app
-          - if client rejects:
-             - animate (depending on config option) camera back to position when the bathroom navigation started
-          - if client accepts:
-             - send request to server to retrieve path data from client current location to target bathroom location
-             - ??? keep updating path every <some-amt-of-time>/if client moves enough from the previous location ???
-             - once client reaches within specified distance from bathroom:
-                - ??? stop updating path ????
-                - notify client (non-intrusively) that they have reached the bathroom
+ - Change the X and checkmark buttons in viewport2d to have white icon color
+ - Change the scale of the X in the Exit find nearest bathroom mode to match the X in the Exit user settings page button
+ - Fix bottleneck behind path LOD updates
+ - Add a schema snapshot system for sending default user settings DB to client if they didnt have a DB prior
+ - (for all Bathroom CRUD) Add REMOTE rate limits on all Bathroom DB operations + the pathfinding operation
  - Add rating system on bathrooms (stars 1-5)
  - Add comments system on bathrooms
  - Setup S3 for Supabase

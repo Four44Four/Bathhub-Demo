@@ -63,6 +63,19 @@ export type InstalledOrbitCameraControls = {
   animateZoomToInitTarget: (durationMs?: number) => void;
   /** Immediately snap zoom to the init target zoom range. */
   snapZoomToInitTarget: () => void;
+  /** Smoothly zoom to a camera height above the ellipsoid (meters). */
+  animateZoomToCameraHeightM: (heightM: number, durationMs?: number) => void;
+  /** Immediately snap zoom to a camera height above the ellipsoid (meters). */
+  snapZoomToCameraHeightM: (heightM: number) => void;
+  /** Current orbit center distance in meters (matches interactive zoom level). */
+  getOrbitCenterDistanceM: () => number;
+  /** Smoothly zoom to an orbit center distance in meters. */
+  animateZoomToOrbitCenterDistanceM: (
+    centerDistanceM: number,
+    durationMs?: number,
+  ) => void;
+  /** Immediately snap zoom to an orbit center distance in meters. */
+  snapZoomToOrbitCenterDistanceM: (centerDistanceM: number) => void;
   /** Updates the init zoom target when user settings change at runtime. */
   setCameraInitSurfaceOffsetM: (offsetM: number) => void;
 };
@@ -157,6 +170,30 @@ export function installOrbitCameraControls({
 
   let initTargetRange = computeInitTargetRange();
 
+  const computeRangeFromCameraHeightM = (heightM: number) =>
+    OrbitCam.clampOrbitCenterDistanceMeters({
+      centerDistanceM: radius + heightM,
+      sphereRadiusM: radius,
+      minSurfaceClearanceM:
+        viewer.scene.screenSpaceCameraController.minimumZoomDistance ??
+        GlobeConsts.MIN_SURFACE_CLEARANCE_M,
+      maxOrbitCenterDistanceM:
+        viewer.scene.screenSpaceCameraController.maximumZoomDistance ?? radius * 20.0,
+    });
+
+  const animateZoomToRange = (targetRange: number, durationMs?: number) => {
+    if (typeof durationMs === "number" && Number.isFinite(durationMs) && durationMs > 0) {
+      const durS = Math.max(0.001, durationMs / 1000);
+      wheelZoomLerpRate = OrbitCam.wheelZoomLerpRateForApprox99PercentInDuration(durS);
+    } else {
+      wheelZoomLerpRate = defaultWheelZoomLerpRate;
+    }
+    clearZoomAim();
+    wheelZoomLastClient = null;
+    wheelZoomTargetRange = targetRange;
+    startWheelZoomLoop();
+  };
+
   /** Full-bleed layout: zoom so the sphere’s limb subtends the larger of the two frustum FOVs (“cover”), clipping on the shorter axis (portrait: left/right). */
   const fillParent = typeof width === "string" && width === "100%";
 
@@ -224,15 +261,19 @@ export function installOrbitCameraControls({
   /** Left-drag / touch orbit: same damping curve as wheel and right-drag zoom (via `zoomCurveReferenceRange`). */
   const rotateSpeedMultiplier = () => zoomRateScale01();
 
-  const setRange = (next: number) => {
-    range = OrbitCam.clampOrbitCenterDistanceMeters({
-      centerDistanceM: next,
+  const clampOrbitCenterDistanceM = (centerDistanceM: number) =>
+    OrbitCam.clampOrbitCenterDistanceMeters({
+      centerDistanceM,
       sphereRadiusM: radius,
       minSurfaceClearanceM:
-        viewer.scene.screenSpaceCameraController.minimumZoomDistance ?? GlobeConsts.MIN_SURFACE_CLEARANCE_M,
+        viewer.scene.screenSpaceCameraController.minimumZoomDistance ??
+        GlobeConsts.MIN_SURFACE_CLEARANCE_M,
       maxOrbitCenterDistanceM:
         viewer.scene.screenSpaceCameraController.maximumZoomDistance ?? radius * 20.0,
     });
+
+  const setRange = (next: number) => {
+    range = clampOrbitCenterDistanceM(next);
   };
 
   const applyOrbit = () => {
@@ -983,19 +1024,7 @@ export function installOrbitCameraControls({
     animateTo,
     snapTo,
     animateZoomToInitTarget: (durationMs?: number) => {
-      // Reuse the existing smooth wheel-zoom target codepath.
-      // If a duration is supplied, tune the exponential rate so we reach ~99% by that time.
-      if (typeof durationMs === "number" && Number.isFinite(durationMs) && durationMs > 0) {
-        const durS = Math.max(0.001, durationMs / 1000);
-        // remaining(T) = exp(-rate*T). Solve for remaining=0.01 at T=durS.
-        wheelZoomLerpRate = OrbitCam.wheelZoomLerpRateForApprox99PercentInDuration(durS);
-      } else {
-        wheelZoomLerpRate = defaultWheelZoomLerpRate;
-      }
-      clearZoomAim();
-      wheelZoomLastClient = null;
-      wheelZoomTargetRange = initTargetRange;
-      startWheelZoomLoop();
+      animateZoomToRange(initTargetRange, durationMs);
     },
     snapZoomToInitTarget: () => {
       if (wheelZoomRaf != null) {
@@ -1006,6 +1035,37 @@ export function installOrbitCameraControls({
       clearZoomAim();
       setRange(initTargetRange);
       wheelZoomTargetRange = initTargetRange;
+      applyOrbit();
+    },
+    animateZoomToCameraHeightM: (heightM: number, durationMs?: number) => {
+      animateZoomToRange(computeRangeFromCameraHeightM(heightM), durationMs);
+    },
+    snapZoomToCameraHeightM: (heightM: number) => {
+      const targetRange = computeRangeFromCameraHeightM(heightM);
+      if (wheelZoomRaf != null) {
+        cancelAnimationFrame(wheelZoomRaf);
+        wheelZoomRaf = null;
+        wheelZoomLastClient = null;
+      }
+      clearZoomAim();
+      setRange(targetRange);
+      wheelZoomTargetRange = targetRange;
+      applyOrbit();
+    },
+    getOrbitCenterDistanceM: () => range,
+    animateZoomToOrbitCenterDistanceM: (centerDistanceM: number, durationMs?: number) => {
+      animateZoomToRange(clampOrbitCenterDistanceM(centerDistanceM), durationMs);
+    },
+    snapZoomToOrbitCenterDistanceM: (centerDistanceM: number) => {
+      const targetRange = clampOrbitCenterDistanceM(centerDistanceM);
+      if (wheelZoomRaf != null) {
+        cancelAnimationFrame(wheelZoomRaf);
+        wheelZoomRaf = null;
+        wheelZoomLastClient = null;
+      }
+      clearZoomAim();
+      setRange(targetRange);
+      wheelZoomTargetRange = targetRange;
       applyOrbit();
     },
     setCameraInitSurfaceOffsetM: (offsetM: number) => {

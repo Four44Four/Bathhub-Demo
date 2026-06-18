@@ -11,6 +11,7 @@ import {
   createBathroomAt,
   type CreateBathroomRpc,
 } from "../../pure/bathroom-data-primary/CreateBathroom";
+import { formatSupabaseError } from "../../pure/formatSupabaseError";
 import {
   type BathroomClientCacheEntry,
   type BathroomSyncResponse,
@@ -21,6 +22,16 @@ import {
   buildSyncBathroomRpcParams,
   parseSyncBathroomRpcPayload,
 } from "../../pure/bathroom-data-primary/SyncBathrooms";
+import {
+  FIND_NEAREST_BATHROOM_ERROR_CONTEXT,
+  FIND_NEAREST_BATHROOM_RPC_NAME,
+  buildFindNearestBathroomRpcParams,
+  findNearestBathroomQueryValidationError,
+  parseFindNearestBathroomRpcData,
+  type FindNearestBathroomConstraints,
+  type FindNearestBathroomRpcRow,
+} from "../../pure/bathroom-data-primary/FindNearestBathroom";
+import { type LatLong } from "../../../_shared/BathroomDataPrimary";
 
 export type { BathroomDataPrimaryRow, ViewportBounds };
 
@@ -60,10 +71,6 @@ export function getSupabaseClient(): SupabaseClient {
     supabaseClient = createClient(getSupabaseUrl(), getSupabaseKey());
   }
   return supabaseClient;
-}
-
-function formatSupabaseError(context: string, message: string): string {
-  return `${context}: ${message}`;
 }
 
 const READ_IN_BOUNDS_INVALID_BBOX_MESSAGE = "invalid bbox coordinates" as const;
@@ -125,6 +132,31 @@ export async function getInBounds(
   }
 
   return (data ?? []) as BathroomDataPrimaryRow[];
+}
+
+export async function findNearest(
+  location: LatLong,
+  constraints: FindNearestBathroomConstraints,
+): Promise<FindNearestBathroomRpcRow | null> {
+  const validationError = findNearestBathroomQueryValidationError(location, constraints);
+  if (validationError !== null) {
+    throw new Error(
+      formatSupabaseError(FIND_NEAREST_BATHROOM_ERROR_CONTEXT, validationError),
+    );
+  }
+
+  const { data, error } = await getSupabaseClient().rpc(
+    FIND_NEAREST_BATHROOM_RPC_NAME,
+    buildFindNearestBathroomRpcParams(location, constraints),
+  );
+
+  if (error !== null) {
+    throw new Error(
+      formatSupabaseError(FIND_NEAREST_BATHROOM_ERROR_CONTEXT, error.message),
+    );
+  }
+
+  return parseFindNearestBathroomRpcData(data);
 }
 
 export async function syncInBounds(

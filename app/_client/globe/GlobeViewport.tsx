@@ -24,6 +24,8 @@ import { installOrbitCameraControls, type InstalledOrbitCameraControls } from ".
 import { globeLodVisualStateFromCameraHeightM } from "../pure/globe/GlobeLayerLod";
 import { TwoToneTileProcessor } from "./TwoToneTileProcessor";
 import { dimensionCss } from "../pure/globe/GlobeViewportCss";
+import { shouldNotifyCameraMotionIdleOnSamplerSettled } from "../pure/globe/GlobeViewportCameraMotionIdle";
+import { viewportCenterBusySamplingArmAction } from "../pure/globe/GlobeViewportCenterSampling";
 import { shouldSchedulePathLodRebuildOnIdle } from "../pure/globe/PathLodRebuildPolicy";
 import * as GeoArrival from "../pure/globe/GeoArrivalCameraLock";
 import {
@@ -811,9 +813,12 @@ export function GlobeViewport({
         containerRef,
         zoomIndicatorRootRef,
         onZoomIndicatorPulse,
-        onGlobeViewportInteraction: () => {
+        onGlobeViewportInteraction: (phase) => {
           isClientIdle = false;
-          cancelPathLodDebounce();
+          if (phase === "start") {
+            cancelPathLodDebounce();
+            pointerIdleNotified = false;
+          }
           viewportSamplerIdleCallbacks.armIdleDetection?.();
           viewportSamplerWakeRef.ensureBusy?.();
         },
@@ -830,6 +835,9 @@ export function GlobeViewport({
         },
         onCameraMotionSettled: () => {
           cameraMotionSettledRef.run?.();
+        },
+        onWheelZoomFrame: () => {
+          viewportSamplerWakeRef.ensureBusy?.();
         },
       });
 
@@ -857,6 +865,37 @@ export function GlobeViewport({
       let viewportSamplerTimer: number | null = null;
       let idleDetectTimer: number | null = null;
       let busySamplingActive = false;
+      /** True after pointer-idle subscribers were notified for the current input session. */
+      let pointerIdleNotified = false;
+
+      const shouldNotifyMotionIdleOnSamplerSettled = () =>
+        shouldNotifyCameraMotionIdleOnSamplerSettled({
+          pointerIdle: cameraControls.isGlobeViewportPointerIdle(
+            GlobeConsts.VIEWPORT_DETECT_IDLE_MS,
+          ),
+          wheelZoomFromUserInput: cameraControls.isWheelZoomFromUserInput(),
+          pointerIdleAlreadyNotified: pointerIdleNotified,
+        });
+
+      const notifyCameraMotionIdleIfNeeded = () => {
+        if (!shouldNotifyMotionIdleOnSamplerSettled()) return;
+        pointerIdleNotified = true;
+        runPendingPathLodRebuildAfterMotion();
+        notifyCameraMotionIdleListeners();
+      };
+
+      const notifyPointerIdleIfNeeded = () => {
+        if (pointerIdleNotified) return;
+        if (
+          !cameraControls.isGlobeViewportPointerIdle(GlobeConsts.VIEWPORT_DETECT_IDLE_MS)
+        ) {
+          return;
+        }
+        isClientIdle = true;
+        pointerIdleNotified = true;
+        maybeSchedulePathLodRebuildOnClientIdle();
+        notifyCameraMotionIdleListeners();
+      };
 
       const stopViewportSampler = () => {
         if (viewportSamplerTimer !== null) {
@@ -886,7 +925,7 @@ export function GlobeViewport({
         notifyViewportChangeListeners();
       };
 
-      /** Single deferred sample when the client has just been classified idle (does not reschedule). */
+      /** Single deferred sample when motion has settled (does not reschedule). */
       const scheduleNextViewportCenterSample = () => {
         if (cancelled || !viewer) return;
         if (viewportSamplerTimer !== null) {
@@ -901,10 +940,9 @@ export function GlobeViewport({
 
       cameraMotionSettledRef.run = () => {
         if (cancelled || !viewer) return;
-        runViewportCenterSample();
+        scheduleNextViewportCenterSample();
         armIdleDetection();
-        runPendingPathLodRebuildAfterMotion();
-        notifyCameraMotionIdleListeners();
+        notifyCameraMotionIdleIfNeeded();
       };
 
       const armIdleDetection = () => {
@@ -921,9 +959,7 @@ export function GlobeViewport({
             armIdleDetection();
             return;
           }
-          isClientIdle = true;
-          scheduleNextViewportCenterSample();
-          maybeSchedulePathLodRebuildOnClientIdle();
+          notifyPointerIdleIfNeeded();
         }, GlobeConsts.VIEWPORT_DETECT_IDLE_MS);
       };
 
@@ -940,24 +976,35 @@ export function GlobeViewport({
           busySamplingActive = false;
           armIdleDetection();
           if (!cameraControls.isGlobeViewportSamplerBusy()) {
-            runPendingPathLodRebuildAfterMotion();
-            notifyCameraMotionIdleListeners();
+            notifyCameraMotionIdleIfNeeded();
           }
         }
       };
 
       const ensureBusySampling = () => {
-        if (cancelled) return;
-        if (busySamplingActive) return;
-        busySamplingActive = true;
+        if (cancelled || !viewer) return;
+        const armAction = viewportCenterBusySamplingArmAction({
+          shouldContinueSampling:
+            cameraControls.shouldContinueViewportCenterSampling(),
+          busySamplingActive,
+          hasScheduledTick: viewportSamplerTimer !== null,
+        });
+        if (armAction === "noop") return;
+        if (armAction === "start") {
+          busySamplingActive = true;
+          runViewportCenterSample();
+          tickGeoArrivalLock();
+        }
+        // Replace any pending single-shot sample (e.g. from motion-settled) so
+        // continuous zoom/rotate always gets a busy tick loop.
         if (viewportSamplerTimer !== null) {
           clearTimeout(viewportSamplerTimer);
           viewportSamplerTimer = null;
         }
-        // Sample immediately so brief drags/zooms still update before the first delayed tick.
-        runViewportCenterSample();
-        tickGeoArrivalLock();
-        viewportSamplerTimer = window.setTimeout(busySamplingTick, GlobeConsts.UPDATE_VIEWPORT_CENTER_DELAY_MS);
+        viewportSamplerTimer = window.setTimeout(
+          busySamplingTick,
+          GlobeConsts.UPDATE_VIEWPORT_CENTER_DELAY_MS,
+        );
       };
 
       viewportSamplerWakeRef.ensureBusy = ensureBusySampling;

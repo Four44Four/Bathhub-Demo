@@ -1,5 +1,4 @@
 # Sprint 2 (basic backend)
- - Fix bottleneck behind path LOD updates
  - Add a schema snapshot system for sending default user settings DB to client if they didnt have a DB prior
  - (for all Bathroom CRUD) Add REMOTE rate limits on all Bathroom DB operations + the pathfinding operation
  - Add rating system on bathrooms (stars 1-5)

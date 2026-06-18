@@ -40,6 +40,7 @@ Actions after interacting with Find bathroom button:
     - If the bathroom response came back in time:
        - Enter into Confirm Find Bathroom mode:
           - Camera animates (depending on config option) over found bathroom at height from Globe surface "Init camera height" from user settings:
+             - The floor value for exponential panning/zoom applies here
              - Upon reaching the found bathroom:
                 - Force a query for the bathrooms visible in the current Globe viewport so that the found bathroom marker will be rendered
           - If client interacts with X button to reject the bathroom:

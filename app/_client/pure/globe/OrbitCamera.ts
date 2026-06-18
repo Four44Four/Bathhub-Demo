@@ -41,6 +41,121 @@ export function orbitShortestDeltaLongitudeRad(fromThetaRad: number, toThetaRad:
   return Utils.wrapAngleRad(toThetaRad - fromThetaRad);
 }
 
+/** Great-circle surface distance (meters) between two lat/lon points on a sphere. */
+export function orbitLatLonSurfaceDistanceMeters(args: {
+  sphereRadiusM: number;
+  fromLatRad: number;
+  fromLonRad: number;
+  toLatRad: number;
+  toLonRad: number;
+}): number {
+  const dLat = args.toLatRad - args.fromLatRad;
+  const dLon = args.toLonRad - args.fromLonRad;
+  const sinHalfDLat = Math.sin(dLat / 2);
+  const sinHalfDLon = Math.sin(dLon / 2);
+  const haversine =
+    sinHalfDLat * sinHalfDLat +
+    Math.cos(args.fromLatRad) * Math.cos(args.toLatRad) * sinHalfDLon * sinHalfDLon;
+  return 2 * args.sphereRadiusM * Math.asin(Math.min(1, Math.sqrt(haversine)));
+}
+
+/**
+ * Tail snap for exponential zoom: finish when within the floor of the target, or when
+ * a positive per-frame step would be imperceptible. Zero delta at loop start (dt = 0)
+ * must not trigger snap.
+ */
+export function shouldSnapExpZoomToTarget(args: {
+  frameDeltaM: number;
+  remainingToTargetM: number;
+  floorM: number;
+}): boolean {
+  return (
+    args.remainingToTargetM < args.floorM ||
+    (args.frameDeltaM > 0 && args.frameDeltaM < args.floorM)
+  );
+}
+
+/**
+ * Tail snap for eased pan (`animateTo`): smoothstep ease-in also produces sub-floor
+ * frame deltas while still far from the target, so frame-delta snap requires remaining
+ * to be near the target as well.
+ */
+export function shouldSnapExpPanToTarget(args: {
+  frameDeltaM: number;
+  remainingToTargetM: number;
+  floorM: number;
+}): boolean {
+  if (args.remainingToTargetM < args.floorM) {
+    return true;
+  }
+  return (
+    args.frameDeltaM > 0 &&
+    args.frameDeltaM < args.floorM &&
+    args.remainingToTargetM < args.floorM * 2
+  );
+}
+
+/** One frame of the programmatic rotate-only animation in `Camera.animateTo`. */
+export function orbitRotateAnimStep(args: {
+  nowMs: number;
+  startMs: number;
+  durationMs: number;
+  startThetaRad: number;
+  startPhiRad: number;
+  targetThetaRad: number;
+  targetPhiRad: number;
+  prevThetaRad: number;
+  prevPhiRad: number;
+  sphereRadiusM: number;
+  frameDeltaFloorM: number;
+  latEps: number;
+}): { thetaRad: number; phiRad: number; done: boolean } {
+  const targetPhi = clampOrbitLatitudeRad(args.targetPhiRad, args.latEps);
+  const dTheta = orbitShortestDeltaLongitudeRad(args.startThetaRad, args.targetThetaRad);
+  const dPhi = targetPhi - args.startPhiRad;
+  const u = Utils.clamp((args.nowMs - args.startMs) / Math.max(1, args.durationMs), 0, 1);
+
+  if (u >= 1) {
+    return { thetaRad: args.targetThetaRad, phiRad: targetPhi, done: true };
+  }
+
+  const sample = sampledOrbitRotateAnimAngles({
+    startThetaRad: args.startThetaRad,
+    startPhiRad: args.startPhiRad,
+    deltaThetaRad: dTheta,
+    deltaPhiRad: dPhi,
+    linearProgress01: u,
+    latEps: args.latEps,
+  });
+
+  const frameDeltaM = orbitLatLonSurfaceDistanceMeters({
+    sphereRadiusM: args.sphereRadiusM,
+    fromLatRad: args.prevPhiRad,
+    fromLonRad: args.prevThetaRad,
+    toLatRad: sample.phiRad,
+    toLonRad: sample.thetaRad,
+  });
+  const remainingM = orbitLatLonSurfaceDistanceMeters({
+    sphereRadiusM: args.sphereRadiusM,
+    fromLatRad: sample.phiRad,
+    fromLonRad: sample.thetaRad,
+    toLatRad: targetPhi,
+    toLonRad: args.targetThetaRad,
+  });
+
+  if (
+    shouldSnapExpPanToTarget({
+      frameDeltaM,
+      remainingToTargetM: remainingM,
+      floorM: args.frameDeltaFloorM,
+    })
+  ) {
+    return { thetaRad: args.targetThetaRad, phiRad: targetPhi, done: true };
+  }
+
+  return { thetaRad: sample.thetaRad, phiRad: sample.phiRad, done: false };
+}
+
 /** One eased sample of the programmatic rotate-only animation in `Camera.animateTo`. */
 export function sampledOrbitRotateAnimAngles(args: {
   startThetaRad: number;
@@ -322,6 +437,11 @@ export function wheelSmoothZoomLerpTick(args: {
     minSurfaceClearanceM: number;
     maxOrbitCenterDistanceM: number;
   };
+  /**
+   * When set, snap to target when the exponential per-frame range delta would be
+   * below this (meters). Pass `null` to use the tight programmatic stop threshold.
+   */
+  frameDeltaFloorM: number | null;
   /** `zoomAim.startRange` when a zoom-aim session exists, else `null`. */
   zoomAimStartRangeM: number | null;
   wheelZoomLastPulseTMs: number;
@@ -340,24 +460,48 @@ export function wheelSmoothZoomLerpTick(args: {
   const wheelZoomLastTMs = args.tNowMs;
   const dt = wheelZoomLoopDtSecondsClamped(args.tNowMs, args.wheelZoomLastTMs);
   const remaining = Math.abs(args.wheelZoomTargetRangeM - args.rangeM);
-  if (remaining < 0.01) {
-    const clearZoomAimIfNearStart =
+  const finishZoom = (rangeM: number) => ({
+    wheelZoomLastTMs,
+    rangeM,
+    stopLoop: true as const,
+    resetDefaultLerpRate: true as const,
+    clearZoomAimIfNearStart:
       args.zoomAimStartRangeM !== null &&
-      Math.abs(args.rangeM - args.zoomAimStartRangeM) < 0.5;
-    return {
-      wheelZoomLastTMs,
-      rangeM: args.rangeM,
-      stopLoop: true,
-      resetDefaultLerpRate: true,
-      clearZoomAimIfNearStart,
-      shouldPulseZoomIndicator: false,
-      wheelZoomLastPulseTMs: args.wheelZoomLastPulseTMs,
-    };
+      Math.abs(rangeM - args.zoomAimStartRangeM) < 0.5,
+    shouldPulseZoomIndicator: false as const,
+    wheelZoomLastPulseTMs: args.wheelZoomLastPulseTMs,
+  });
+
+  if (remaining < 1e-9) {
+    return finishZoom(args.rangeM);
   }
 
   const alpha = wheelZoomExponentialBlendAlpha(dt, args.lerpRate);
   const prevRange = args.rangeM;
   const lerped = Utils.lerp(args.rangeM, args.wheelZoomTargetRangeM, alpha);
+
+  if (args.frameDeltaFloorM !== null && args.frameDeltaFloorM > 0) {
+    const frameDeltaM = Math.abs(lerped - args.rangeM);
+    if (
+      shouldSnapExpZoomToTarget({
+        frameDeltaM,
+        remainingToTargetM: remaining,
+        floorM: args.frameDeltaFloorM,
+      })
+    ) {
+      return finishZoom(
+        clampOrbitCenterDistanceMeters({
+          centerDistanceM: args.wheelZoomTargetRangeM,
+          sphereRadiusM: args.orbitRangeClamp.sphereRadiusM,
+          minSurfaceClearanceM: args.orbitRangeClamp.minSurfaceClearanceM,
+          maxOrbitCenterDistanceM: args.orbitRangeClamp.maxOrbitCenterDistanceM,
+        }),
+      );
+    }
+  } else if (remaining < 0.01) {
+    return finishZoom(args.rangeM);
+  }
+
   const nextRangeM = clampOrbitCenterDistanceMeters({
     centerDistanceM: lerped,
     sphereRadiusM: args.orbitRangeClamp.sphereRadiusM,

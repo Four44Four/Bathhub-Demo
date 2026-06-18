@@ -14,7 +14,7 @@ describe("shouldContinueGlobeViewportCenterSampling", () => {
     ).toBe(true);
   });
 
-  test("continues during user wheel smoothing only", () => {
+  test("continues during any wheel smoothing (user or programmatic)", () => {
     expect(
       shouldContinueGlobeViewportCenterSampling({
         pointersDownCount: 0,
@@ -28,10 +28,32 @@ describe("shouldContinueGlobeViewportCenterSampling", () => {
         wheelZoomActive: true,
         wheelZoomFromUserInput: false,
       }),
-    ).toBe(false);
+    ).toBe(true);
   });
 
-  test("does not continue for programmatic rotate-only motion", () => {
+  test("continues during an active Cesium pinch even with no tracked pointers", () => {
+    expect(
+      shouldContinueGlobeViewportCenterSampling({
+        pointersDownCount: 0,
+        wheelZoomActive: false,
+        wheelZoomFromUserInput: false,
+        isPinching: true,
+      }),
+    ).toBe(true);
+  });
+
+  test("continues during programmatic rotate smoothing when pointer-idle", () => {
+    expect(
+      shouldContinueGlobeViewportCenterSampling({
+        pointersDownCount: 0,
+        wheelZoomActive: false,
+        wheelZoomFromUserInput: false,
+        rotateAnimActive: true,
+      }),
+    ).toBe(true);
+  });
+
+  test("stops when pointer-idle and no smoothing animation is active", () => {
     expect(
       shouldContinueGlobeViewportCenterSampling({
         pointersDownCount: 0,

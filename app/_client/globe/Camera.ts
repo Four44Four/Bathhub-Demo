@@ -29,8 +29,12 @@ export type InstallOrbitCameraOptions = {
   zoomIndicatorRootRef?: RefObject<HTMLElement | null>;
   onZoomIndicatorPulse?: (x: number, y: number) => void;
   onClickLatLonDegrees?: (lat: number, lon: number) => void;
-  /** Fired on pointer down, wheel, and pinch start so viewport sampling can wake before `camera.changed`. */
-  onGlobeViewportInteraction?: () => void;
+  /**
+   * Fired when the user rotates or zooms the globe.
+   * `start` — pointer down, wheel tick, pinch start (discrete input).
+   * `continue` — ongoing drag/pinch move (keeps viewport-center sampling alive).
+   */
+  onGlobeViewportInteraction?: (phase: "start" | "continue") => void;
   /**
    * When false, pointer/wheel/pinch orbit input is ignored (still allow pointerup/cancel for hygiene).
    * Used while post-geolocation camera animations run.
@@ -46,6 +50,11 @@ export type InstallOrbitCameraOptions = {
    * rotate/zoom animations). Not fired while any motion is still in flight.
    */
   onCameraMotionSettled?: () => void;
+  /**
+   * Fired after each wheel-smooth-zoom animation frame applies the orbit camera.
+   * Used to keep viewport-center sampling armed while `wheelZoomActive` is true.
+   */
+  onWheelZoomFrame?: () => void;
 };
 
 export type InstalledOrbitCameraControls = {
@@ -64,11 +73,12 @@ export type InstalledOrbitCameraControls = {
    */
   isGlobeViewportPointerIdle: (idleThresholdMs: number, nowMs?: number) => boolean;
   /**
-   * True while viewport-center sampling should continue: active user pointer input, or
-   * user wheel-smoothing after the last wheel tick. Programmatic recenter/geolocation
-   * animations do not count (see GlobeViewport spec).
+   * True while viewport-center sampling should continue: active user input, pinch
+   * recognizer, or any in-flight wheel-zoom / rotate smoothing (see GlobeViewport spec).
    */
   shouldContinueViewportCenterSampling: () => boolean;
+  /** True after user wheel input until the next programmatic zoom animation starts. */
+  isWheelZoomFromUserInput: () => boolean;
   /**
    * Smoothly rotate the orbit camera so the surface point at (latDeg, longDeg)
    * is centered. Does NOT change zoom (range). Any user input (drag/wheel/pinch)
@@ -120,6 +130,7 @@ export function installOrbitCameraControls({
   isUserGlobeOrbitInputAllowed,
   onOrbitRotateAnimationEnd,
   onCameraMotionSettled,
+  onWheelZoomFrame,
 }: InstallOrbitCameraOptions): InstalledOrbitCameraControls {
   const EPS = 1e-3;
 
@@ -128,14 +139,27 @@ export function installOrbitCameraControls({
   let lastPointerInputMs =
     typeof performance !== "undefined" ? performance.now() : Date.now();
 
-  const recordPointerInput = () => {
+  const touchLastPointerInputMs = () => {
     lastPointerInputMs =
       typeof performance !== "undefined" ? performance.now() : Date.now();
+  };
+
+  const notifyGlobeViewportInteraction = (phase: "start" | "continue") => {
     try {
-      onGlobeViewportInteraction?.();
+      onGlobeViewportInteraction?.(phase);
     } catch {
       // ignore third-party hook failures
     }
+  };
+
+  const recordPointerInput = () => {
+    touchLastPointerInputMs();
+    notifyGlobeViewportInteraction("start");
+  };
+
+  const recordPointerGestureContinue = () => {
+    touchLastPointerInputMs();
+    notifyGlobeViewportInteraction("continue");
   };
 
   const canvas = viewer.scene.canvas;
@@ -542,6 +566,8 @@ export function installOrbitCameraControls({
       if (!allowUserOrbitInput()) return;
       if (!isPinching || !zoomAim) return;
 
+      recordPointerGestureContinue();
+
       const delta = OrbitCam.readCesiumPinchDistanceDelta(e);
       if (!delta) return;
 
@@ -693,26 +719,35 @@ export function installOrbitCameraControls({
     const startT =
       typeof performance !== "undefined" ? performance.now() : Date.now();
     const dur = Math.max(1, durationMs);
+    let prevTheta = startTheta;
+    let prevPhi = startPhi;
 
     const tick = (now: number) => {
-      const u = Utils.clamp((now - startT) / dur, 0, 1);
-      const sample = OrbitCam.sampledOrbitRotateAnimAngles({
+      const step = OrbitCam.orbitRotateAnimStep({
+        nowMs: now,
+        startMs: startT,
+        durationMs: dur,
         startThetaRad: startTheta,
         startPhiRad: startPhi,
-        deltaThetaRad: dTheta,
-        deltaPhiRad: dPhi,
-        linearProgress01: u,
+        targetThetaRad: targetTheta,
+        targetPhiRad: targetPhi,
+        prevThetaRad: prevTheta,
+        prevPhiRad: prevPhi,
+        sphereRadiusM: radius,
+        frameDeltaFloorM: GlobeConsts.EXP_PAN_ZOOM_FRAME_DELTA_FLOOR_M,
         latEps: EPS,
       });
-      theta = sample.thetaRad;
-      phi = sample.phiRad;
+      theta = step.thetaRad;
+      phi = step.phiRad;
+      prevTheta = step.thetaRad;
+      prevPhi = step.phiRad;
       applyOrbit();
-      if (u < 1) {
-        rotateAnimRaf = requestAnimationFrame(tick);
-      } else {
+      if (step.done) {
         rotateAnimRaf = null;
         onOrbitRotateAnimationEnd?.();
         notifyCameraMotionSettledIfFullyIdle();
+      } else {
+        rotateAnimRaf = requestAnimationFrame(tick);
       }
     };
     rotateAnimRaf = requestAnimationFrame(tick);
@@ -745,6 +780,7 @@ export function installOrbitCameraControls({
         wheelZoomTargetRangeM: wheelZoomTargetRange,
         lerpRate: wheelZoomLerpRate,
         orbitRangeClamp,
+        frameDeltaFloorM: GlobeConsts.EXP_PAN_ZOOM_FRAME_DELTA_FLOOR_M,
         zoomAimStartRangeM: zoomAim?.startRange ?? null,
         wheelZoomLastPulseTMs: wheelZoomLastPulseT,
         hasWheelZoomLastClient: wheelZoomLastClient != null,
@@ -752,6 +788,16 @@ export function installOrbitCameraControls({
       wheelZoomLastT = step.wheelZoomLastTMs;
 
       if (step.stopLoop) {
+        if (step.rangeM !== range) {
+          range = step.rangeM;
+          applyZoomAimIfActive();
+          applyOrbit();
+          try {
+            onWheelZoomFrame?.();
+          } catch {
+            // ignore third-party hook failures
+          }
+        }
         if (step.clearZoomAimIfNearStart) clearZoomAim();
         wheelZoomRaf = null;
         if (step.resetDefaultLerpRate) wheelZoomLerpRate = defaultWheelZoomLerpRate;
@@ -767,6 +813,11 @@ export function installOrbitCameraControls({
 
       applyZoomAimIfActive();
       applyOrbit();
+      try {
+        onWheelZoomFrame?.();
+      } catch {
+        // ignore third-party hook failures
+      }
 
       wheelZoomRaf = requestAnimationFrame(tick);
     };
@@ -858,6 +909,10 @@ export function installOrbitCameraControls({
     if (!allowUserOrbitInput()) {
       e.preventDefault();
       return;
+    }
+
+    if (mode === "rotate" || mode === "zoomDrag" || mode === "pinchZoom") {
+      recordPointerGestureContinue();
     }
 
     if (mode === "rotate") {
@@ -977,6 +1032,7 @@ export function installOrbitCameraControls({
       if (mode === "pinchZoom" || mode === "zoomDrag") clearZoomAim();
       mode = "none";
       endPinchZoomSession();
+      notifyCameraMotionSettledIfFullyIdle();
     } else if (pointers.size === 1 && e.pointerType !== "mouse") {
       mode = "rotate";
       endPinchZoomSession();
@@ -1009,7 +1065,6 @@ export function installOrbitCameraControls({
     cancelRotateAnim();
 
     wheelZoomFromUserInput = true;
-    recordPointerInput();
 
     const minRange = getMinRange();
     const maxRange =
@@ -1036,7 +1091,9 @@ export function installOrbitCameraControls({
     if (appliedScale < 1) {
       ensureZoomAimForClientXY(e.clientX, e.clientY);
     }
+    // Start smoothing before waking the viewport sampler so `wheelZoomActive` is already true.
     startWheelZoomLoop();
+    recordPointerInput();
     e.preventDefault();
   };
 
@@ -1095,13 +1152,18 @@ export function installOrbitCameraControls({
       pointersDownCount: pointers.size,
       wheelZoomActive: wheelZoomRaf !== null,
       wheelZoomFromUserInput,
+      isPinching,
+      rotateAnimActive: rotateAnimRaf !== null,
     });
+
+  const isWheelZoomFromUserInput = () => wheelZoomFromUserInput;
 
   return {
     isGlobeViewportSamplerBusy,
     isGlobePointerInputActive,
     isGlobeViewportPointerIdle: isGlobeViewportPointerIdleFn,
     shouldContinueViewportCenterSampling,
+    isWheelZoomFromUserInput,
     animateTo,
     snapTo,
     animateZoomToInitTarget: (durationMs?: number) => {

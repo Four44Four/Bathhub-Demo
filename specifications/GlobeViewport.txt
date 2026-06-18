@@ -3,6 +3,10 @@
     - Globe animations (such as when Recentering) will not invalidate the idle state, only user input
  - Camera facing Globe can be brought closer to Globe's surface by scrolling mouse wheel forward, dragging right click up, or pinching in with 2 fingers
     - Doing those interactions in the opposite direction will bring the Camera farther from the Globe's surface
+ - There will be a specified floor value for the frame delta (in meters) where an exponential animation for panning or zoom will snap to the target value once the exponential frame delta falls below it
+    - This is to prevent extra time spent interpolating zoom level with near imperceptible motion from dragging out animation
+ - Mouse wheel scrolling will result in an exponentially smoothed zoom in or out
+    - The floor value for exponential panning/zoom applies here
  - When using 2 fingers on the Globe, panning and zooming can happen simultaneously
  - When any action that triggers a zoom occurs, render a 2D image on the viewport according to ./app/_client/ZoomIndicator.tsx, centered on the spot on the screen where the mouse cursor is (in the case of mouse scroll wheel zoom or right click drag zoom), or the midpoint between the 2 fingers (in the case of 2 finger pinch zooming) 
  - The following references to GlobeImage refer to a Cesium billboard entity/image that always faces the camera
@@ -11,6 +15,7 @@
  - If the user has not allowed geolocation data permission or has blocked access to geolocation data, render a 2D static image according to ./app/_client/MapMarker.ts with its bottom midpoint centered on the center of the GlobeViewport 
  - The user allows geolocation data permission, play an animation to smoothly ease to if the correct config option is enabled, or snap camera and Globe rotation so that the camera moves down to specified close distance from the surface of the Globe and the Globe rotates so that the user's current geolocation position is in the center of the GlobeViewport
     - The camera's distance from the Globe's surface should be determined by the "Init camera height (meters)" setting as described in specifications/user_settings.txt
+    - The floor value for exponential panning/zoom applies here
  - If the user already allowed geolocation data permission upon loading the app:
     - Load the GlobeViewport, Globe, and camera to have the user's geolocation position already centered on the GlobeViewport, and have the camera already at the close distance from the surface of the Globe
        - The camera's distance from the Globe's surface should be determined by the "Init camera height (meters)" setting as described in specifications/user_settings.txt
@@ -18,7 +23,13 @@
  - With a specified delay, whenever the user is detected to be rotating the Globe or zooming:
     - Repeatedly calculate the 3D point on the Globe that is directly on the GlobeViewport's center
     - Cache this calculated 3D point
-    - When the user is idle: stop calculating it
+    - This calculation should be completely independent from the idle calculation
+       - When the zoom animation is active but the user is no longer actively inputting:
+          - Do not delay the idle, but continue calculating the center point
+    - When the user is idle but there is still an active drag or zooming smoothing animation where the motion of the camera/Globe is not static: 
+       - Keep calculating the point
+    - When the user is idle AND there is no more drag or zooming smoothing animation active:
+       - Stop calculating the point
 Viewport2d:
  - 2D UI at static positions overlayed on the Globe viewport
  - Elements:
@@ -39,6 +50,7 @@ Viewport2d:
        - Only appears when the geolocation of the client is detected (and permissions are granted)
        - When interacted with:
           - The Globe will play the animation to smoothly ease, or snap if the correct user config option is enabled, the Globe's rotation and camera zoom to the correct level to be directly over the current geolocation position if geolocation permissions were granted 
+             - The floor value for exponential panning/zoom applies here
     - Find nearest bathroom button:
        - Circular button
        - Has image public/find_bathroom_icon.svg

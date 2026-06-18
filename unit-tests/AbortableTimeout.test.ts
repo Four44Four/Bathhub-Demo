@@ -7,7 +7,7 @@ function createManualSchedule() {
       callback = cb;
       return 1;
     },
-    clearTimeout: () => {
+    clearTimeout: (_timerId: number) => {
       callback = null;
     },
     elapse: () => {
@@ -42,7 +42,8 @@ describe("runAbortableTimeout", () => {
 
     schedule.elapse();
     await expect(resultPromise).resolves.toBe("timeout");
-    expect(capturedSignal?.aborted).toBe(true);
+    expect(capturedSignal).not.toBeNull();
+    expect(capturedSignal!.aborted).toBe(true);
   });
 
   test("returns error when work rejects without aborting", async () => {

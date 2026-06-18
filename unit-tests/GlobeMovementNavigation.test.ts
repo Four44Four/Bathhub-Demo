@@ -8,6 +8,8 @@ describe("navigateGlobeToLatLon", () => {
       animateZoomToInitTarget: jest.fn(),
       snapTo: jest.fn(),
       snapZoomToInitTarget: jest.fn(),
+      subscribeCameraMotionIdle: jest.fn(() => () => {}),
+      isGlobeViewportSamplerBusy: jest.fn(() => false),
     };
 
     navigateGlobeToLatLon(
@@ -30,6 +32,8 @@ describe("navigateGlobeToLatLon", () => {
       animateZoomToInitTarget: jest.fn(),
       snapTo: jest.fn(),
       snapZoomToInitTarget: jest.fn(),
+      subscribeCameraMotionIdle: jest.fn(() => () => {}),
+      isGlobeViewportSamplerBusy: jest.fn(() => false),
     };
 
     navigateGlobeToLatLon(

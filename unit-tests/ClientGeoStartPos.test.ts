@@ -1,7 +1,4 @@
-import {
-  isClientStartPosReadyForPathUpdate,
-  readClientStartPos,
-} from "../app/_client/pure/globe/ClientGeoStartPos";
+import { readClientStartPos } from "../app/_client/pure/globe/ClientGeoStartPos";
 import type { GlobeViewportHandle } from "../app/_client/globe/GlobeViewport";
 
 describe("readClientStartPos", () => {

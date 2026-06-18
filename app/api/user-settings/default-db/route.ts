@@ -3,7 +3,7 @@ import { getDefaultUserSettingsDbSnapshotBytes } from "@/app/_server/user-settin
 export async function GET() {
   try {
     const bytes = await getDefaultUserSettingsDbSnapshotBytes();
-    return new Response(bytes, {
+    return new Response(Uint8Array.from(bytes), {
       status: 200,
       headers: {
         "Content-Type": "application/x-sqlite3",

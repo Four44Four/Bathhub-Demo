@@ -2,7 +2,7 @@ import {
   shouldInstallInitialUserSettingsDbFromServer,
   type InitialUserSettingsDbInstallResult,
 } from "@/app/_shared/user-settings/installInitialUserSettingsDb";
-import type { UserSettingsDbPort } from "../UserSettingsDbSqlite";
+import type { UserSettingsDbPort } from "./UserSettingsDbSqlite";
 import { fetchDefaultUserSettingsDbBytes } from "./web/fetchDefaultUserSettingsDbBytes";
 import { isSqliteDatabaseBytes } from "../pure/bathroom/SqliteDatabaseBytes";
 

@@ -638,6 +638,8 @@ export function createGlobeOrbitHarness(
           animateZoomToInitTarget: controls.animateZoomToInitTarget,
           snapTo: controls.snapTo,
           snapZoomToInitTarget: controls.snapZoomToInitTarget,
+          subscribeCameraMotionIdle: () => () => {},
+          isGlobeViewportSamplerBusy: () => false,
         },
         globeMovementSmooth: args.globeMovementSmooth,
         animationDurationMs: durationMs,

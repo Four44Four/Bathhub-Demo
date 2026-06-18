@@ -24,7 +24,6 @@ function exitFindBathroomIconStyle(): CSSProperties {
     height: BTN_IMG_SIZE_PX,
     width: BTN_IMG_SIZE_PX,
     display: "block",
-    filter: `brightness(${SharedConsts.FG_COLOR_VALUE_FACTOR})`,
     userSelect: "none",
   };
 }
@@ -50,7 +49,7 @@ export function ExitFindBathroom({
   const fillColor = SharedConsts.NEGATIVE_COLOR;
   const iconSrc = useRecoloredSvgSrc(
     NearestBathroomConsts.EXIT_FIND_BATHROOM_ICON_PATH,
-    fillColor,
+    SharedConsts.ICON_ON_TINTED_BUTTON_COLOR,
   );
   const outerSidePx = viewportCircularButtonOuterSidePx(
     btnImgSizePx,

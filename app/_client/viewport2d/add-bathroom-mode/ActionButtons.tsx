@@ -47,18 +47,19 @@ function actionIconStyle(): CSSProperties {
     height: ADD_BATHROOM_ACTION_ICON_SIZE_PX,
     width: "auto",
     display: "block",
-    filter: `brightness(${SharedConsts.FG_COLOR_VALUE_FACTOR})`,
     userSelect: "none",
   };
 }
 
 type ActionIconProps = {
   path: string;
-  baseColor: string;
 };
 
-function ActionIcon({ path, baseColor }: ActionIconProps) {
-  const src = useRecoloredSvgSrc(path, baseColor);
+function ActionIcon({ path }: ActionIconProps) {
+  const src = useRecoloredSvgSrc(
+    path,
+    SharedConsts.ICON_ON_TINTED_BUTTON_COLOR,
+  );
   if (!src) return null;
 
   return <img src={src} alt="" draggable={false} style={actionIconStyle()} />;
@@ -93,7 +94,7 @@ export function ActionButtons({
         style={actionButtonStyle(cancelBg, disabled)}
         onClick={onCancel}
       >
-        <ActionIcon path={ADD_BATHROOM_CANCEL_ICON} baseColor={cancelBg} />
+        <ActionIcon path={ADD_BATHROOM_CANCEL_ICON} />
       </button>
       <button
         type="button"
@@ -102,7 +103,7 @@ export function ActionButtons({
         style={actionButtonStyle(confirmBg, disabled)}
         onClick={onConfirm}
       >
-        <ActionIcon path={ADD_BATHROOM_CONFIRM_ICON} baseColor={confirmBg} />
+        <ActionIcon path={ADD_BATHROOM_CONFIRM_ICON} />
       </button>
     </div>
   );

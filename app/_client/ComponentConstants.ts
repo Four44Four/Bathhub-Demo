@@ -9,6 +9,8 @@ export const Shared = {
     FONT_LIGHT_CLASS: Fonts.NOTOSANS_LIGHT_CLASS,
     NEGATIVE_COLOR: "#E06C89",
     POSITIVE_COLOR: "#6CE0D1",
+    /** Icon color on tinted viewport2d action buttons (cancel, confirm, exit). */
+    ICON_ON_TINTED_BUTTON_COLOR: "#ffffff",
     FG_COLOR_VALUE_FACTOR: 0.7,
 } as const;
 

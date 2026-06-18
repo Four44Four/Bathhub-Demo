@@ -33,8 +33,7 @@ export type InstallOrbitCameraOptions = {
   isUserGlobeOrbitInputAllowed?: () => boolean;
   /**
    * Fired when a programmatic `animateTo` rotation finishes (including the no-op case where
-   * the camera is already at the target). Used to rebuild screen-space path geometry that
-   * does not receive `camera.moveEnd` while a concurrent zoom animation is still running.
+   * the camera is already at the target).
    */
   onOrbitRotateAnimationEnd?: () => void;
 };

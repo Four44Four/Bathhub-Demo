@@ -664,7 +664,7 @@ export function GlobeViewport({
 
       const pathHandle = installPath(Cesium, viewer, ellipsoid);
       pathHandleRef.current = pathHandle;
-      const rebuildPathOnCameraMoveEnd = () => {
+      const rebuildPathLodOnClientIdle = () => {
         pathHandle.rebuildActivePath();
       };
 
@@ -751,7 +751,6 @@ export function GlobeViewport({
           tickGeoArrivalLock();
           return GeoArrival.isGlobeOrbitUserInputAllowed(geoArrivalLockStateRef.current);
         },
-        onOrbitRotateAnimationEnd: rebuildPathOnCameraMoveEnd,
       });
 
       // Publish the controls for the imperative `animateTo` handle. If the
@@ -872,6 +871,7 @@ export function GlobeViewport({
           if (cancelled || !viewer || cameraControls.isGlobeViewportSamplerBusy()) return;
           isClientIdle = true;
           scheduleNextViewportCenterSample();
+          rebuildPathLodOnClientIdle();
         }, GlobeConsts.VIEWPORT_DETECT_IDLE_MS);
       };
 
@@ -927,6 +927,8 @@ export function GlobeViewport({
           ensureBusySampling();
         } else {
           runViewportCenterSample();
+          isClientIdle = false;
+          armIdleDetection();
         }
       };
 
@@ -971,8 +973,6 @@ export function GlobeViewport({
       applyLodVisualState(viewer.camera.positionCartographic.height ?? 8_000_000);
       viewer.camera.changed.addEventListener(scheduleLodUpdate);
 
-      viewer.camera.moveEnd.addEventListener(rebuildPathOnCameraMoveEnd);
-
       const ro = new ResizeObserver(() => {
         viewer?.resize();
         viewer?.forceResize();
@@ -994,7 +994,6 @@ export function GlobeViewport({
         },
         tileProcessor,
         onSamplerCameraChanged: samplerKickOnCameraChanged,
-        onCameraMoveEnd: rebuildPathOnCameraMoveEnd,
         camera: viewer.camera,
         clickedIndicator,
         pathHandle,
@@ -1014,7 +1013,6 @@ export function GlobeViewport({
           onCameraChanged: () => void;
           cancelLodRaf: () => void;
           onSamplerCameraChanged: () => void;
-          onCameraMoveEnd: () => void;
           tileProcessor: TwoToneTileProcessor;
           camera: CesiumTypes.Camera;
           clickedIndicator: { destroy: () => void };
@@ -1046,7 +1044,6 @@ export function GlobeViewport({
       }
       cleanup?.camera.changed.removeEventListener(cleanup.onCameraChanged);
       cleanup?.tileProcessor.destroy();
-      cleanup?.camera.moveEnd.removeEventListener(cleanup.onCameraMoveEnd);
       cleanup?.removeInputListeners();
       cleanup?.clickedIndicator.destroy();
       cleanup?.pathHandle.destroy();

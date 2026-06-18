@@ -4,15 +4,17 @@ import { Path as PathConsts } from "../ComponentConstants";
 import { Point } from "../../_shared/Utils";
 import {
   dedupeConsecutiveLngLat,
+  decimatePolylineScreenSpace,
   filletBezierStepCount,
   pathColorModeToUniform,
   pathEdgeStart01,
+  pathGeodesicGranularityRadians,
   pathGeometryWidthPixels,
-  pathScreenSegmentCollinearityDot,
+  pathLodCollinearityIndices,
+  pathLodSeparationIndices,
   pathSurfaceClearanceMeters,
+  pathWorldSamplesSignature,
   quadraticBezierVector3,
-  resamplePolylineUniformIndices,
-  shouldKeepPathLodVertexAfterMerge,
 } from "../pure/globe/PathGeometry";
 
 export type { PathColorMode } from "../pure/globe/PathGeometry";
@@ -211,44 +213,35 @@ function buildCapsuleSamples(
     Cesium.Cartesian3.fromDegrees(p.longitude, p.latitude, clearance, ellipsoid),
   );
   if (raw.length < 3) return raw;
-  const scratchA = new Cesium.Cartesian2();
-  const scratchB = new Cesium.Cartesian2();
-  const lod: CesiumTypes.Cartesian3[] = [raw[0]];
-  let lastKept = 0;
-  for (let i = 1; i < raw.length - 1; i++) {
-    const a = Cesium.SceneTransforms.worldToWindowCoordinates(scene, raw[lastKept], scratchA);
-    const b = Cesium.SceneTransforms.worldToWindowCoordinates(scene, raw[i], scratchB);
-    if (!a || !b || Cesium.Cartesian2.distance(a, b) >= PathConsts.MIN_VERTEX_SEPARATION_PIXELS) {
-      lod.push(raw[i]);
-      lastKept = i;
-    }
+
+  const scratch = new Cesium.Cartesian2();
+  const projected: ({ x: number; y: number } | null)[] = [];
+  for (let i = 0; i < raw.length; i++) {
+    const w = Cesium.SceneTransforms.worldToWindowCoordinates(scene, raw[i], scratch);
+    projected.push(w ? { x: w.x, y: w.y } : null);
   }
-  lod.push(raw[raw.length - 1]);
+
+  const sepIdx = pathLodSeparationIndices(projected, PathConsts.MIN_VERTEX_SEPARATION_PIXELS);
+  const lod = sepIdx.map((i) => raw[i]!);
   if (lod.length < 3) return lod;
 
-  const projected = lod.map((p) => Cesium.SceneTransforms.worldToWindowCoordinates(scene, p, new Cesium.Cartesian2()) ?? null);
-  const merged: CesiumTypes.Cartesian3[] = [lod[0]];
-  for (let i = 1; i < lod.length - 1; i++) {
-    const a = projected[i - 1];
-    const b = projected[i];
-    const c = projected[i + 1];
-    if (!a || !b || !c) {
-      merged.push(lod[i]);
-      continue;
-    }
-    const dot = pathScreenSegmentCollinearityDot(a.x, a.y, b.x, b.y, c.x, c.y);
-    if (shouldKeepPathLodVertexAfterMerge(dot)) merged.push(lod[i]);
-  }
-  merged.push(lod[lod.length - 1]);
+  const colIdx = pathLodCollinearityIndices(sepIdx, projected);
+  const merged = colIdx.map((i) => raw[i]!);
   const rounded = roundPolylineCorners(Cesium, merged);
   if (rounded.length <= PathConsts.MAX_POLYLINE_SAMPLES) return rounded;
-  const out: CesiumTypes.Cartesian3[] = [];
-  const idx = resamplePolylineUniformIndices(
+
+  const roundedProj: { x: number; y: number }[] = [];
+  for (let i = 0; i < rounded.length; i++) {
+    const w = Cesium.SceneTransforms.worldToWindowCoordinates(scene, rounded[i], scratch);
+    if (!w) return rounded;
+    roundedProj.push({ x: w.x, y: w.y });
+  }
+  const decIdx = decimatePolylineScreenSpace(
+    roundedProj,
     PathConsts.MAX_POLYLINE_SAMPLES,
-    rounded.length,
+    PathConsts.MIN_VERTEX_SEPARATION_PIXELS * 0.5,
   );
-  for (const i of idx) out.push(rounded[i]);
-  return out;
+  return decIdx.map((i) => rounded[i]!);
 }
 
 function buildPathRibbonPrimitive(args: {
@@ -256,14 +249,15 @@ function buildPathRibbonPrimitive(args: {
   ellipsoid: CesiumTypes.Ellipsoid;
   positions: CesiumTypes.Cartesian3[];
   material: CesiumTypes.Material;
+  cameraHeightM: number;
 }): CesiumTypes.Primitive | null {
-  const { Cesium, ellipsoid, positions, material } = args;
+  const { Cesium, ellipsoid, positions, material, cameraHeightM } = args;
   const geometry = Cesium.PolylineGeometry.createGeometry(
     new Cesium.PolylineGeometry({
       positions,
       width: PATH_GEOMETRY_WIDTH_PIXELS,
       arcType: Cesium.ArcType.GEODESIC,
-      granularity: Cesium.Math.toRadians(0.5),
+      granularity: pathGeodesicGranularityRadians(cameraHeightM),
       vertexFormat: Cesium.PolylineMaterialAppearance.VERTEX_FORMAT,
       ellipsoid,
     }),
@@ -275,7 +269,7 @@ function buildPathRibbonPrimitive(args: {
       material,
       translucent: true,
     }),
-    asynchronous: false,
+    asynchronous: true,
   });
 }
 
@@ -289,10 +283,10 @@ export function installPath(
   let primitive: CesiumTypes.Primitive | null = null;
   let material: CesiumTypes.Material | null = null;
   let rollingCancel: (() => void) | null = null;
+  let lastLodSignature: string | null = null;
+  let rebuildRafId: number | null = null;
 
-  const teardown = () => {
-    if (rollingCancel) rollingCancel();
-    rollingCancel = null;
+  const teardownPrimitive = () => {
     if (primitive) {
       try {
         scene.primitives.remove(primitive);
@@ -301,6 +295,16 @@ export function installPath(
       }
     }
     primitive = null;
+  };
+
+  const teardown = () => {
+    if (rebuildRafId !== null) {
+      cancelAnimationFrame(rebuildRafId);
+      rebuildRafId = null;
+    }
+    if (rollingCancel) rollingCancel();
+    rollingCancel = null;
+    teardownPrimitive();
     if (material) {
       try {
         material.destroy();
@@ -309,6 +313,7 @@ export function installPath(
       }
     }
     material = null;
+    lastLodSignature = null;
   };
 
   const startRolling = () => {
@@ -329,13 +334,11 @@ export function installPath(
     rollingCancel = () => cancelAnimationFrame(raf);
   };
 
-  const build = (points: Point[]) => {
-    const cameraHeightM = viewer.camera.positionCartographic.height ?? 0;
-    const samples = buildCapsuleSamples(Cesium, scene, ellipsoid, points, cameraHeightM);
-    if (samples.length < 2) return;
+  const ensureMaterial = () => {
+    if (material) return material;
     const fabric = buildPathRibbonFabric(
       Cesium,
-      (PathConsts.COLOR_MODE as string)  === "rolling-gradient"
+      (PathConsts.COLOR_MODE as string) === "rolling-gradient"
         ? (performance.now() % Math.max(1, PathConsts.GRADIENT_ROLL_PERIOD_MS)) /
             Math.max(1, PathConsts.GRADIENT_ROLL_PERIOD_MS)
         : 0,
@@ -347,16 +350,55 @@ export function installPath(
         source: fabric.source,
       },
     });
+    startRolling();
+    return material;
+  };
+
+  const replacePrimitive = (
+    samples: CesiumTypes.Cartesian3[],
+    cameraHeightM: number,
+    signature: string,
+  ) => {
+    const mat = ensureMaterial();
+    teardownPrimitive();
     primitive = buildPathRibbonPrimitive({
       Cesium,
       ellipsoid,
       positions: samples,
-      material,
+      material: mat,
+      cameraHeightM,
     });
-    if (!primitive || !material) return;
+    if (!primitive) return;
+    lastLodSignature = signature;
     scene.primitives.add(primitive);
-    startRolling();
     scene.requestRender();
+  };
+
+  const build = (points: Point[]) => {
+    const cameraHeightM = viewer.camera.positionCartographic.height ?? 0;
+    const samples = buildCapsuleSamples(Cesium, scene, ellipsoid, points, cameraHeightM);
+    if (samples.length < 2) return;
+    const signature = pathWorldSamplesSignature(samples);
+    replacePrimitive(samples, cameraHeightM, signature);
+  };
+
+  const rebuildActivePathNow = () => {
+    if (!activePoints || activePoints.length < 2) return;
+    const cameraHeightM = viewer.camera.positionCartographic.height ?? 0;
+    const samples = buildCapsuleSamples(Cesium, scene, ellipsoid, activePoints, cameraHeightM);
+    if (samples.length < 2) return;
+    const signature = pathWorldSamplesSignature(samples);
+    if (signature === lastLodSignature && primitive) return;
+    replacePrimitive(samples, cameraHeightM, signature);
+  };
+
+  const rebuildActivePath = () => {
+    if (!activePoints || activePoints.length < 2) return;
+    if (rebuildRafId !== null) return;
+    rebuildRafId = requestAnimationFrame(() => {
+      rebuildRafId = null;
+      rebuildActivePathNow();
+    });
   };
 
   const setPath = (pointsIn: Point[]) => {
@@ -369,12 +411,6 @@ export function installPath(
     }
     activePoints = points;
     build(points);
-  };
-
-  const rebuildActivePath = () => {
-    if (!activePoints || activePoints.length < 2) return;
-    teardown();
-    build(activePoints);
   };
 
   const clearPath = () => {

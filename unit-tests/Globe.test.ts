@@ -19,7 +19,6 @@ import * as GeoArrival from "../app/_client/pure/globe/GeoArrivalCameraLock";
 import { Globe as GlobeConsts } from "../app/_client/ComponentConstants";
 import { USER_SETTINGS_DEFAULTS } from "../app/_shared/user-settings/UserSettingsSchema";
 import { installOrbitCameraControls } from "../app/_client/globe/Camera";
-import type { GlobeViewportHandle } from "../app/_client/globe/GlobeViewport";
 
 describe("globeLayerLodMath", () => {
     test("detailLayerAlphaFromCameraHeightM", () => {
@@ -205,182 +204,78 @@ function createMockCesium() {
   } as unknown as typeof import("cesium");
 }
 
-type OrbitCameraTestHarness = {
-  globeRef: Pick<GlobeViewportHandle, "animateTo" | "snapTo">;
-  rebuildPath: jest.Mock<void, []>;
-  /** Simulates Cesium emitting `camera.moveEnd` after an instantaneous camera update. */
-  fireCameraMoveEnd: () => void;
-  destroy: () => void;
-};
-
-function installOrbitCameraPathRebuildHarness(initLat = 0, initLong = 0): OrbitCameraTestHarness {
-  const Cesium = createMockCesium();
-  const moveEndListeners = new Set<() => void>();
-  const canvas = {
-    style: { touchAction: "" as string },
-    clientWidth: 800,
-    clientHeight: 600,
-    addEventListener: jest.fn(),
-    removeEventListener: jest.fn(),
-    setPointerCapture: jest.fn(),
-    getBoundingClientRect: () => ({ left: 0, top: 0, width: 800, height: 600 }),
-  };
-
-  const fireCameraMoveEnd = () => {
-    for (const fn of moveEndListeners) fn();
-  };
-
-  const viewer = {
-    resize: jest.fn(),
-    forceResize: jest.fn(),
-    scene: {
-      canvas,
-      requestRender: jest.fn(),
-      pickPositionSupported: false,
-      globe: { pick: () => undefined },
-      screenSpaceCameraController: {
-        minimumZoomDistance: GlobeConsts.MIN_SURFACE_CLEARANCE_M,
-        maximumZoomDistance: 6_371_000 * 20,
-        enableInputs: true,
-        enableRotate: true,
-        enableLook: true,
-        enableTilt: true,
-        enableTranslate: true,
-        enableZoom: true,
-        maximumTiltAngle: Math.PI / 2,
-        enableCollisionDetection: true,
-      },
-    },
-    camera: {
-      frustum: { fovy: Math.PI / 3, aspectRatio: 800 / 600 },
-      pickEllipsoid: () => undefined,
-      getPickRay: () => null,
-      lookAtTransform: jest.fn(),
-      /** Cesium defers `moveEnd` while the camera is still moving frame-to-frame. */
-      setView: jest.fn(),
-      moveEnd: {
-        addEventListener: (fn: () => void) => {
-          moveEndListeners.add(fn);
-        },
-        removeEventListener: (fn: () => void) => {
-          moveEndListeners.delete(fn);
-        },
-      },
-    },
-    fireCameraMoveEnd,
-  };
-
-  const rebuildPath = jest.fn<void, []>();
-  const rebuildPathOnCameraMoveEnd = () => {
-    rebuildPath();
-  };
-  viewer.camera.moveEnd.addEventListener(rebuildPathOnCameraMoveEnd);
-
-  const controls = installOrbitCameraControls({
-    Cesium,
-    viewer: viewer as unknown as import("cesium").Viewer,
-    ellipsoid: { maximumRadius: 6_371_000 } as import("cesium").Ellipsoid,
-    radius: 6_371_000,
-    initLat,
-    initLong,
-    width: 400,
-    cameraInitSurfaceOffsetM: USER_SETTINGS_DEFAULTS.camera_init_surface_offset_m,
-    containerRef: { current: null },
-    onOrbitRotateAnimationEnd: rebuildPathOnCameraMoveEnd,
-  });
-
-  const globeRef: Pick<GlobeViewportHandle, "animateTo" | "snapTo"> = {
-    animateTo: (lat, long, durationMs) => controls.animateTo(lat, long, durationMs),
-    snapTo: (lat, long) => controls.snapTo(lat, long),
-  };
-
-  rebuildPath.mockClear();
-
-  return {
-    globeRef,
-    rebuildPath,
-    fireCameraMoveEnd: viewer.fireCameraMoveEnd,
-    destroy: () => {
-      controls.destroy();
-      viewer.camera.moveEnd.removeEventListener(rebuildPathOnCameraMoveEnd);
-    },
-  };
-}
-
-describe("globeRef path rebuild after camera moves", () => {
-  let perfSpy: jest.SpyInstance<number, []>;
-  let pendingRafs: FrameRequestCallback[];
-  let perfNow = 0;
-  let rafId = 0;
-
+describe("globeRef path LOD rebuild timing", () => {
   beforeEach(() => {
-    pendingRafs = [];
-    perfNow = 0;
-    rafId = 0;
-    globalThis.requestAnimationFrame = (cb) => {
-      pendingRafs.push(cb);
-      rafId += 1;
-      return rafId;
-    };
-    globalThis.cancelAnimationFrame = () => {};
     (globalThis as unknown as { window: Window }).window = {
       addEventListener: jest.fn(),
       removeEventListener: jest.fn(),
     } as unknown as Window;
-    perfSpy = jest.spyOn(performance, "now").mockImplementation(() => perfNow);
   });
 
   afterEach(() => {
-    perfSpy.mockRestore();
-    delete (globalThis as { requestAnimationFrame?: typeof requestAnimationFrame })
-      .requestAnimationFrame;
-    delete (globalThis as { cancelAnimationFrame?: typeof cancelAnimationFrame })
-      .cancelAnimationFrame;
     delete (globalThis as unknown as { window?: Window }).window;
   });
 
-  /** Runs one generation of RAF callbacks at `atMs` (call again after duration to finish animations). */
-  const flushRafGeneration = (atMs: number) => {
-    perfNow = atMs;
-    const batch = pendingRafs.splice(0, pendingRafs.length);
-    for (const cb of batch) cb(atMs);
-  };
+  test("onOrbitRotateAnimationEnd remains an optional camera hook (path LOD uses client idle in GlobeViewport)", () => {
+    const onRotateEnd = jest.fn<void, []>();
+    const Cesium = createMockCesium();
+    const canvas = {
+      style: { touchAction: "" as string },
+      clientWidth: 800,
+      clientHeight: 600,
+      addEventListener: jest.fn(),
+      removeEventListener: jest.fn(),
+      setPointerCapture: jest.fn(),
+      getBoundingClientRect: () => ({ left: 0, top: 0, width: 800, height: 600 }),
+    };
+    const viewer = {
+      resize: jest.fn(),
+      forceResize: jest.fn(),
+      scene: {
+        canvas,
+        requestRender: jest.fn(),
+        pickPositionSupported: false,
+        globe: { pick: () => undefined },
+        screenSpaceCameraController: {
+          minimumZoomDistance: GlobeConsts.MIN_SURFACE_CLEARANCE_M,
+          maximumZoomDistance: 6_371_000 * 20,
+          enableInputs: true,
+          enableRotate: true,
+          enableLook: true,
+          enableTilt: true,
+          enableTranslate: true,
+          enableZoom: true,
+          maximumTiltAngle: Math.PI / 2,
+          enableCollisionDetection: true,
+        },
+      },
+      camera: {
+        frustum: { fovy: Math.PI / 3, aspectRatio: 800 / 600 },
+        pickEllipsoid: () => undefined,
+        getPickRay: () => null,
+        lookAtTransform: jest.fn(),
+        setView: jest.fn(),
+      },
+    };
 
-  test("globeRef.animateTo() triggers Path rebuild when the rotation animation finishes", () => {
-    const harness = installOrbitCameraPathRebuildHarness(0, 0);
-    try {
-      harness.rebuildPath.mockClear();
-      harness.globeRef.animateTo(30, 45, 100);
-      expect(harness.rebuildPath).not.toHaveBeenCalled();
-      flushRafGeneration(0);
-      expect(harness.rebuildPath).not.toHaveBeenCalled();
-      flushRafGeneration(100);
-      expect(harness.rebuildPath).toHaveBeenCalledTimes(1);
-    } finally {
-      harness.destroy();
-    }
-  });
+    const controls = installOrbitCameraControls({
+      Cesium,
+      viewer: viewer as unknown as import("cesium").Viewer,
+      ellipsoid: { maximumRadius: 6_371_000 } as import("cesium").Ellipsoid,
+      radius: 6_371_000,
+      initLat: 12,
+      initLong: 34,
+      width: 400,
+      cameraInitSurfaceOffsetM: USER_SETTINGS_DEFAULTS.camera_init_surface_offset_m,
+      containerRef: { current: null },
+      onOrbitRotateAnimationEnd: onRotateEnd,
+    });
 
-  test("globeRef.animateTo() triggers Path rebuild immediately when already at the target", () => {
-    const harness = installOrbitCameraPathRebuildHarness(12, 34);
     try {
-      harness.rebuildPath.mockClear();
-      harness.globeRef.animateTo(12, 34, 100);
-      expect(harness.rebuildPath).toHaveBeenCalledTimes(1);
+      controls.animateTo(12, 34, 100);
+      expect(onRotateEnd).toHaveBeenCalledTimes(1);
     } finally {
-      harness.destroy();
-    }
-  });
-
-  test("globeRef.snapTo() triggers Path rebuild via camera.moveEnd (same hook as GlobeViewport)", () => {
-    const harness = installOrbitCameraPathRebuildHarness(0, 0);
-    try {
-      harness.rebuildPath.mockClear();
-      harness.globeRef.snapTo(20, 50);
-      harness.fireCameraMoveEnd();
-      expect(harness.rebuildPath).toHaveBeenCalledTimes(1);
-    } finally {
-      harness.destroy();
+      controls.destroy();
     }
   });
 });

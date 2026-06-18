@@ -64,6 +64,11 @@ Actions after interacting with Find bathroom button:
           - Send request to server to calculate/return path data from current client location to target bathroom location
           - (re)Render the path from the client to the target bathroom with the path data
              - The rendered path will be an anti-aliased line on the Globe with several gradient, shader-based rendering effect options
+             - Sharp corners should be smoothed out
+             - At different zoom levels when the client is determined to be idle:
+                - The geometry of the line will be updated so that the points will not be within a specified amount of pixels within each other on screen space coordinates
+                - It should be simplified and render the line using less points at distant levels of zoom
+                - It should be detailed and render the line using more points at close levels of zoom
           - To implement updating the path when after a duration of time AND when a user moves enough:
             - Store the previous location that the path was updated at, starting with the original location of the client when starting the Find bathroom process
             - Store the previous timestamp that the path was updated at, starting with the time that the first path data was requested

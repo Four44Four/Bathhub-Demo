@@ -17,11 +17,13 @@
 /.next/
 /out/
 
+# locally hosted Supabase generated files
+/local-hosting/supabase/.branches
+/local-hosting/supabase/.temp
+/local-hosting/supabase/migrations
+
 # production
 /build
-
-# local development hosting (Supabase + Redis scripts; not committed)
-/local-hosting/
 
 # misc
 .DS_Store

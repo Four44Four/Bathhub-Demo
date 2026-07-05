@@ -1,0 +1,42 @@
+# Local Supabase config for bathhub development (./local-hosting).
+# API is exposed on 54331 so it does not conflict with integration tests (54323).
+#
+# Optional Supabase services (studio, storage, realtime, etc.) stay disabled to
+# keep startup fast for day-to-day development.
+
+project_id = "bathhub-dev-local"
+
+[api]
+enabled = true
+port = 54331
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54332
+shadow_port = 54330
+major_version = 15
+
+[realtime]
+enabled = false
+
+[studio]
+enabled = false
+port = 54339
+
+[inbucket]
+enabled = false
+port = 54334
+
+[storage]
+enabled = false
+
+[auth]
+enabled = true
+
+[edge_runtime]
+enabled = false
+
+[analytics]
+enabled = false

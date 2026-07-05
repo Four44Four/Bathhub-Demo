@@ -26,7 +26,7 @@ describe("installInitialUserSettingsDbFromServer", () => {
     const db = createMockDb();
     const bytes = new Uint8Array([0x53, 0x51, 0x4c, 0x69]);
     const deps: InstallInitialUserSettingsDbDeps = {
-      fetchDefaultDbBytes: jest.fn(async () => bytes),
+      fetchDefaultDbBytes: jest.fn(async () => ({ ok: true, bytes })),
       isValidSqliteBytes: jest.fn(() => true),
     };
 
@@ -43,7 +43,10 @@ describe("installInitialUserSettingsDbFromServer", () => {
       getPersistentSchemaVersion: jest.fn(async () => null),
     });
     const deps: InstallInitialUserSettingsDbDeps = {
-      fetchDefaultDbBytes: jest.fn(async () => new Uint8Array([1, 2, 3])),
+      fetchDefaultDbBytes: jest.fn(async () => ({
+        ok: true,
+        bytes: new Uint8Array([1, 2, 3]),
+      })),
       isValidSqliteBytes: jest.fn(() => true),
     };
 
@@ -51,5 +54,28 @@ describe("installInitialUserSettingsDbFromServer", () => {
 
     expect(result).toEqual({ ok: false, reason: "not_applicable" });
     expect(deps.fetchDefaultDbBytes).not.toHaveBeenCalled();
+  });
+
+  test("reports rate-limit violations when the default DB fetch is denied", async () => {
+    const db = createMockDb();
+    const onRateLimitViolation = jest.fn();
+    const deps: InstallInitialUserSettingsDbDeps = {
+      fetchDefaultDbBytes: jest.fn(async () => ({
+        ok: false,
+        reason: "rate_limited",
+        errorMsg:
+          "Rate limit exceeded: default user settings database download is limited to 5 requests per minute.",
+      })),
+      isValidSqliteBytes: jest.fn(() => true),
+      onRateLimitViolation,
+    };
+
+    const result = await installInitialUserSettingsDbFromServer(db, deps);
+
+    expect(result).toEqual({ ok: false, reason: "fetch_failed" });
+    expect(onRateLimitViolation).toHaveBeenCalledWith(
+      "Rate limit exceeded: default user settings database download is limited to 5 requests per minute.",
+    );
+    expect(db.replaceDbFromBytes).not.toHaveBeenCalled();
   });
 });

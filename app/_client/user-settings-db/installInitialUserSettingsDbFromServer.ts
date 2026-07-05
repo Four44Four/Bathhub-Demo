@@ -3,12 +3,16 @@ import {
   type InitialUserSettingsDbInstallResult,
 } from "@/app/_shared/user-settings/installInitialUserSettingsDb";
 import type { UserSettingsDbPort } from "./UserSettingsDbSqlite";
-import { fetchDefaultUserSettingsDbBytes } from "./web/fetchDefaultUserSettingsDbBytes";
+import {
+  fetchDefaultUserSettingsDbBytes,
+  type FetchDefaultUserSettingsDbResult,
+} from "./web/fetchDefaultUserSettingsDbBytes";
 import { isSqliteDatabaseBytes } from "../pure/bathroom/SqliteDatabaseBytes";
 
 export type InstallInitialUserSettingsDbDeps = {
-  fetchDefaultDbBytes: () => Promise<Uint8Array | null>;
+  fetchDefaultDbBytes: () => Promise<FetchDefaultUserSettingsDbResult>;
   isValidSqliteBytes: (bytes: Uint8Array) => boolean;
+  onRateLimitViolation?: (errorMsg: string) => void;
 };
 
 export const defaultInstallInitialUserSettingsDbDeps: InstallInitialUserSettingsDbDeps =
@@ -33,11 +37,17 @@ export async function installInitialUserSettingsDbFromServer(
   }
 
   const bytes = await deps.fetchDefaultDbBytes();
-  if (bytes == null || !deps.isValidSqliteBytes(bytes)) {
+  if (!bytes.ok) {
+    if (bytes.reason === "rate_limited") {
+      deps.onRateLimitViolation?.(bytes.errorMsg);
+    }
+    return { ok: false, reason: "fetch_failed" };
+  }
+  if (!deps.isValidSqliteBytes(bytes.bytes)) {
     return { ok: false, reason: "fetch_failed" };
   }
 
-  await db.replaceDbFromBytes(bytes);
+  await db.replaceDbFromBytes(bytes.bytes);
   await db.persistToDisk();
   return { ok: true };
 }

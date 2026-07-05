@@ -1,5 +1,4 @@
 # Sprint 2 (basic backend)
- - Make rate limit violations have a dedicated alert band
  - Make "schema out of date" screen only take up virtual phone interface
  - Add a spinner to "schema out of date" screen
  - Animate the "schema out of date" screen disappearing so it does not look so abrupt/flash for a second

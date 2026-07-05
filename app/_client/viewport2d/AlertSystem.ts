@@ -14,6 +14,7 @@ import {
   type ReactNode,
   type RefObject,
 } from "react";
+import { createPortal } from "react-dom";
 
 import {
   positionalAlertIdsWithDetachedAnchors,
@@ -23,8 +24,10 @@ import { subscribeOnTap } from "../NonDragTapDetector";
 
 import {
   alertSystemDismissAllPositional,
+  alertSystemDismissBand,
   alertSystemDismissImportant,
   alertSystemDismissPositional,
+  alertSystemShowBand,
   alertSystemShowImportant,
   alertSystemShowPositional,
   EMPTY_ALERT_SYSTEM_STATE,
@@ -35,6 +38,7 @@ import {
   resolveImportantAlertButtons,
 } from "../pure/viewport2d/AlertSystemState";
 import { ImportantAlert } from "./alerts/ImportantAlert";
+import { BandAlertStack } from "./alerts/BandAlertStack";
 import { PositionalAlert } from "./alerts/PositionalAlert";
 import { type Rect } from "../Utils";
 
@@ -56,12 +60,21 @@ export type ShowImportantAlertOptions = {
   buttons?: ImportantAlertButton[];
 };
 
+export type ShowBandAlertOptions = {
+  message: string;
+  positive?: boolean;
+  /** When true, the band stays visible until manually removed. */
+  persistUntilRemoved?: boolean;
+};
+
 export type AlertSystemApi = {
   showPositionalAlert: (options: ShowPositionalAlertOptions) => string;
   dismissPositionalAlert: (id: string) => void;
   dismissAllPositionalAlerts: () => void;
   showImportantAlert: (options: ShowImportantAlertOptions) => void;
   dismissImportantAlert: () => void;
+  showBandAlert: (options: ShowBandAlertOptions) => string;
+  dismissBandAlert: (id: string) => void;
 };
 
 type PositionalAlertRuntime = PositionalAlertRecord & {
@@ -136,10 +149,13 @@ export function AlertSystemProvider({
 }: AlertSystemProviderProps) {
   const [state, setState] = useState<AlertSystemState>(EMPTY_ALERT_SYSTEM_STATE);
   const [clipRect, setClipRect] = useState<Rect | null>(null);
+  const [phoneViewportElement, setPhoneViewportElement] =
+    useState<HTMLElement | null>(null);
   const anchorsRef = useRef<Map<string, HTMLElement>>(new Map());
 
   useLayoutEffect(() => {
     const clipElement = phoneViewportRef.current;
+    setPhoneViewportElement(clipElement);
     if (clipElement == null) {
       setClipRect(null);
       return;
@@ -215,6 +231,29 @@ export function AlertSystemProvider({
     setState((prev) => alertSystemDismissImportant(prev));
   }, []);
 
+  const showBandAlert = useCallback(
+    ({
+      message,
+      positive = false,
+      persistUntilRemoved = false,
+    }: ShowBandAlertOptions): string => {
+      const id = createAlertId();
+      setState((prev) =>
+        alertSystemShowBand(prev, id, message, {
+          positive,
+          persistUntilRemoved,
+          createdAtMs: Date.now(),
+        }),
+      );
+      return id;
+    },
+    [],
+  );
+
+  const dismissBandAlert = useCallback((id: string) => {
+    setState((prev) => alertSystemDismissBand(prev, id));
+  }, []);
+
   const positionalRuntime = useMemo((): PositionalAlertRuntime[] => {
     return state.positional.flatMap((record) => {
       const anchorElement = anchorsRef.current.get(record.id);
@@ -230,11 +269,15 @@ export function AlertSystemProvider({
       dismissAllPositionalAlerts,
       showImportantAlert,
       dismissImportantAlert,
+      showBandAlert,
+      dismissBandAlert,
     }),
     [
       dismissAllPositionalAlerts,
+      dismissBandAlert,
       dismissImportantAlert,
       dismissPositionalAlert,
+      showBandAlert,
       showImportantAlert,
       showPositionalAlert,
     ],
@@ -256,6 +299,15 @@ export function AlertSystemProvider({
       onDismissPositional: dismissPositionalAlert,
       onDismissImportant: dismissImportantAlert,
     }),
+    phoneViewportElement != null && state.band.length > 0
+      ? createPortal(
+          createElement(BandAlertStack, {
+            alerts: state.band,
+            onDismiss: dismissBandAlert,
+          }),
+          phoneViewportElement,
+        )
+      : null,
   );
 }
 

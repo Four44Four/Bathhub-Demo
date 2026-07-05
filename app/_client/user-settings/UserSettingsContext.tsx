@@ -47,8 +47,11 @@ import { currentUserSettingsPageId } from "@/app/_shared/user-settings/UserSetti
 import {
   saveActiveUserSettingsToPersistentDb,
   USER_SETTINGS_SCHEMA_RETRY_INTERVAL_MS,
+  defaultUserSettingsSchemaMigrationRunnerDeps,
+  type UserSettingsSchemaMigrationRunnerDeps,
 } from "./UserSettingsSchemaMigrationRunner";
 import { USER_SETTINGS_FRONTEND_SCHEMA_VERSION } from "./UserSettingsSchemaVersion";
+import { useReportRateLimitViolation } from "../pure/rate-limit/useReportRateLimitViolation";
 
 export type UserSettingsBootstrapPhase =
   | "loading"
@@ -111,6 +114,17 @@ export function UserSettingsProvider({ children }: UserSettingsProviderProps) {
     setSettings(getActiveUserSettings());
   }, []);
 
+  const reportRateLimitViolation = useReportRateLimitViolation();
+  const migrationRunnerDeps = useMemo<UserSettingsSchemaMigrationRunnerDeps>(
+    () => ({
+      ...defaultUserSettingsSchemaMigrationRunnerDeps,
+      onRateLimitViolation: (errorMsg) => {
+        reportRateLimitViolation(errorMsg);
+      },
+    }),
+    [reportRateLimitViolation],
+  );
+
   useEffect(() => {
     let cancelled = false;
     let retryTimer: ReturnType<typeof setTimeout> | null = null;
@@ -152,6 +166,7 @@ export function UserSettingsProvider({ children }: UserSettingsProviderProps) {
         db,
         finishReady,
         USER_SETTINGS_FRONTEND_SCHEMA_VERSION,
+        migrationRunnerDeps,
       );
       if (cancelled) return "retry" as const;
       return outcome;
@@ -183,7 +198,7 @@ export function UserSettingsProvider({ children }: UserSettingsProviderProps) {
       cancelled = true;
       clearRetry();
     };
-  }, [refreshFromMemory]);
+  }, [migrationRunnerDeps, refreshFromMemory]);
 
   const schemaUpdateHasErrored = bootstrapPhase === "migration_errored";
 

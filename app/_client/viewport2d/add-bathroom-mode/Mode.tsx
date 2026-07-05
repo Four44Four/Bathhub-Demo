@@ -11,6 +11,7 @@ import {
   addBathroomResultAlertForPhase,
 } from "../../pure/viewport2d/AddBathroomModeState";
 import { VIEWPORT2D_TOP_LAYER_Z_INDEX } from "../../pure/viewport2d/PositionalAlertAnchor";
+import { useReportRateLimitViolation } from "../../pure/rate-limit/useReportRateLimitViolation";
 import { useAlertSystem } from "../AlertSystem";
 import { ActionButtons } from "./ActionButtons";
 import { useAddBathroomMode } from "./Context";
@@ -26,6 +27,7 @@ export type AddBathroomModeProps = {
 export function AddBathroomMode({ globeRef }: AddBathroomModeProps) {
   const { isActive, exitAddBathroomMode } = useAddBathroomMode();
   const { showImportantAlert } = useAlertSystem();
+  const reportRateLimitViolation = useReportRateLimitViolation();
   const { requestState, resetRequest, submitCreate } = useAddBathroomRequest();
   const {
     opacity: backdropOpacity,
@@ -67,7 +69,17 @@ export function AddBathroomMode({ globeRef }: AddBathroomModeProps) {
   }, [animateSpinnerOpacityTo, requestState.phase]);
 
   const showResultAlert = useCallback(
-    (phase: "success" | "failure" | "timeout") => {
+    (
+      phase: "success" | "failure" | "timeout",
+      errorMsg?: string,
+    ) => {
+      if (phase === "failure" && reportRateLimitViolation(errorMsg)) {
+        animateBackdropOpacityTo(0);
+        exitAddBathroomMode({ withNewBathroom: false });
+        resetRequest();
+        return;
+      }
+
       const alertConfig = addBathroomResultAlertForPhase(phase);
       if (!alertConfig) return;
 
@@ -91,6 +103,7 @@ export function AddBathroomMode({ globeRef }: AddBathroomModeProps) {
       exitAddBathroomMode,
       globeRef,
       resetRequest,
+      reportRateLimitViolation,
       showImportantAlert,
     ],
   );
@@ -103,7 +116,7 @@ export function AddBathroomMode({ globeRef }: AddBathroomModeProps) {
     const center = globeRef.current?.getViewportCenterLatLon();
     if (!center) return;
 
-    const terminalPhase = await submitCreate(
+    const { phase: terminalPhase, errorMsg } = await submitCreate(
       center.latitude,
       center.longitude,
       () => animateBackdropOpacityTo(1),
@@ -113,7 +126,7 @@ export function AddBathroomMode({ globeRef }: AddBathroomModeProps) {
       terminalPhase === "failure" ||
       terminalPhase === "timeout"
     ) {
-      showResultAlert(terminalPhase);
+      showResultAlert(terminalPhase, errorMsg);
     }
   }, [
     animateBackdropOpacityTo,

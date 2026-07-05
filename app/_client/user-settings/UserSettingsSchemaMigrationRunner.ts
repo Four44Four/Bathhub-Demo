@@ -22,6 +22,7 @@ export type UserSettingsSchemaMigrationRunnerDeps = {
   getMigration: (fromVersion: number) => Promise<UserSettingsSchemaMigrationResult>;
   reportError: typeof reportUserSettingsSchemaUpdateError;
   preloadDefaults: (settings: UserSettingsRow) => void;
+  onRateLimitViolation?: (errorMsg: string) => void;
 };
 
 export const defaultUserSettingsSchemaMigrationRunnerDeps: UserSettingsSchemaMigrationRunnerDeps =
@@ -42,6 +43,9 @@ export async function runUserSettingsSchemaMigrationStep(
 ): Promise<UserSettingsMigrationRunResult> {
   const migration = await deps.getMigration(fromVersion);
   if (!migration.ok) {
+    if (migration.error === "rate_limited") {
+      deps.onRateLimitViolation?.(migration.message);
+    }
     return {
       ok: false,
       errorMessages: [migration.message],

@@ -1,8 +1,10 @@
 import { positionalAlertIdsWithDetachedAnchors } from "../app/_client/pure/viewport2d/PositionalAlertAnchor";
 import {
   alertSystemDismissAllPositional,
+  alertSystemDismissBand,
   alertSystemDismissImportant,
   alertSystemDismissPositional,
+  alertSystemShowBand,
   alertSystemShowImportant,
   alertSystemShowPositional,
   EMPTY_ALERT_SYSTEM_STATE,
@@ -32,6 +34,19 @@ describe("AlertSystemState", () => {
     });
     state = alertSystemDismissImportant(state);
     expect(state.important).toBeNull();
+  });
+
+  test("show and dismiss band alerts", () => {
+    let state = EMPTY_ALERT_SYSTEM_STATE;
+    state = alertSystemShowBand(state, "a", "Violated rate limit for bathroom creation", {
+      createdAtMs: 1,
+    });
+    state = alertSystemShowBand(state, "b", "Violated rate limit for retrieving bathrooms", {
+      createdAtMs: 2,
+    });
+    expect(state.band).toHaveLength(2);
+    state = alertSystemDismissBand(state, "a");
+    expect(state.band.map((entry) => entry.id)).toEqual(["b"]);
   });
 
   test("resolveImportantAlertButtons uses explicit buttons when provided", () => {

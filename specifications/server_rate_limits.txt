@@ -4,6 +4,12 @@
  - Use Redis for keeping track of the current rate limit
     - Create a wrapper over all Redis calls to centralize Redis logic in a single directory, so that the Redis client can be switched out later if necessary without mass refactoring
     - The Redis URL should be passed through the environment variable REDIS_URL
+ - When rate limits are violated:
+    - Display a negative alert band with white text "Violated rate limit for <server-task-name>"
+    - EXAMPLE:
+       - "Violated rate limit for bathroom creation" for bathroom creation
+       - "Violated rate limit for retrieving bathrooms" for bathroom reading sync
+       - "Violated rate limit for finding nearest bathroom" for nearest bathroom query
  - Bathrooms:
     - Creation:
        - 5 per minute

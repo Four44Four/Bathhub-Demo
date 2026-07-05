@@ -25,6 +25,7 @@ import {
   navigateGlobeToBathroomPreview,
   type SavedGlobeCameraState,
 } from "../../pure/globe/GlobeCameraState";
+import { useReportRateLimitViolation } from "../../pure/rate-limit/useReportRateLimitViolation";
 import { useAlertSystem } from "../AlertSystem";
 import { useBathroomNavigationMode } from "./Context";
 
@@ -39,6 +40,7 @@ export function useFindNearestBathroomFlow({
   const { settings } = useUserSettings();
   const globeMovementSmoothRef = useGlobeMovementSmoothRef();
   const { showImportantAlert } = useAlertSystem();
+  const reportRateLimitViolation = useReportRateLimitViolation();
   const {
     requestState,
     beginFindNearestBathroom,
@@ -110,6 +112,16 @@ export function useFindNearestBathroomFlow({
     setRequestState((state) =>
       findNearestBathroomRequestApplyTerminalFailure(state, outcome.phase),
     );
+
+    const rateLimitErrorMsg =
+      result !== "timeout" && result !== "error" ? result.errorMsg : undefined;
+    const rateLimited = reportRateLimitViolation(rateLimitErrorMsg);
+    if (rateLimited) {
+      setRequestState(() => findNearestBathroomRequestReset());
+      inFlightRef.current = false;
+      return;
+    }
+
     showImportantAlert({
       message: findNearestBathroomFailureAlertMessage(outcome.phase),
       positive: false,
@@ -126,6 +138,7 @@ export function useFindNearestBathroomFlow({
     setRequestState,
     settings?.find_nearest_bathroom_max_dist_m,
     showImportantAlert,
+    reportRateLimitViolation,
   ]);
 
   useEffect(() => {

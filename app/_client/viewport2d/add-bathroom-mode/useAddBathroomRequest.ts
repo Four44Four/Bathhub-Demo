@@ -95,8 +95,11 @@ export function useAddBathroomRequest() {
       latitude: number,
       longitude: number,
       showLoadingScreen: () => void,
-    ): Promise<AddBathroomRequestPhase | null> => {
-      if (inFlightRef.current) return null;
+    ): Promise<{
+      phase: AddBathroomRequestPhase | null;
+      errorMsg?: string;
+    }> => {
+      if (inFlightRef.current) return { phase: null };
       inFlightRef.current = true;
 
       const requestPromise = withTimeout(
@@ -112,7 +115,13 @@ export function useAddBathroomRequest() {
       dispatchTerminalPhase(dispatch, terminalPhase);
 
       inFlightRef.current = false;
-      return terminalPhase;
+      return {
+        phase: terminalPhase,
+        errorMsg:
+          result !== "timeout" && typeof result === "object"
+            ? result.errorMsg
+            : undefined,
+      };
     },
     [],
   );

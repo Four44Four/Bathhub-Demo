@@ -24,6 +24,7 @@ import {
   type BathroomMarkersHandle,
 } from "../globe/BathroomMarkers";
 import { loadCesium } from "../globe/loadCesium";
+import { useReportRateLimitViolation } from "../pure/rate-limit/useReportRateLimitViolation";
 import {
   isCameraCloseEnoughForBathroomQuery,
   isGlobeViewportCameraSampleReady,
@@ -117,6 +118,7 @@ export async function runBathroomViewportSyncForGlobe(
 }
 
 export function BathroomViewportSync({ globeRef }: BathroomViewportSyncProps) {
+  const reportRateLimitViolation = useReportRateLimitViolation();
   const renderedRef = useRef<RenderedBathroomMap>(new Map());
   const markersRef = useRef<BathroomMarkersHandle | null>(null);
   const markersViewerTokenRef = useRef(0);
@@ -235,6 +237,7 @@ export function BathroomViewportSync({ globeRef }: BathroomViewportSyncProps) {
           syncMarkersFromRendered(previousRendered);
         },
         onRemoteSyncError: (errorMsg) => {
+          reportRateLimitViolation(errorMsg);
           console.error(errorMsg);
         },
       });
@@ -279,6 +282,7 @@ export function BathroomViewportSync({ globeRef }: BathroomViewportSyncProps) {
       },
       onClearBathrooms: clearBathrooms,
       onRemoteSyncError: (errorMsg) => {
+        reportRateLimitViolation(errorMsg);
         console.error(errorMsg);
       },
     });

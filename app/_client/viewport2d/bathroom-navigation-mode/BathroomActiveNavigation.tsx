@@ -29,6 +29,7 @@ import {
 import { useClientGeo, useClientGeoRef } from "../../globe/ClientGeoContext";
 import { type GlobeViewportHandle } from "../../globe/GlobeViewport";
 import { readClientStartPos } from "../../pure/globe/ClientGeoStartPos";
+import { useReportRateLimitViolation } from "../../pure/rate-limit/useReportRateLimitViolation";
 import { useBathroomNavigationMode } from "./Context";
 import { BandAlert } from "../alerts/BandAlert";
 import { NearestBathroom as NearestBathroomConsts } from "../../ComponentConstants";
@@ -56,6 +57,7 @@ export function BathroomActiveNavigation({
     setActiveNavigationPaused,
     clearActiveNavigation,
   } = useBathroomNavigationMode();
+  const reportRateLimitViolation = useReportRateLimitViolation();
   const [showReachedBand, setShowReachedBand] = useState(false);
   const [pathUpdateErrorMessage, setPathUpdateErrorMessage] = useState<string | null>(
     null,
@@ -105,7 +107,10 @@ export function BathroomActiveNavigation({
   const fetchPathUpdate = useCallback(async (startPos: LatLong) => {
     const navigation = activeNavigationRef.current;
     if (!navigation) {
-      return resolvePathUpdateRequestOutcome({ val: null, errorMsg: "inactive" });
+      return {
+        outcome: resolvePathUpdateRequestOutcome({ val: null, errorMsg: "inactive" }),
+        errorMsg: "inactive",
+      };
     }
 
     const result = await runAbortableTimeout(
@@ -119,7 +124,12 @@ export function BathroomActiveNavigation({
         }),
       NearestBathroomConsts.BATHROOM_PATH_UPDATE_REQUEST_TIMEOUT_MS,
     );
-    return resolvePathUpdateRequestOutcome(result);
+    const serverErrorMsg =
+      result !== "timeout" && result !== "error" ? result.errorMsg : undefined;
+    return {
+      outcome: resolvePathUpdateRequestOutcome(result),
+      errorMsg: serverErrorMsg,
+    };
   }, []);
 
   const applyPathUpdateOutcome = useCallback(
@@ -127,6 +137,7 @@ export function BathroomActiveNavigation({
       outcome: ReturnType<typeof resolvePathUpdateRequestOutcome>,
       startLocation: ReturnType<typeof readClientStartPos>,
       requestStartedAtMs: number,
+      serverErrorMsg?: string,
     ) => {
       if (outcome.kind === "success") {
         setPathUpdateErrorMessage(null);
@@ -154,6 +165,9 @@ export function BathroomActiveNavigation({
       );
 
       if (shouldShowPathUpdateErrorBand(outcome)) {
+        if (reportRateLimitViolation(serverErrorMsg)) {
+          return;
+        }
         setPathUpdateErrorMessage(
           pathUpdateErrorBandMessage(
             outcome.reason,
@@ -163,7 +177,7 @@ export function BathroomActiveNavigation({
         );
       }
     },
-    [globeRef],
+    [globeRef, reportRateLimitViolation],
   );
 
   const runPathUpdateRequest = useCallback(async () => {
@@ -184,8 +198,8 @@ export function BathroomActiveNavigation({
     );
 
     try {
-      const outcome = await fetchPathUpdate(startPos);
-      applyPathUpdateOutcome(outcome, startPos, requestStartedAtMs);
+      const { outcome, errorMsg } = await fetchPathUpdate(startPos);
+      applyPathUpdateOutcome(outcome, startPos, requestStartedAtMs, errorMsg);
     } finally {
       pathRequestInFlightRef.current = false;
     }

@@ -15,6 +15,9 @@ export async function requestFindNearestBathroom(
     body: JSON.stringify(body),
     signal,
   });
+  if (response.status === 429) {
+    return { val: null, errorMsg: await response.text() };
+  }
   if (!response.ok) {
     throw new Error(
       `Find nearest bathroom request failed with status ${response.status}`,

@@ -20,14 +20,24 @@ export type ImportantAlertRecord = {
   buttons: ImportantAlertButton[];
 };
 
+export type BandAlertRecord = {
+  id: string;
+  message: string;
+  positive: boolean;
+  persistUntilRemoved: boolean;
+  createdAtMs: number;
+};
+
 export type AlertSystemState = {
   positional: PositionalAlertRecord[];
   important: ImportantAlertRecord | null;
+  band: BandAlertRecord[];
 };
 
 export const EMPTY_ALERT_SYSTEM_STATE: AlertSystemState = {
   positional: [],
   important: null,
+  band: [],
 };
 
 export function alertSystemShowPositional(
@@ -91,4 +101,39 @@ export function alertSystemDismissImportant(
   state: AlertSystemState,
 ): AlertSystemState {
   return { ...state, important: null };
+}
+
+export function alertSystemShowBand(
+  state: AlertSystemState,
+  id: string,
+  message: string,
+  options: {
+    positive?: boolean;
+    persistUntilRemoved?: boolean;
+    createdAtMs?: number;
+  } = {},
+): AlertSystemState {
+  return {
+    ...state,
+    band: [
+      ...state.band,
+      {
+        id,
+        message,
+        positive: options.positive ?? false,
+        persistUntilRemoved: options.persistUntilRemoved ?? false,
+        createdAtMs: options.createdAtMs ?? 0,
+      },
+    ],
+  };
+}
+
+export function alertSystemDismissBand(
+  state: AlertSystemState,
+  id: string,
+): AlertSystemState {
+  return {
+    ...state,
+    band: state.band.filter((entry) => entry.id !== id),
+  };
 }

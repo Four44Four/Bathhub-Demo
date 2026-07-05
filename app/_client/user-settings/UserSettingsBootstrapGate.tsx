@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useRef, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 
 import { useAlertSystem } from "../viewport2d/AlertSystem";
 import { useUserSettings } from "./UserSettingsContext";
@@ -16,6 +22,27 @@ export function UserSettingsBootstrapGate({
   const { bootstrapPhase, schemaUpdateHasErrored } = useUserSettings();
   const { showImportantAlert } = useAlertSystem();
   const hasShownMigrationErrorRef = useRef(false);
+  const [schemaScreenMounted, setSchemaScreenMounted] = useState(false);
+  const [schemaScreenExiting, setSchemaScreenExiting] = useState(false);
+
+  const isSchemaOutOfDate = bootstrapPhase === "schema_out_of_date";
+
+  useEffect(() => {
+    if (isSchemaOutOfDate) {
+      setSchemaScreenMounted(true);
+      setSchemaScreenExiting(false);
+      return;
+    }
+
+    if (schemaScreenMounted && !schemaScreenExiting) {
+      setSchemaScreenExiting(true);
+    }
+  }, [isSchemaOutOfDate, schemaScreenMounted, schemaScreenExiting]);
+
+  const handleSchemaScreenExitComplete = useCallback(() => {
+    setSchemaScreenMounted(false);
+    setSchemaScreenExiting(false);
+  }, []);
 
   useEffect(() => {
     if (!schemaUpdateHasErrored || hasShownMigrationErrorRef.current) return;
@@ -28,15 +55,15 @@ export function UserSettingsBootstrapGate({
     });
   }, [schemaUpdateHasErrored, showImportantAlert]);
 
-  if (bootstrapPhase === "schema_out_of_date") {
-    return (
-      <>
-        {children}
-        <UserSettingsSchemaOutOfDateScreen />
-      </>
-    );
-  }
-
-  return children;
+  return (
+    <>
+      {children}
+      {schemaScreenMounted ? (
+        <UserSettingsSchemaOutOfDateScreen
+          exiting={schemaScreenExiting}
+          onExitComplete={handleSchemaScreenExitComplete}
+        />
+      ) : null}
+    </>
+  );
 }
-

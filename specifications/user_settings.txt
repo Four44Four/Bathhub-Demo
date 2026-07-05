@@ -88,6 +88,11 @@ General:
           - The client will enter a SCHEMA_OUT_OF_DATE state
     - If the client is in a SCHEMA_OUT_OF_DATE state:
        - Display a "schema out of date" screen that prevents the client from doing anything
+       - (on the webapp demo) The "schema out of date" screen will only take up the phone interface screen
+       - There is header text that reads "Loading updated settings"
+       - There is a spinner under the text
+       - When the screen is to be hidden:
+          - Animate it disappearing by sliding down and off the screen over a specified amount of time
        - Try every specified amount of time to request a schema update from the server
           - The schema update request will consist of the client's current persistent schema version number
           - If the schema update request successfully reaches the server:

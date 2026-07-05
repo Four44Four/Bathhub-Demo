@@ -1,7 +1,4 @@
 # Sprint 2 (basic backend)
- - Make "schema out of date" screen only take up virtual phone interface
- - Add a spinner to "schema out of date" screen
- - Animate the "schema out of date" screen disappearing so it does not look so abrupt/flash for a second
  - Incorporate `coords.accuracy` to prevent browser geolocation jitter from being mistaken for movement ??
  - Redis caching for reads
  - Add rating system on bathrooms (stars 1-5)

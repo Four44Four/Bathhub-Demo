@@ -14,7 +14,7 @@ export const SERVER_RATE_LIMITS = {
     perDay: { maxRequests: 15, windowSeconds: 86_400 },
   },
   bathroomReadSync: {
-    per30Seconds: { maxRequests: 1, windowSeconds: 30 },
+    per30Seconds: { maxRequests: 100, windowSeconds: 30 },
   },
   bathroomFindNearest: {
     perMinute: { maxRequests: 20, windowSeconds: 60 },

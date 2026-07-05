@@ -178,6 +178,11 @@ export const Menus = {
     BACKDROP_COLOR: "rgba(12, 13, 18, 0.62)",
 } as const;
 
+export const SchemaLoadingScreen = {
+    /** Milliseconds for the slide-down dismiss animation. */
+    ANIMATE_OUT_MS: 500,
+} as const;
+
 export const UserSettings = {
     /** Off boolean switch background; number-slider bar right of the knob (CSS hex). */
     COMPONENT_BG_COLOR: "#DCDCE4",

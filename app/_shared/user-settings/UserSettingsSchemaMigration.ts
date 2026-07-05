@@ -19,7 +19,8 @@ export type UserSettingsSchemaMigrationSuccess = {
 
 export type UserSettingsSchemaMigrationErrorCode =
   | "invalid_version"
-  | "already_at_max";
+  | "already_at_max"
+  | "rate_limited";
 
 export type UserSettingsSchemaMigrationFailure = {
   ok: false;

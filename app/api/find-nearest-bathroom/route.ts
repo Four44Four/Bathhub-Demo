@@ -15,5 +15,9 @@ export async function POST(request: NextRequest) {
     return new Response(null, { status: 499 });
   }
 
+  if (result.errorMsg?.startsWith("Rate limit exceeded:")) {
+    return new Response(result.errorMsg, { status: 429 });
+  }
+
   return Response.json(result);
 }

@@ -3,6 +3,7 @@
  - OPEN_ROUTE_SERVICE_API_KEY
  - SUPABASE_URL
  - SUPABASE_KEY
+ - REDIS_URL
 
 # Run tests
  - `npm run unit-tests`

@@ -8,7 +8,6 @@ import {
   type ViewportBounds,
 } from "../app/_shared/BathroomDataPrimary";
 import { BathroomMapMarker } from "../app/_client/ComponentConstants";
-import { syncBathroomsInGlobeViewport } from "../app/_client/Bathroom";
 import { type BathroomLocalDbPort } from "../app/_client/local-db/LocalDbPort";
 import {
   type RenderedBathroomMap,
@@ -29,6 +28,7 @@ import {
   type RemoteSyncGateState,
 } from "../app/_client/pure/bathroom/BathroomViewportRemoteGate";
 import { BathroomRemoteDB } from "../app/_client/ComponentConstants";
+import { syncInBounds } from "../app/_server/database/bathroom-data-primary/CrudCore";
 import { type InputCoordinate } from "./formatCrudReport";
 import { requireLocalSupabaseEnv } from "./requireLocalSupabase";
 
@@ -174,7 +174,7 @@ export async function runViewportRemoteCacheSync(
   let rendered = initialRendered;
   let syncResponse: BathroomSyncResponse = { upserts: [], deleteIds: [] };
   let remoteError: string | null = null;
-  const syncRemote = options?.syncRemote ?? syncBathroomsInGlobeViewport;
+  const syncRemote = options?.syncRemote ?? syncBathroomsInBoundsForIntegration;
 
   await runBathroomViewportRemoteSync({
     requestId,
@@ -234,7 +234,7 @@ export async function runViewportCacheSync(
   const maxHeight =
     options?.maxQueryCameraHeightM ?? BathroomMapMarker.MAX_QUERY_CAMERA_HEIGHT_M;
   const cameraHeightM = options?.cameraHeightM ?? maxHeight - 1;
-  const syncRemote = options?.syncRemote ?? syncBathroomsInGlobeViewport;
+  const syncRemote = options?.syncRemote ?? syncBathroomsInBoundsForIntegration;
 
   await runBathroomViewportSyncForGlobe({
     globe: {
@@ -266,6 +266,20 @@ export async function runViewportCacheSync(
   });
 
   return { rendered, syncResponse, remoteError };
+}
+
+async function syncBathroomsInBoundsForIntegration(
+  bounds: ViewportBounds,
+  clientCache: BathroomClientCacheEntry[],
+): Promise<{ val: BathroomSyncResponse | null; errorMsg?: string }> {
+  try {
+    return { val: await syncInBounds(bounds, clientCache) };
+  } catch (error: unknown) {
+    return {
+      val: null,
+      errorMsg: error instanceof Error ? error.message : String(error),
+    };
+  }
 }
 
 export function expectViewportEntryMatchesRow(

@@ -8,6 +8,7 @@ import {
   type BathroomDataPrimaryRow,
   type BathroomSyncResponse,
   type BathroomViewportEntry,
+  type VerifyStatus,
   type ViewportBounds,
 } from "../_shared/BathroomDataPrimary";
 import * as BathroomCrud from "../_server/database/bathroom-data-primary/Crud";
@@ -67,9 +68,14 @@ export async function createBathroomAt(
   latitude: number,
   longitude: number,
 ): Promise<Errorable<BathroomDataPrimaryRow>> {
-  return toErrorable(() =>
-    BathroomCrud.bathroomDbCreate(latitude, longitude),
-  );
+  return BathroomCrud.bathroomDbCreate(latitude, longitude);
+}
+
+export async function updateBathroomVerifyStatus(
+  id: number,
+  verifyStatus: VerifyStatus,
+): Promise<Errorable<BathroomDataPrimaryRow>> {
+  return BathroomCrud.bathroomDbUpdateVerifyStatus(id, verifyStatus);
 }
 
 export async function readBathroomsInBounds(

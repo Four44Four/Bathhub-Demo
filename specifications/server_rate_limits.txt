@@ -1,0 +1,26 @@
+ - Store all rate limits as constants in the dedicated constants file in the server directory
+ - Should be per IP address
+    - IP address should be valid even if application backend server is behind a proxy
+ - Use Redis for keeping track of the current rate limit
+    - Create a wrapper over all Redis calls to centralize Redis logic in a single directory, so that the Redis client can be switched out later if necessary without mass refactoring
+    - The Redis URL should be passed through the environment variable REDIS_URL
+ - Bathrooms:
+    - Creation:
+       - 5 per minute
+       - 15 per day
+    - Reading/sync with client bounds:
+       - 100 per 30 seconds
+    - Querying about nearest bathroom to coordinates:
+       - 20 per minute
+    - Updating:
+       - 20 per minute
+ - Path data generation via ORS:
+    - 10 per minute
+    - 300 per day
+ - User config rate limits:
+    - Pulling current default DB:
+       - 5 per minute
+       - 20 per day
+    - Pulling migration scripts:
+       - 5 per minute
+       - 50 per day

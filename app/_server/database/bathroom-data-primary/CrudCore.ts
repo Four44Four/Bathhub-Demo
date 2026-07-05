@@ -4,6 +4,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 import {
   type BathroomDataPrimaryRow,
+  type VerifyStatus,
   type ViewportBounds,
 } from "../../../_shared/BathroomDataPrimary";
 import {
@@ -31,6 +32,11 @@ import {
   type FindNearestBathroomConstraints,
   type FindNearestBathroomRpcRow,
 } from "../../pure/bathroom-data-primary/FindNearestBathroom";
+import {
+  UPDATE_BATHROOM_VERIFY_STATUS_RPC_NAME,
+  updateBathroomVerifyStatus,
+  type UpdateBathroomVerifyStatusRpc,
+} from "../../pure/bathroom-data-primary/UpdateBathroom";
 import { type LatLong } from "../../../_shared/BathroomDataPrimary";
 
 export type { BathroomDataPrimaryRow, ViewportBounds };
@@ -105,6 +111,21 @@ export async function createAt(
   };
 
   return createBathroomAt(latitude, longitude, rpc);
+}
+
+export async function updateVerifyStatus(
+  id: number,
+  verifyStatus: VerifyStatus,
+): Promise<BathroomDataPrimaryRow> {
+  const client = getSupabaseClient();
+  const rpc: UpdateBathroomVerifyStatusRpc = async (params) => {
+    const { data, error } = await client
+      .rpc(UPDATE_BATHROOM_VERIFY_STATUS_RPC_NAME, params)
+      .single();
+    return { data: data as BathroomDataPrimaryRow | null, error };
+  };
+
+  return updateBathroomVerifyStatus(id, verifyStatus, rpc);
 }
 
 export async function getInBounds(

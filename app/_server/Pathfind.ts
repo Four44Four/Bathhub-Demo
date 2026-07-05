@@ -3,6 +3,7 @@
 import { OrsDirectionsGeoJsonResponse } from "@/types/ors-directions-geojson";
 import { type Point, type PathParams, type Errorable } from "../_shared/Utils";
 import * as OrsPathfind from "./ors/ORSPathfind";
+import { tryEnforceServerRateLimit } from "./rate-limit/enforceRateLimit";
 
 export type PathData = {
     points: Array<Point>;
@@ -13,6 +14,14 @@ export type PathData = {
 export async function getPathBetweenPoints(
     params: PathParams
 ): Promise<Errorable<PathData>> {
+    const rateLimit = await tryEnforceServerRateLimit("ors-path");
+    if (!rateLimit.allowed) {
+        return {
+            val: null,
+            errorMsg: rateLimit.message,
+        };
+    }
+
     let geoJsonRes: OrsDirectionsGeoJsonResponse;
     try {
         geoJsonRes = await OrsPathfind.fetchRoutePathGeoJson(params);

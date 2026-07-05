@@ -198,7 +198,12 @@ describe("attemptUserSettingsSchemaBootstrap", () => {
     });
     const finishReady = jest.fn(async () => {});
 
-    const outcome = await attemptUserSettingsSchemaBootstrap(db, finishReady, 1);
+    const outcome = await attemptUserSettingsSchemaBootstrap(
+      db,
+      finishReady,
+      1,
+      createMigrationDeps(),
+    );
 
     expect(outcome).toBe("done");
     expect(finishReady).toHaveBeenCalledWith(false);
@@ -222,7 +227,12 @@ describe("attemptUserSettingsSchemaBootstrap", () => {
       expect(phase).toBe("ready");
     });
 
-    const outcome = await attemptUserSettingsSchemaBootstrap(db, finishReady, 1);
+    const outcome = await attemptUserSettingsSchemaBootstrap(
+      db,
+      finishReady,
+      1,
+      createMigrationDeps(),
+    );
 
     expect(outcome).toBe("done");
     expect(finishReady).toHaveBeenCalledWith(false);
@@ -243,7 +253,12 @@ describe("attemptUserSettingsSchemaBootstrap", () => {
       expect(phase).toBe("migration_errored");
     });
 
-    const outcome = await attemptUserSettingsSchemaBootstrap(db, finishReady, 1);
+    const outcome = await attemptUserSettingsSchemaBootstrap(
+      db,
+      finishReady,
+      1,
+      createMigrationDeps(),
+    );
 
     expect(outcome).toBe("errored");
     expect(finishReady).toHaveBeenCalledWith(true);

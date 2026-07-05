@@ -1,7 +1,8 @@
 import {
-  bathroomDbCreate,
-  bathroomDbReadInBounds,
-} from "../app/_server/database/bathroom-data-primary/Crud";
+  createAt as bathroomDbCreate,
+  getInBounds as bathroomDbReadInBounds,
+  updateVerifyStatus as bathroomDbUpdateVerifyStatus,
+} from "../app/_server/database/bathroom-data-primary/CrudCore";
 import {
   CREATE_BATHROOM_ERROR_CONTEXT,
   TEMP_DATA_LENGTH,
@@ -239,6 +240,32 @@ describe("bathroom_data_primary CRUD against local Supabase", () => {
 
   test("bathroom_data_primary row count matches locations.json after seeding", () => {
     expect(tableRows).toHaveLength(expectedBathrooms.length);
+  });
+
+  test("bathroomDbUpdateVerifyStatus updates verify_status and increments version", async () => {
+    const target = created[0]?.row;
+    expect(target).toBeDefined();
+    if (target === undefined) return;
+
+    const updated = await bathroomDbUpdateVerifyStatus(target.id, "verified");
+
+    expect(updated).toMatchObject({
+      id: target.id,
+      latitude: target.latitude,
+      longitude: target.longitude,
+      verify_status: "verified",
+      version: target.version + 1,
+    });
+
+    const rows = await bathroomDbReadInBounds(
+      boundsAround(target.latitude, target.longitude),
+    );
+    const persisted = rows.find((candidate) => candidate.id === target.id);
+    expect(persisted).toMatchObject({
+      id: target.id,
+      verify_status: "verified",
+      version: target.version + 1,
+    });
   });
 
   test("bathroomDbReadInBounds returns empty for an out-of-bounds viewport", async () => {

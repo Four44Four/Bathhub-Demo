@@ -9,6 +9,8 @@ import {
   loadActiveUserSettingsFromPersistentDbIfAllowed,
   migrateUserSettingsSchemaToFrontendVersion,
   type UserSettingsMigrationRunResult,
+  type UserSettingsSchemaMigrationRunnerDeps,
+  defaultUserSettingsSchemaMigrationRunnerDeps,
 } from "./UserSettingsSchemaMigrationRunner";
 import type { UserSettingsBootstrapAttemptOutcome } from "@/app/_shared/user-settings/UserSettingsBootstrapOrchestration";
 
@@ -20,6 +22,7 @@ export async function attemptUserSettingsSchemaBootstrap(
   db: UserSettingsDbPort,
   finishReady: UserSettingsBootstrapFinishReady,
   frontendVersion: number = USER_SETTINGS_FRONTEND_SCHEMA_VERSION,
+  deps: UserSettingsSchemaMigrationRunnerDeps = defaultUserSettingsSchemaMigrationRunnerDeps,
 ): Promise<UserSettingsBootstrapAttemptOutcome> {
   await db.init();
 
@@ -39,7 +42,7 @@ export async function attemptUserSettingsSchemaBootstrap(
     return "done";
   }
 
-  const migration = await migrateUserSettingsSchemaToFrontendVersion(db);
+  const migration = await migrateUserSettingsSchemaToFrontendVersion(db, deps);
   if (!migration.ok) {
     await finishReady(true);
     return "errored";

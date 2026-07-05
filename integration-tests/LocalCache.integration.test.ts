@@ -1,7 +1,7 @@
 import {
-  bathroomDbReadInBounds,
-  bathroomDbSyncInBounds,
-} from "../app/_server/database/bathroom-data-primary/Crud";
+  getInBounds as bathroomDbReadInBounds,
+  syncInBounds as bathroomDbSyncInBounds,
+} from "../app/_server/database/bathroom-data-primary/CrudCore";
 import {
   BATHROOM_LOCAL_CACHE_TABLE_NAME,
   type BathroomClientCacheEntry,

@@ -76,6 +76,9 @@ General:
           - This will prevent user setting data from being unintentionally lost if the client falls behind very far on their local user setting schema version
        - The schema migration should always fill new columns with default values
        - The schema migration should always make UPDATE statements to coerce all potentially newly invalid values to be some valid value if a new CHECK constraint is added or if an existing CHECK constraint is updated
+       - The schema migration should be designed to handle accidental repeat runs and prevent them from corrupting DB
+          - Errors should be raised when duplicate actions are detected, which should trigger an automatic aborting of the attempted schema update, leaving the schema unchanged from before the attempted schema migration
+             - For example, trying to add the same column multiple times or deleting a column that doesn't exist
     - The client will have a dedicated and persistent key-value pair named SCHEMA_VERSION with a number value stored in their SQLite DB for the last schema version that the client has installed
     - The client's frontend code will store the valid schema number that is needed to make the frontend of the app work
        - This is not stored and queried from the server as the client may be using an out of date version of the app and relying on purely the server will lead to the out of date app breaking the moment a client migrates their local user settings DB schema

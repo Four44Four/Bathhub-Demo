@@ -8,6 +8,7 @@ import {
   pathUpdateTrackerAfterPathRequest,
   pathUpdateTrackerAtRequestStart,
 } from "@/app/_shared/find-nearest-bathroom/PathUpdatePolicy";
+import { sphericalPythagoreanDistanceMeters } from "@/app/_shared/find-nearest-bathroom/sphericalPythagoreanDistanceMeters";
 import { evaluatePathPollTick } from "../../pure/viewport2d/BathroomActiveNavigationPathPoll";
 import {
   shouldPauseBathroomActiveNavigation,
@@ -254,6 +255,23 @@ export function BathroomActiveNavigation({
         return true;
       }
       if (tick.requestPathUpdate) {
+        const tracker = pathTrackerRef.current;
+        if (
+          tick.pathUpdateTrigger === "distance_exceeded" &&
+          tracker.previousTimestampMs !== 0 &&
+          !pathRequestInFlightRef.current
+        ) {
+          const movementMeters = sphericalPythagoreanDistanceMeters(
+            tracker.previousLocation,
+            tick.currentLocation,
+          );
+          console.log("[bathhub] Requesting ORS path update after movement", {
+            movementMeters: Number(movementMeters.toFixed(2)),
+            minDistanceM: NearestBathroomConsts.BATHROOM_PATH_UPDATE_MIN_DISTANCE_M,
+            previousLocation: tracker.previousLocation,
+            currentLocation: tick.currentLocation,
+          });
+        }
         void runPathUpdateRequest();
       }
       return false;

@@ -32,10 +32,20 @@ This version has breaking changes — APIs, conventions, and file structure may 
     - If an integration test fails:
        - Check to see if any corresponding/related unit test is actually testing the big-picture/architectural functionality, not just localized behaviors
     - If a unit test fails:
-       - Check to see if any corresponding/related integration test should be revised to account for any changes that will be made to the failing unit test, while ensuring the intended purpose of the integration test 
+       - Check to see if any corresponding/related integration test should be revised to account for any changes that will be made to the failing unit test, while ensuring the intended purpose of the integration test
+    - Integration tests should not use existing .env files
+       - Use locally hosted versions of dependencies whenever possible
+       - If locally hosted versions of any dependencies are not available:
+          - Notify developer
  - Whenever new user settings are added/created:
     - Create a new schema version to migrate the clients' SQLite DB tables for persistently storing the user settings with the new user settings and any defaults
     - Create a new DB snapshot for initializing clients with no user setting DBs in .app/_server/user-settings/snapshot/default-user-settings.sqlite by running all the migrations up to the newest one
+ - Whenever a new Redis based feature/operation is added:
+    - Use the Redis client wrapper, not the Redis client packages directly (to allow for Redis client implementation to be changed without requiring a major refactoring)
+ - Whenever a new serverside DB CRUD endpoint/client accessible function is exposed:
+    - Enforce an appropriate rate limit if there was no specific rate limit specified
+    - Notify developer that a rate limit was automatically added
+    - Test the rate limit in integration tests
  - All files in ./specifications are the intended technical specifications of the project so far
     - Do not treat them as reflective of what is currently implemented in the source code
     - If code is encountered that does not match the tecnical specifications:

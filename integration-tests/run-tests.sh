@@ -61,7 +61,30 @@ export_supabase_env() {
   echo "run-tests: SUPABASE_KEY set (${#SUPABASE_KEY} chars)"
 }
 
+REDIS_CONTAINER_NAME="bathhub-test-redis"
+
+start_redis() {
+  echo "run-tests: starting local Redis container..."
+  docker rm -f "$REDIS_CONTAINER_NAME" >/dev/null 2>&1 || true
+  docker run -d --name "$REDIS_CONTAINER_NAME" -p 6379:6379 redis:7-alpine >/dev/null
+
+  for attempt in $(seq 1 30); do
+    if docker exec "$REDIS_CONTAINER_NAME" redis-cli ping 2>/dev/null | grep -q PONG; then
+      export REDIS_URL="redis://127.0.0.1:6379"
+      echo "run-tests: REDIS_URL=$REDIS_URL"
+      return 0
+    fi
+    sleep 1
+  done
+
+  echo "run-tests: Redis failed to start within 30s" >&2
+  docker logs "$REDIS_CONTAINER_NAME" >&2 || true
+  exit 1
+}
+
 cleanup() {
+  docker rm -f "$REDIS_CONTAINER_NAME" >/dev/null 2>&1 || true
+
   if [[ -n "${WORKSPACE_DIR:-}" ]] && command -v supabase >/dev/null 2>&1; then
     (
       cd "$WORKSPACE_DIR"
@@ -91,11 +114,16 @@ fi
 
 export_supabase_env
 
+start_redis
+
 echo "run-tests: running bathroom_data_primary CRUD integration checks..."
 npx jest --runInBand --verbose "$SCRIPT_DIR/Crud.integration.test.ts"
 
 echo "run-tests: running find nearest bathroom integration checks..."
 npx jest --runInBand --verbose "$SCRIPT_DIR/FindNearestBathroom.integration.test.ts"
+
+echo "run-tests: running Redis rate limit integration checks..."
+npx jest --runInBand --verbose "$SCRIPT_DIR/RateLimit.integration.test.ts"
 
 echo "run-tests: running local cache integration checks against seeded locations.json rows..."
 # sqlite-wasm loads through Node dynamic import; Jest needs VM module support.

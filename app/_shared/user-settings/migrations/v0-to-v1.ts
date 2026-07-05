@@ -25,11 +25,11 @@ const globeMovementSmoothSql = globe_movement_smooth ? 1 : 0;
 export const USER_SETTINGS_MIGRATION_V0_TO_V1: UserSettingsSchemaMigrationScripts = {
   defaults: USER_SETTINGS_MIGRATION_V0_TO_V1_DEFAULTS,
   forwardSql: [
-    `CREATE TABLE IF NOT EXISTS ${USER_SETTINGS_META_TABLE_NAME} (
+    `CREATE TABLE ${USER_SETTINGS_META_TABLE_NAME} (
   key TEXT PRIMARY KEY NOT NULL,
   value TEXT NOT NULL
 );`,
-    `CREATE TABLE IF NOT EXISTS ${USER_SETTINGS_TABLE_NAME} (
+    `CREATE TABLE ${USER_SETTINGS_TABLE_NAME} (
   id INTEGER PRIMARY KEY NOT NULL CHECK (id = 1),
   globe_movement_smooth INTEGER NOT NULL CHECK (globe_movement_smooth IN (0, 1)),
   camera_init_surface_offset_m INTEGER NOT NULL CHECK (
@@ -39,7 +39,7 @@ export const USER_SETTINGS_MIGRATION_V0_TO_V1: UserSettingsSchemaMigrationScript
     find_nearest_bathroom_max_dist_m >= 0 AND find_nearest_bathroom_max_dist_m <= 10000
   )
 );`,
-    `INSERT OR IGNORE INTO ${USER_SETTINGS_TABLE_NAME} (
+    `INSERT INTO ${USER_SETTINGS_TABLE_NAME} (
   id,
   globe_movement_smooth,
   camera_init_surface_offset_m,
@@ -50,7 +50,7 @@ export const USER_SETTINGS_MIGRATION_V0_TO_V1: UserSettingsSchemaMigrationScript
   ${camera_init_surface_offset_m},
   ${find_nearest_bathroom_max_dist_m}
 );`,
-    `INSERT OR REPLACE INTO ${USER_SETTINGS_META_TABLE_NAME} (key, value)
+    `INSERT INTO ${USER_SETTINGS_META_TABLE_NAME} (key, value)
 VALUES ('${USER_SETTINGS_SCHEMA_VERSION_META_KEY}', '1');`,
   ],
 };

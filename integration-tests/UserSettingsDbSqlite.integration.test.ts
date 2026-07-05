@@ -301,6 +301,28 @@ describe("UserSettingsDbSqlite — real sqlite-wasm layer (user_settings spec §
       );
     });
 
+    test("repeat forward migration aborts on duplicate actions and leaves schema unchanged", async () => {
+      const db = createTestDb();
+      await db.init();
+      await runSequentialMigrationStep(db, 0);
+
+      const settingsBeforeRepeat: UserSettingsRow = {
+        globe_movement_smooth: false,
+        camera_init_surface_offset_m: 4200,
+        find_nearest_bathroom_max_dist_m: 1200,
+      };
+      await db.saveSettingsToDb(settingsBeforeRepeat);
+      await expectUserSettingsTableContains(db, settingsBeforeRepeat);
+      expect(await db.getPersistentSchemaVersion()).toBe(1);
+
+      await expect(
+        db.runForwardMigration(USER_SETTINGS_MIGRATION_V0_TO_V1.forwardSql),
+      ).rejects.toThrow(/user_settings_meta already exist/i);
+
+      expect(await db.getPersistentSchemaVersion()).toBe(1);
+      await expectUserSettingsTableContains(db, settingsBeforeRepeat);
+    });
+
     test("partial forward migration is rolled back atomically", async () => {
       const db = createTestDb();
       await db.init();

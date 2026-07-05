@@ -1,5 +1,6 @@
 import {
   buildAndValidateDefaultUserSettingsDbSnapshot,
+  validateBuiltDefaultUserSettingsDbSnapshot,
 } from "../app/_shared/user-settings/buildDefaultUserSettingsDbSnapshot";
 import { readDefaultUserSettingsDbSnapshotBytes } from "../app/_server/user-settings/readDefaultUserSettingsDbSnapshot";
 import {
@@ -44,7 +45,7 @@ describe("Default user settings DB snapshot (user_settings spec §118–127)", (
     const db = new sqlite3.oo1.DB(":memory:");
     loadUserSettingsBytesIntoMemoryDb(sqlite3, db, snapshotBytes);
 
-    const validation = buildAndValidateDefaultUserSettingsDbSnapshot(
+    const validation = validateBuiltDefaultUserSettingsDbSnapshot(
       createDefaultUserSettingsDbSnapshotReader(db),
       USER_SETTINGS_MAX_SCHEMA_VERSION,
     );

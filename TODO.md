@@ -6,7 +6,6 @@
  - Make "schema out of date" screen only take up virtual phone interface
  - Add a spinner to "schema out of date" screen
  - Animate the "schema out of date" screen disappearing so it does not look so abrupt/flash for a second
- - Ensure that user settings migrations can be run repeatedly without side effects
  - Incorporate `coords.accuracy` to prevent browser geolocation jitter from being mistaken for movement ??
  - Redis caching for reads
  - Add rating system on bathrooms (stars 1-5)
@@ -16,7 +15,8 @@
  - Make a Dockerfile for building a Docker container that exposes both the Supabase DB and the Redis server in one container when ran
 
 # Sprint 3 (accounts)
- - Restrict destructive Bathroom DB operations to authenticated users
+ - Add account system
+    - Restrict destructive Bathroom DB operations to authenticated users
 
 # Sprint 4 (offline caching)
  - Add way to save map data and all bathrooms visible in viewport

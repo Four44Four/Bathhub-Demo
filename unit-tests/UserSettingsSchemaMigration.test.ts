@@ -46,9 +46,12 @@ describe("resolveUserSettingsSchemaMigration", () => {
     expect(result.fromVersion).toBe(0);
     expect(result.toVersion).toBe(1);
     expect(result.defaults).toEqual(USER_SETTINGS_MIGRATION_V0_TO_V1_DEFAULTS);
-    expect(result.forwardSql.join("\n")).toContain("CREATE TABLE IF NOT EXISTS user_settings");
+    expect(result.forwardSql.join("\n")).toContain("CREATE TABLE user_settings");
+    expect(result.forwardSql.join("\n")).not.toContain("IF NOT EXISTS");
     expect(result.forwardSql.join("\n")).toContain(
-      "INSERT OR REPLACE INTO user_settings_meta",
+      "INSERT INTO user_settings_meta",
     );
+    expect(result.forwardSql.join("\n")).not.toContain("OR IGNORE");
+    expect(result.forwardSql.join("\n")).not.toContain("OR REPLACE");
   });
 });

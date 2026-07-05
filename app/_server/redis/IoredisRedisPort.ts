@@ -3,6 +3,7 @@ import "server-only";
 import { Redis } from "ioredis";
 
 import { type RedisPort } from "./RedisPort";
+import { buildIoredisConnectionOptions } from "./ioredisConnectionOptions";
 
 const INCR_WITH_EXPIRE_SCRIPT = `
 local current = redis.call('INCR', KEYS[1])
@@ -14,26 +15,8 @@ return current
 
 const REDIS_ERROR_LOG_INTERVAL_MS = 10_000;
 
-function buildIoredisOptions(redisUrl: string) {
-  const parsed = new URL(redisUrl);
-  const options: {
-    maxRetriesPerRequest: number;
-    enableReadyCheck: boolean;
-    tls?: { servername: string };
-  } = {
-    maxRetriesPerRequest: 2,
-    enableReadyCheck: true,
-  };
-
-  if (parsed.protocol === "rediss:") {
-    options.tls = { servername: parsed.hostname };
-  }
-
-  return options;
-}
-
 export function createIoredisRedisPort(redisUrl: string): RedisPort {
-  const client = new Redis(redisUrl, buildIoredisOptions(redisUrl));
+  const client = new Redis(redisUrl, buildIoredisConnectionOptions(redisUrl));
 
   let lastErrorLoggedAt = 0;
   client.on("error", (error: Error) => {

@@ -17,6 +17,7 @@ declare module "ioredis" {
       numkeys: number,
       ...args: (string | number)[]
     ): Promise<unknown>;
+    del(key: string): Promise<number>;
     quit(): Promise<string>;
   }
 

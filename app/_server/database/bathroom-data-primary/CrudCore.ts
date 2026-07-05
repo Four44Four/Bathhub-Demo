@@ -38,39 +38,18 @@ import {
   type UpdateBathroomVerifyStatusRpc,
 } from "../../pure/bathroom-data-primary/UpdateBathroom";
 import { type LatLong } from "../../../_shared/BathroomDataPrimary";
+import { getSupabaseKey, getSupabaseUrl } from "../../EnvironmentVariables";
 
 export type { BathroomDataPrimaryRow, ViewportBounds };
 
-/** Env var name read for the Supabase project URL (see `getSupabaseUrl`). */
-const SUPABASE_URL_ENV = "SUPABASE_URL" as const;
-
-/** Env var name read for the Supabase API key (see `getSupabaseKey`). */
-const SUPABASE_KEY_ENV = "SUPABASE_KEY" as const;
-
 /** Bathroom table used by this CRUD module. */
 export const BATHROOM_DATA_PRIMARY_TABLE_NAME = "bathroom_data_primary" as const;
-
-function getSupabaseUrl(): string {
-  const url = process.env[SUPABASE_URL_ENV];
-  if (url === undefined || url.length === 0) {
-    throw new Error(`Missing or empty environment variable ${SUPABASE_URL_ENV}`);
-  }
-  return url;
-}
-
-function getSupabaseKey(): string {
-  const key = process.env[SUPABASE_KEY_ENV];
-  if (key === undefined || key.length === 0) {
-    throw new Error(`Missing or empty environment variable ${SUPABASE_KEY_ENV}`);
-  }
-  return key;
-}
 
 let supabaseClient: SupabaseClient | null = null;
 
 /**
  * Returns a singleton Supabase client initialized from
- * `process.env.SUPABASE_URL` and `process.env.SUPABASE_KEY`.
+ * {@link getSupabaseUrl} and {@link getSupabaseKey}.
  */
 export function getSupabaseClient(): SupabaseClient {
   if (supabaseClient === null) {

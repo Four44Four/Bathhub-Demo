@@ -5,6 +5,7 @@ import Openrouteservice from "openrouteservice-js";
 import type { OrsDirectionsGeoJsonResponse } from "@/types/ors-directions-geojson";
 
 import { type PathParams, type Point } from "../../_shared/Utils";
+import { getOpenRouteServiceApiKey } from "../EnvironmentVariables";
 
 /** Request timeout for remote OpenRouteService API calls (ms). */
 const ORS_TIMEOUT_MS = 5000;
@@ -12,24 +13,11 @@ const ORS_TIMEOUT_MS = 5000;
 /** Hardcoded response format for directions requests (ORS URL segment + JSON shape). */
 const ORS_DIRECTIONS_FORMAT = "geojson" as const;
 
-/** Env var name read for the ORS API key (see `getOpenRouteServiceApiKey`). */
-const OPEN_ROUTE_SERVICE_API_KEY_ENV = "OPEN_ROUTE_SERVICE_API_KEY" as const;
-
 export type ORSProfile = "driving-car" | "driving-hgv" | "cycling-regular" | "cycling-mountain" | "cycling-road" | "cycling-electric" | "foot-walking" | "foot-hiking" | "wheelchair";
-
-function getOpenRouteServiceApiKey(): string {
-  const key = process.env[OPEN_ROUTE_SERVICE_API_KEY_ENV];
-  if (key === undefined || key.length === 0) {
-    throw new Error(
-      `Missing or empty environment variable ${OPEN_ROUTE_SERVICE_API_KEY_ENV}`,
-    );
-  }
-  return key;
-}
 
 /**
  * Creates a Directions client for the public ORS API (`https://api.openrouteservice.org`).
- * Uses `process.env.OPEN_ROUTE_SERVICE_API_KEY` and {@link ORS_TIMEOUT_MS}.
+ * Uses {@link getOpenRouteServiceApiKey} and {@link ORS_TIMEOUT_MS}.
  */
 function createOpenRouteDirectionsClient() {
   return new Openrouteservice.Directions({

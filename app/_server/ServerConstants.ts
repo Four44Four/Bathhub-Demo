@@ -2,9 +2,6 @@ import "server-only";
 
 import { type RateLimitWindowConfig } from "./pure/rate-limit/RateLimit";
 
-/** Env var name for the Redis connection URL (see `getRedisPort`). */
-export const REDIS_URL_ENV = "REDIS_URL" as const;
-
 /** When true, log rate limit violations (scope and client IP) to the server console. */
 export const RATE_LIMIT_VIOLATE_LOG = true;
 

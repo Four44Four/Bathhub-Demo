@@ -1,4 +1,7 @@
-import { REDIS_URL_ENV } from "../app/_server/ServerConstants";
+import {
+  getRedisUrl,
+  REDIS_URL_ENV,
+} from "../app/_server/EnvironmentVariables";
 
 const LOCAL_REDIS_HOSTS = new Set(["127.0.0.1", "localhost", "::1"]);
 
@@ -7,11 +10,7 @@ export type LocalRedisEnv = {
 };
 
 export function requireLocalRedis(): LocalRedisEnv {
-  const url = process.env[REDIS_URL_ENV];
-
-  if (url === undefined || url.length === 0) {
-    throw new Error(`Missing or empty ${REDIS_URL_ENV}`);
-  }
+  const url = getRedisUrl();
 
   let parsed: URL;
   try {

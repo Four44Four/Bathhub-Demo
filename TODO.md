@@ -1,5 +1,4 @@
 # Sprint 2 (basic backend)
- - Handle + notify dev when env vars are missing or env vars external URLs being down
  - Centralize top band alerts in a dedicated alert type file
     - Multiple alert bands triggering will stack them vertically
        - The most recent alerts will be at the top

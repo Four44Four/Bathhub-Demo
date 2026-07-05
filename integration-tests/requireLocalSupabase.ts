@@ -1,3 +1,9 @@
+import {
+  getSupabaseKey,
+  getSupabaseUrl,
+  SUPABASE_URL_ENV,
+} from "../app/_server/EnvironmentVariables";
+
 const LOCAL_SUPABASE_HOSTS = new Set(["127.0.0.1", "localhost", "::1"]);
 
 export type LocalSupabaseEnv = {
@@ -6,27 +12,19 @@ export type LocalSupabaseEnv = {
 };
 
 export function requireLocalSupabaseEnv(): LocalSupabaseEnv {
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_KEY;
-
-  if (url === undefined || url.length === 0) {
-    throw new Error("Missing or empty SUPABASE_URL");
-  }
-
-  if (key === undefined || key.length === 0) {
-    throw new Error("Missing or empty SUPABASE_KEY");
-  }
+  const url = getSupabaseUrl();
+  const key = getSupabaseKey();
 
   let parsed: URL;
   try {
     parsed = new URL(url);
   } catch {
-    throw new Error(`SUPABASE_URL is not a valid URL: ${url}`);
+    throw new Error(`${SUPABASE_URL_ENV} is not a valid URL: ${url}`);
   }
 
   if (!LOCAL_SUPABASE_HOSTS.has(parsed.hostname)) {
     throw new Error(
-      `SUPABASE_URL must point at local Supabase (127.0.0.1 or localhost), got ${url}`,
+      `${SUPABASE_URL_ENV} must point at local Supabase (127.0.0.1 or localhost), got ${url}`,
     );
   }
 

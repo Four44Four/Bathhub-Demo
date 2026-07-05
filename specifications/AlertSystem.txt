@@ -1,8 +1,20 @@
- - Minor alerts should trigger the positional alert indicator
-    - A positional alert indicator consists of a body with a rectangle with text detailing the error, and a triangular tail pointing towards the element that triggered the alert
-    - It must point above or below a specified element, using that element's bounding box to calculate a top or bottom edge and positioning its triangular tail to be some specific amount of pixels away from that edge
-    - Positional alerts are cleared when the client taps or clicks on the interface without dragging
-       - For example, they should be preserved when the client is dragging to pan or zoom on the Globe, but the moment the client taps on a location without dragging, the positional alerts will all disappear
+ - Minor alerts should trigger when an alert does not require the client to stop what they are doing and acknowledge it:
+    - Positional alerts:
+       - Used when a minor alert is specific to a component
+       - A positional alert indicator consists of a body with a rectangle with text detailing the error, and a triangular tail pointing towards the element that triggered the alert
+       - It must point above or below a specified element, using that element's bounding box to calculate a top or bottom edge and positioning its triangular tail to be some specific amount of pixels away from that edge
+       - Positional alerts are cleared when the client taps or clicks on the interface without dragging
+          - For example, they should be preserved when the client is dragging to pan or zoom on the Globe, but the moment the client taps on a location without dragging, the positional alerts will all disappear
+    - Band alerts:
+       - Used when a minor alert is not tied to a specific component
+       - Is a band at the top of the screen/phone interface
+          - Has horizontally centered white text
+       - When multiple band alerts are made/new band alerts are made before others are removed:
+          - Place the most recent ones at the top
+       - There is a specified default duration that the band alerts will stay on screen for
+          - There is an option to have the band alert remain on-screen until it is manually removed
+       - Can be a negative or positive alert
+          - Negative alerts will have a different accent color for the button (reddish color) than the positive alert (greenish color)
  - Major alerts should trigger the important alert indicator
     - Alerts are considered major if they warrant stopping the client from making further inputs until they acknowledge and dismiss the alert
     - Important alerts consists of a popup window with text detailing the alert and a large Ok button for dismissing the alert 

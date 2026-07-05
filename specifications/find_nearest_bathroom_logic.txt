@@ -82,7 +82,7 @@ Actions after interacting with Find bathroom button:
                - If it exceeds the specified distance:
                   - Update the path data from the server
                   - If there was an error or timeout while fetching updated path data:
-                     - Display a reddish band (same color as the negative important alert's button background color, but copy the constant by value into a new constant) at the top of the screen with white text saying "Error while updating path" if there was an error, or "Timed out while updating path" if the request for new path data timed out
+                     - Display a negative band alert at the top of the screen with white text saying "Error while updating path" if there was an error, or "Timed out while updating path" if the request for new path data timed out
                      - Wait a specified debounce duration
                      - Retry fetching updated path data given the user's current location and the current target bathroom location:
                         - This happens independently from the user location and time debounced path updating logic
@@ -95,5 +95,4 @@ Actions after interacting with Find bathroom button:
  - Once client reaches within a specified distance from the target bathroom:
     - Set `bathroomActiveNavigation` to false
     - Clear the currently rendered path
-    - For a specified duration:
-       - Display a greenish band (same color as the positive important alert's button background color, but copy the constant by value into a new constant) at the top of the screen with white text saying "Reached target bathroom"
+    - Display a positive band alert at the top of the screen with white text saying "Reached target bathroom"

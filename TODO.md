@@ -1,7 +1,4 @@
 # Sprint 2 (basic backend)
- - Centralize top band alerts in a dedicated alert type file
-    - Multiple alert bands triggering will stack them vertically
-       - The most recent alerts will be at the top
  - Make rate limit violations have a dedicated alert band
  - Make "schema out of date" screen only take up virtual phone interface
  - Add a spinner to "schema out of date" screen

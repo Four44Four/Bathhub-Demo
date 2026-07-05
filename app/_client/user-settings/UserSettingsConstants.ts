@@ -23,6 +23,5 @@ export const USER_SETTINGS_HEADER_SEPARATOR_COLOR = lerpHex(
 export const USER_SETTINGS_ROW_BORDER_COLOR = "#E6E6F0";
 export const USER_SETTINGS_LABEL_COLOR = "#3A3D4A";
 export const USER_SETTINGS_SUBPAGE_CHEVRON_COLOR = "#B5B5C4";
-/** Copied by value from Alerts.NEGATIVE_ACCENT_COLOR (negative important-alert ok button). */
-export const USER_SETTINGS_DANGER_BAND_BG_COLOR = "#EC3968";
-export const USER_SETTINGS_DANGER_BAND_TEXT_COLOR = "#FFFFFF";
+export const USER_SETTINGS_DANGER_BAND_MESSAGE =
+  "Danger: user settings cannot be changed";

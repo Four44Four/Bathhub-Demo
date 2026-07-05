@@ -117,7 +117,8 @@ General:
     - Under no circumstances should a client's frontend code try to load data from the persistent SQLite user settings DB table without first confirming that the schema version number from the persistent SQLite local data table matches with the hardcoded frontend schema version OR if the client has USER_SETTING_SCHEMA_UPDATE_HAS_ERRORED as true
        - This way, mismatches will not occur during the loading process for an out of date user settings config
     - If USER_SETTING_SCHEMA_UPDATE_HAS_ERRORED is true:
-       - The client will have a reddish band (same color as the negative important alert's button background color, but copy the constant by value into a new constant) at the top of the screen with white text saying "Danger: user settings cannot be changed"
+       - The client will have a negative band alert (same color as the negative important alert's button background color, but copy the constant by value into a new constant) at the top of the screen with white text saying "Danger: user settings cannot be changed"
+       - Do not clear the band alert until USER_SETTING_SCHEMA_UPDATE_HAS_ERRORED is false
     - Whenever a new schema version is created/added:
        - On server:
           - Run all migrations from v0 to v<new-version> to initialize a complete default user settings table/DB

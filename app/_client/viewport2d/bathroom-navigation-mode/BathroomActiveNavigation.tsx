@@ -30,8 +30,7 @@ import { useClientGeo, useClientGeoRef } from "../../globe/ClientGeoContext";
 import { type GlobeViewportHandle } from "../../globe/GlobeViewport";
 import { readClientStartPos } from "../../pure/globe/ClientGeoStartPos";
 import { useBathroomNavigationMode } from "./Context";
-import { PathUpdateErrorBand } from "./PathUpdateErrorBand";
-import { ReachedTargetBand } from "@/app/_client/viewport2d/bathroom-navigation-mode/ReachedTargetBand";
+import { BandAlert } from "../alerts/BandAlert";
 import { NearestBathroom as NearestBathroomConsts } from "../../ComponentConstants";
 
 export type BathroomActiveNavigationProps = {
@@ -93,9 +92,6 @@ export function BathroomActiveNavigation({
     globeRef.current?.clearPath();
     clearActiveNavigation();
     setShowReachedBand(true);
-    window.setTimeout(() => {
-      setShowReachedBand(false);
-    }, NearestBathroomConsts.BATHROOM_REACHED_TARGET_BAND_DURATION_MS);
   }, [clearActiveNavigation, globeRef]);
 
   const renderFrozenPath = useCallback(() => {
@@ -325,8 +321,19 @@ export function BathroomActiveNavigation({
 
   return (
     <>
-      <PathUpdateErrorBand message={pathUpdateErrorMessage} />
-      <ReachedTargetBand visible={showReachedBand} />
+      {pathUpdateErrorMessage ? (
+        <BandAlert
+          message={pathUpdateErrorMessage}
+          onAutoHide={() => setPathUpdateErrorMessage(null)}
+        />
+      ) : null}
+      {showReachedBand ? (
+        <BandAlert
+          message={NearestBathroomConsts.BATHROOM_REACHED_TARGET_BAND_MESSAGE}
+          positive
+          onAutoHide={() => setShowReachedBand(false)}
+        />
+      ) : null}
     </>
   );
 }

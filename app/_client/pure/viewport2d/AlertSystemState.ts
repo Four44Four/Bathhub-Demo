@@ -1,3 +1,4 @@
+import { appendBandAlertWithMaxStack } from "./BandAlertPolicy";
 import { PositionalAlertSide } from "../../viewport2d/AlertSystem";
 
 export type PositionalAlertRecord = {
@@ -111,20 +112,19 @@ export function alertSystemShowBand(
     positive?: boolean;
     persistUntilRemoved?: boolean;
     createdAtMs?: number;
-  } = {},
+    maxStack: number;
+  },
 ): AlertSystemState {
+  const record: BandAlertRecord = {
+    id,
+    message,
+    positive: options.positive ?? false,
+    persistUntilRemoved: options.persistUntilRemoved ?? false,
+    createdAtMs: options.createdAtMs ?? 0,
+  };
   return {
     ...state,
-    band: [
-      ...state.band,
-      {
-        id,
-        message,
-        positive: options.positive ?? false,
-        persistUntilRemoved: options.persistUntilRemoved ?? false,
-        createdAtMs: options.createdAtMs ?? 0,
-      },
-    ],
+    band: appendBandAlertWithMaxStack(state.band, record, options.maxStack),
   };
 }
 

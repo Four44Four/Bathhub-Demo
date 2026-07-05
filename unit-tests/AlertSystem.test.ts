@@ -40,13 +40,29 @@ describe("AlertSystemState", () => {
     let state = EMPTY_ALERT_SYSTEM_STATE;
     state = alertSystemShowBand(state, "a", "Violated rate limit for bathroom creation", {
       createdAtMs: 1,
+      maxStack: 5,
     });
     state = alertSystemShowBand(state, "b", "Violated rate limit for retrieving bathrooms", {
       createdAtMs: 2,
+      maxStack: 5,
     });
     expect(state.band).toHaveLength(2);
     state = alertSystemDismissBand(state, "a");
     expect(state.band.map((entry) => entry.id)).toEqual(["b"]);
+  });
+
+  test("show band alerts drops oldest entries when max stack is exceeded", () => {
+    let state = EMPTY_ALERT_SYSTEM_STATE;
+    const ids = ["a", "b", "c", "d", "e", "f"] as const;
+
+    for (const [index, id] of ids.entries()) {
+      state = alertSystemShowBand(state, id, `Message ${id}`, {
+        createdAtMs: index + 1,
+        maxStack: 5,
+      });
+    }
+
+    expect(state.band.map((entry) => entry.id)).toEqual(["b", "c", "d", "e", "f"]);
   });
 
   test("resolveImportantAlertButtons uses explicit buttons when provided", () => {

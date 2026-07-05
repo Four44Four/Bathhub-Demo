@@ -16,6 +16,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 
+import { Alerts as AlertConsts } from "../ComponentConstants";
 import {
   positionalAlertIdsWithDetachedAnchors,
   subscribePositionalAlertClipRect,
@@ -243,6 +244,7 @@ export function AlertSystemProvider({
           positive,
           persistUntilRemoved,
           createdAtMs: Date.now(),
+          maxStack: AlertConsts.BAND_ALERT_MAX_STACK,
         }),
       );
       return id;

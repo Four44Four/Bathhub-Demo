@@ -163,6 +163,8 @@ export const Alerts = {
     TEXT_COLOR: "#ffffff",
     /** Default duration band alerts stay on screen before auto-hiding (milliseconds). */
     BAND_ALERT_AUTO_HIDE_MS: 3_000,
+    /** Maximum band alerts stacked on screen; oldest are removed when exceeded. */
+    BAND_ALERT_MAX_STACK: 5,
     BAND_ALERT_Z_INDEX: 60,
     BAND_ALERT_FONT_SIZE_PX: 13,
     BAND_ALERT_LINE_HEIGHT: 1.3,

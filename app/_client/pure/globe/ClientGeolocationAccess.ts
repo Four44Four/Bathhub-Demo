@@ -23,3 +23,18 @@ export function shouldDiscardStoredGeoFixOnLoad(
 ): boolean {
   return permissionState === "denied";
 }
+
+/** Reads the current geolocation permission state from the Permissions API. */
+export async function readGeolocationPermissionState(): Promise<GeolocationPermissionState> {
+  if (typeof navigator === "undefined" || !navigator.permissions?.query) {
+    return "unknown";
+  }
+  try {
+    const status = await navigator.permissions.query({ name: "geolocation" });
+    if (status.state === "granted") return "granted";
+    if (status.state === "denied") return "denied";
+    return "prompt";
+  } catch {
+    return "unknown";
+  }
+}

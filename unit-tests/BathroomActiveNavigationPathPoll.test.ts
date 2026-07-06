@@ -1,6 +1,5 @@
 import { readClientStartPos } from "../app/_client/pure/globe/ClientGeoStartPos";
 import { evaluatePathPollTick } from "../app/_client/pure/viewport2d/BathroomActiveNavigationPathPoll";
-import type { GlobeViewportHandle } from "../app/_client/globe/GlobeViewport";
 import {
   initialPathUpdateTracker,
   pathUpdateTrackerAfterPathRequest,
@@ -13,17 +12,13 @@ const ARRIVAL_DISTANCE_M = 30;
 
 describe("BathroomActiveNavigationPathPoll", () => {
   test("reads a fresh client location each tick so movement after first fix can trigger path update", () => {
-    let markerPos = { latitude: 0, longitude: 0 };
-    const globe = {
-      getMapMarkerUserLatLon: () => markerPos,
-    } as GlobeViewportHandle;
     const clientGeo = {
       isClientGeoGranted: true,
       mapInitLat: 0,
       mapInitLong: 0,
     };
 
-    const readCurrentLocation = () => readClientStartPos(globe, clientGeo);
+    const readCurrentLocation = () => readClientStartPos(null, clientGeo);
     const target = { latitude: 1, longitude: 0 };
 
     let tracker = initialPathUpdateTracker(readCurrentLocation());
@@ -52,7 +47,7 @@ describe("BathroomActiveNavigationPathPoll", () => {
     expect(beforeMove.pathUpdateTrigger).toBeNull();
     expect(beforeMove.currentLocation).toEqual({ latitude: 0, longitude: 0 });
 
-    markerPos = { latitude: 0.001, longitude: 0 };
+    clientGeo.mapInitLat = 0.001;
 
     const afterMove = evaluatePathPollTick({
       readCurrentLocation,

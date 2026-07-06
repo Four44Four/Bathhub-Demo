@@ -2,7 +2,6 @@
 "use client";
 
 import {
-  useEffect,
   useLayoutEffect,
   useRef,
   useState,
@@ -48,17 +47,26 @@ import { navigateGlobeToLatLon } from "./_client/pure/globe/GlobeMovementNavigat
 import {
   shouldApplyStoredGeoFixOnLoad,
   shouldDiscardStoredGeoFixOnLoad,
-  type GeolocationPermissionState,
+  readGeolocationPermissionState,
 } from "./_client/pure/globe/ClientGeolocationAccess";
+import {
+  clientGeoPositionsClose,
+  isUnsetClientGeoPosition,
+} from "./_client/pure/globe/ClientGeoPosition";
 import { viewport2dChromeHidden } from "./_client/pure/viewport2d/FindNearestBathroomState";
 import { useUserSettings } from "./_client/user-settings/UserSettingsContext";
 import { useGlobeMovementSmoothRef } from "./_client/user-settings/useGlobeMovementSmooth";
 import {
   ClientGeoProvider,
   patchClientGeoRef,
+  useClientGeo,
   useClientGeoRef,
   usePatchClientGeo,
 } from "./_client/globe/ClientGeoContext";
+import {
+  UserGeolocationProvider,
+  useUserGeolocation,
+} from "./_client/geolocation/UserGeolocationProvider";
 import { USER_SETTINGS_DEFAULTS } from "./_shared/user-settings/UserSettingsSchema";
 import { BathroomViewportSync } from "./_client/bathroom/BathroomViewportSync";
 import { BathroomLocalDbOnAppOpen } from "./_client/local-db";
@@ -67,21 +75,6 @@ import { SWIPE_MENU_BACKDROP_Z_INDEX } from "./_client/pure/viewport2d/Positiona
 /** When set to `"100%"`, the globe mount fills the virtual phone frame (see `layout.tsx`) and the initial camera distance is chosen so the globe “covers” the view (no letterboxing; excess clips on the shorter axis). */
 const GLOBE_VIEWPORT_WIDTH = "100%";
 const GLOBE_VIEWPORT_HEIGHT = "100%";
-
-/** Set when geolocation is active for this client (instant bootstrap or post-grant snap/animate). */
-let isClientGeoGranted = false;
-
-/**
- * Module-level mutable globe-center coordinates. Default to (0, 0) when the
- * client has no geolocation permission (or denies the prompt). Updated to the
- * client's current position whenever geolocation data becomes available.
- *
- * Kept at module scope so geolocation callbacks can read the latest fix without
- * prop drilling. Camera moves are driven imperatively via
- * `globeRef` — changing these does not re-init the Cesium viewer.
- */
-let mapInitLat = 0.0;
-let mapInitLong = 0.0;
 
 const GEO_CACHE_KEY = "bathhub_last_geo_v1";
 
@@ -115,20 +108,6 @@ function clearGeoCache() {
   }
 }
 
-async function readGeoPermissionState(): Promise<GeolocationPermissionState> {
-  if (typeof navigator === "undefined" || !navigator.permissions?.query) {
-    return "unknown";
-  }
-  try {
-    const status = await navigator.permissions.query({ name: "geolocation" });
-    if (status.state === "granted") return "granted";
-    if (status.state === "denied") return "denied";
-    return "prompt";
-  } catch {
-    return "unknown";
-  }
-}
-
 type FrozenGlobeInit = {
   lat: number;
   long: number;
@@ -137,16 +116,18 @@ type FrozenGlobeInit = {
 
 /** SSR-safe defaults — sessionStorage is applied after mount in `useLayoutEffect`. */
 const DEFAULT_GLOBE_INIT: FrozenGlobeInit = {
-  lat: mapInitLat,
-  long: mapInitLong,
+  lat: 0,
+  long: 0,
   snapInitialView: false,
 };
 
 function applyGeoCacheFromSession(): FrozenGlobeInit | null {
   const cached = readGeoCache();
   if (!cached) return null;
-  mapInitLat = cached.lat;
-  mapInitLong = cached.lng;
+  if (isUnsetClientGeoPosition(cached.lat, cached.lng)) {
+    clearGeoCache();
+    return null;
+  }
   return { lat: cached.lat, long: cached.lng, snapInitialView: true };
 }
 
@@ -186,14 +167,11 @@ function HomeContent({
   const globeRef = useRef<GlobeViewportHandle | null>(null);
   const clientGeoRef = useClientGeoRef();
   const patchClientGeo = usePatchClientGeo();
+  const clientGeo = useClientGeo();
+  const { seedUserPosition, registerGlobeGeoHandlers } = useUserGeolocation();
   const { beginFindNearestBathroom } = useFindNearestBathroomFlow({ globeRef });
   /** SSR-safe on first render; sessionStorage geo is merged in `useLayoutEffect` before Cesium init. */
   const [globeInit, setGlobeInit] = useState<FrozenGlobeInit>(DEFAULT_GLOBE_INIT);
-  /**
-   * Recenter mounts only when geolocation permission is `granted` (Permissions API),
-   * or once a live fix arrives where the Permissions API is unavailable (e.g. Safari).
-   */
-  const [showRecenterButton, setShowRecenterButton] = useState(false);
   const [zoomIndicator, setZoomIndicator] = useState<{ x: number; y: number; pulse: number }>({
     x: 0,
     y: 0,
@@ -205,31 +183,82 @@ function HomeContent({
       backdropOpacity: 0,
       menuHeightPx: SwipeMenuConsts.INACTIVE_HEIGHT_PX,
     });
-  const syncClientGeo = (lat: number, lng: number, granted = true) => {
-    isClientGeoGranted = granted;
-    mapInitLat = lat;
-    mapInitLong = lng;
-    patchClientGeo({
-      isClientGeoGranted: granted,
-      mapInitLat: lat,
-      mapInitLong: lng,
-    });
-  };
-
-  const revokeClientGeoAccess = () => {
-    isClientGeoGranted = false;
-    patchClientGeo({ isClientGeoGranted: false });
-    setShowRecenterButton(false);
-  };
 
   const syncMapMarkerFallbackCoords = (lat: number, lng: number) => {
-    mapInitLat = lat;
-    mapInitLong = lng;
     patchClientGeoRef(clientGeoRef, { mapInitLat: lat, mapInitLong: lng }, patchClientGeo);
   };
 
-  /** Tracks whether the camera has been framed to the user's geo fix (no React state). */
+  /** Tracks the last camera framing target for cache / snap heuristics. */
   const globeViewStateRef = useRef({ ...DEFAULT_GLOBE_INIT });
+  /** Last lat/lng the globe was navigated to; allows re-framing when a bad fix is replaced. */
+  const lastAppliedGlobeGeoRef = useRef<{ lat: number; lng: number } | null>(null);
+
+  const showRecenterButton = clientGeo.isClientGeoGranted;
+
+  const applyUserGeolocationToGlobe = (lat: number, lng: number) => {
+    if (isUnsetClientGeoPosition(lat, lng)) return;
+
+    const prevApplied = lastAppliedGlobeGeoRef.current;
+    if (prevApplied && clientGeoPositionsClose(prevApplied, { lat, lng })) {
+      return;
+    }
+
+    writeGeoCache(lat, lng);
+
+    void globeRef.current?.waitForViewer().then(() => {
+      const globe = globeRef.current;
+      if (!globe) return;
+
+      globe.setMapMarkerUserLatLon(lat, lng);
+
+      const prev = globeViewStateRef.current;
+      const close = clientGeoPositionsClose(
+        { lat: prev.lat, lng: prev.long },
+        { lat, lng },
+      );
+
+      lastAppliedGlobeGeoRef.current = { lat, lng };
+      globeViewStateRef.current = { lat, long: lng, snapInitialView: true };
+
+      if (prev.snapInitialView && close) {
+        globe.snapTo(lat, lng);
+        globe.snapZoomToInitTarget();
+        return;
+      }
+
+      if (prev.snapInitialView && !close) {
+        globe.snapTo(lat, lng);
+        globe.snapZoomToInitTarget();
+        return;
+      }
+
+      navigateGlobeToLatLon(
+        {
+          globe,
+          globeMovementSmooth: globeMovementSmoothRef.current,
+          animationDurationMs: GlobeConsts.ANIMATE_ON_INIT_DURA,
+        },
+        lat,
+        lng,
+      );
+    });
+  };
+
+  const applyUserGeolocationToGlobeRef = useRef(applyUserGeolocationToGlobe);
+  applyUserGeolocationToGlobeRef.current = applyUserGeolocationToGlobe;
+
+  useLayoutEffect(() => {
+    registerGlobeGeoHandlers({
+      onUserGeoFix: (lat, lng) => {
+        applyUserGeolocationToGlobeRef.current(lat, lng);
+      },
+      onUserGeoRevoked: () => {
+        lastAppliedGlobeGeoRef.current = null;
+        globeViewStateRef.current = { ...DEFAULT_GLOBE_INIT };
+      },
+    });
+    return () => registerGlobeGeoHandlers(null);
+  }, [registerGlobeGeoHandlers]);
 
   useLayoutEffect(() => {
     const init = applyGeoCacheFromSession();
@@ -239,15 +268,19 @@ function HomeContent({
 
     const applyCachedGeo = () => {
       if (cancelled) return;
-      isClientGeoGranted = true;
       globeViewStateRef.current = init;
-      setShowRecenterButton(true);
+      lastAppliedGlobeGeoRef.current = { lat: init.lat, lng: init.long };
       setGlobeInit(init);
-      syncClientGeo(init.lat, init.long);
+      seedUserPosition({ latitude: init.lat, longitude: init.long });
+      patchClientGeo({
+        isClientGeoGranted: true,
+        mapInitLat: init.lat,
+        mapInitLong: init.long,
+      });
       snapGlobeToGeoWhenReady(globeRef.current, init.lat, init.long);
     };
 
-    void readGeoPermissionState().then((permissionState) => {
+    void readGeolocationPermissionState().then((permissionState) => {
       if (cancelled) return;
       if (shouldDiscardStoredGeoFixOnLoad(permissionState)) {
         clearGeoCache();
@@ -261,243 +294,7 @@ function HomeContent({
     return () => {
       cancelled = true;
     };
-  }, []);
-
-  useEffect(() => {
-    if (typeof navigator === "undefined" || !navigator.permissions?.query) return;
-
-    let cancelled = false;
-    let geoPermStatus: PermissionStatus | null = null;
-
-    const onPermissionChange = () => {
-      if (cancelled || !geoPermStatus) return;
-      const granted = geoPermStatus.state === "granted";
-      setShowRecenterButton(granted);
-      if (!granted) {
-        revokeClientGeoAccess();
-      }
-    };
-
-    navigator.permissions
-      .query({ name: "geolocation" })
-      .then((status) => {
-        if (cancelled) return;
-        geoPermStatus = status;
-        const granted = status.state === "granted";
-        setShowRecenterButton(granted);
-        if (!granted) {
-          revokeClientGeoAccess();
-        }
-        status.addEventListener("change", onPermissionChange);
-      })
-      .catch(() => {
-        /* Unsupported or restricted — rely on first successful geolocation callback. */
-      });
-
-    return () => {
-      cancelled = true;
-      geoPermStatus?.removeEventListener("change", onPermissionChange);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (typeof navigator === "undefined" || !navigator.geolocation) return;
-
-    let cancelled = false;
-    /** Ensures we only run the init animation once. */
-    let appliedUserLocation = false;
-    let watchId: number | null = null;
-
-    // Omit `timeout` so the browser waits indefinitely while the permission prompt is open.
-    const geoOptions: PositionOptions = {
-      enableHighAccuracy: false,
-      maximumAge: 60_000,
-    };
-
-    const clearWatch = () => {
-      if (watchId !== null) {
-        navigator.geolocation.clearWatch(watchId);
-        watchId = null;
-      }
-    };
-
-    /**
-     * When permission is already granted, resolve a fix (preferring cache via maximumAge)
-     * before registering `watchPosition`, so the first watch callback cannot race ahead and
-     * trigger the init animation on a 0,0 globe.
-     */
-    const applyInstantBootstrapPosition = (lat: number, lng: number) => {
-      setShowRecenterButton(true);
-      syncClientGeo(lat, lng);
-      writeGeoCache(lat, lng);
-      globeRef.current?.setMapMarkerUserLatLon(lat, lng);
-
-      const prev = globeViewStateRef.current;
-      const close =
-        Math.abs(prev.lat - lat) < 0.002 && Math.abs(prev.long - lng) < 0.002;
-
-      if (close && prev.snapInitialView) {
-        globeViewStateRef.current = { lat, long: lng, snapInitialView: true };
-        snapGlobeToGeoWhenReady(globeRef.current, lat, lng);
-        return;
-      }
-
-      if (prev.snapInitialView && !close) {
-        globeViewStateRef.current = { lat, long: lng, snapInitialView: true };
-        queueMicrotask(() => {
-          globeRef.current?.snapTo(lat, lng);
-          globeRef.current?.snapZoomToInitTarget();
-        });
-        return;
-      }
-
-      globeViewStateRef.current = { lat, long: lng, snapInitialView: true };
-      navigateGlobeToLatLon(
-        {
-          globe: globeRef.current,
-          globeMovementSmooth: globeMovementSmoothRef.current,
-          animationDurationMs: GlobeConsts.ANIMATE_ON_INIT_DURA,
-        },
-        lat,
-        lng,
-      );
-    };
-
-    const bootstrapGrantedInstantFix = () =>
-      new Promise<void>((resolve) => {
-        const opts: PositionOptions = {
-          maximumAge: Infinity,
-          enableHighAccuracy: false,
-        };
-        const onFix = (pos: GeolocationPosition) => {
-          if (cancelled) return;
-          applyInstantBootstrapPosition(pos.coords.latitude, pos.coords.longitude);
-        };
-
-        const perms = navigator.permissions;
-        if (!perms?.query) {
-          navigator.geolocation.getCurrentPosition(
-            (pos) => {
-              onFix(pos);
-              resolve();
-            },
-            () => resolve(),
-            opts,
-          );
-          return;
-        }
-        perms
-          .query({ name: "geolocation" })
-          .then((status) => {
-            if (cancelled || status.state !== "granted") {
-              resolve();
-              return;
-            }
-            navigator.geolocation.getCurrentPosition(
-              (pos) => {
-                onFix(pos);
-                resolve();
-              },
-              () => resolve(),
-              opts,
-            );
-          })
-          .catch(() => resolve());
-      });
-
-    const applyGeolocationPosition = (pos: GeolocationPosition) => {
-      if (cancelled) return;
-
-      const lat = pos.coords.latitude;
-      const long = pos.coords.longitude;
-      setShowRecenterButton(true);
-      syncClientGeo(lat, long);
-      writeGeoCache(lat, long);
-      // Switch MapMarker from the 2D static overlay to the 3D billboard FIRST,
-      // so the swap is visible from the very first frame of the
-      // animateTo / animateZoomToInitTarget transition below.
-      globeRef.current?.setMapMarkerUserLatLon(lat, long);
-
-      const prev = globeViewStateRef.current;
-      const close =
-        Math.abs(lat - prev.lat) < 0.002 && Math.abs(long - prev.long) < 0.002;
-
-      if (prev.snapInitialView && close) {
-        globeViewStateRef.current = { lat, long, snapInitialView: true };
-        if (!appliedUserLocation) {
-          appliedUserLocation = true;
-          clearWatch();
-        }
-        snapGlobeToGeoWhenReady(globeRef.current, lat, long);
-        return;
-      }
-
-      if (appliedUserLocation) return;
-      appliedUserLocation = true;
-      clearWatch();
-
-      if (prev.snapInitialView && !close) {
-        globeViewStateRef.current = { lat, long, snapInitialView: true };
-        globeRef.current?.snapTo(lat, long);
-        globeRef.current?.snapZoomToInitTarget();
-        return;
-      }
-
-      globeViewStateRef.current = { lat, long, snapInitialView: true };
-
-      navigateGlobeToLatLon(
-        {
-          globe: globeRef.current,
-          globeMovementSmooth: globeMovementSmoothRef.current,
-          animationDurationMs: GlobeConsts.ANIMATE_ON_INIT_DURA,
-        },
-        lat,
-        long,
-      );
-    };
-
-    const onPositionError = (err: GeolocationPositionError) => {
-      if (cancelled) return;
-      // Hard denial ends the watch; other codes may be transient (Firefox).
-      if (err.code === err.PERMISSION_DENIED) {
-        clearWatch();
-        revokeClientGeoAccess();
-      }
-    };
-
-    /** Firefox: do not `await` anything before registering geolocation — a deferred
-     * `getCurrentPosition` can leave the request untied from the permission prompt so
-     * neither success nor error runs after a slow Allow. `watchPosition` keeps a live
-     * subscription until the first fix (works better than one-shot here). */
-    const startWatch = () => {
-      if (cancelled || appliedUserLocation) return;
-      clearWatch();
-      watchId = navigator.geolocation.watchPosition(
-        applyGeolocationPosition,
-        onPositionError,
-        geoOptions,
-      );
-    };
-
-    void bootstrapGrantedInstantFix().then(() => {
-      if (!cancelled) startWatch();
-    });
-
-    const retryIfStillWaiting = () => {
-      if (cancelled || appliedUserLocation) return;
-      if (document.visibilityState !== "visible") return;
-      startWatch();
-    };
-    window.addEventListener("focus", retryIfStillWaiting);
-    document.addEventListener("visibilitychange", retryIfStillWaiting);
-
-    return () => {
-      cancelled = true;
-      clearWatch();
-      window.removeEventListener("focus", retryIfStillWaiting);
-      document.removeEventListener("visibilitychange", retryIfStillWaiting);
-    };
-  }, []);
+  }, [patchClientGeo, seedUserPosition]);
 
   return (
     <SwipeMenuInteractionContext.Provider value={swipeMenuInteraction}>
@@ -555,9 +352,9 @@ function HomeContent({
           <Recenter
             globeRef={globeRef}
             viewportRef={phoneFrameRef}
-            isClientGeoGranted={isClientGeoGranted}
-            mapInitLat={mapInitLat}
-            mapInitLong={mapInitLong}
+            isClientGeoGranted={clientGeo.isClientGeoGranted}
+            mapInitLat={clientGeo.mapInitLat}
+            mapInitLong={clientGeo.mapInitLong}
           />
         ) : null}
         {!viewportChromeHidden && showRecenterButton && bathroomActiveNavigation === null ? (
@@ -599,11 +396,13 @@ export default function Home() {
       <AddBathroomModeProvider>
         <BathroomNavigationModeProvider>
           <ClientGeoProvider>
-            <UserSettingsProvider>
+            <UserGeolocationProvider>
+              <UserSettingsProvider>
               <UserSettingsBootstrapGate>
                 <HomeContent phoneFrameRef={phoneFrameRef} />
               </UserSettingsBootstrapGate>
-            </UserSettingsProvider>
+              </UserSettingsProvider>
+            </UserGeolocationProvider>
           </ClientGeoProvider>
         </BathroomNavigationModeProvider>
       </AddBathroomModeProvider>

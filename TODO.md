@@ -1,5 +1,4 @@
 # Sprint 2 (basic backend)
- - Incorporate `coords.accuracy` to prevent browser geolocation jitter from being mistaken for movement ??
  - Redis caching for reads
  - Add rating system on bathrooms (stars 1-5)
  - Add comments system on bathrooms

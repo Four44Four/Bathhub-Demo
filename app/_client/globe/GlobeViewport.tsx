@@ -170,7 +170,7 @@ export type GlobeViewportHandle = {
    */
   subscribeCameraMotionIdle: (listener: CameraMotionIdleListener) => () => void;
   /**
-   * Authoritative "you are here" push from `page.tsx`'s geolocation watcher.
+   * Authoritative "you are here" push from the centralized user geolocation calculator.
    * Immediately flips MapMarker from the 2D static overlay to the 3D billboard
    * at (lat, long). Survives Cesium viewer re-inits (the last pushed value is
    * replayed when a new MapMarker is installed). Call this BEFORE `animateTo` /
@@ -178,8 +178,7 @@ export type GlobeViewportHandle = {
    */
   setMapMarkerUserLatLon: (lat: number, long: number) => void;
   /**
-   * Latest device position from MapMarker's continuous geolocation watch (or the
-   * last `setMapMarkerUserLatLon` push). Null before the first fix.
+   * Latest device position from the last `setMapMarkerUserLatLon` push. Null before the first fix.
    */
   getMapMarkerUserLatLon: () => Point | null;
   /**
@@ -199,9 +198,8 @@ export type GlobeViewportHandle = {
  * Current client geolocation coordinates when permitted; otherwise the surface point under the
  * viewport center, or fallback to map init coordinates if Cesium is not ready.
  *
- * With geolocation granted, coordinates come from MapMarker's continuous watch (via
- * `getMapMarkerUserLatLon`), falling back to `mapInitLat` / `mapInitLong` before the
- * first fix.
+ * With geolocation granted, coordinates come from the centralized user geolocation calculator
+ * (`mapInitLat` / `mapInitLong` on `ClientGeoState`).
  */
 export function getStartPos(
   globe: GlobeViewportHandle | null,
@@ -209,24 +207,19 @@ export function getStartPos(
   mapInitLat: number,
   mapInitLong: number,
 ): Point {
-  if (!isClientGeoGranted) {
-    return (
-      globe?.getViewportCenterLatLon() ?? {
-        latitude: mapInitLat,
-        longitude: mapInitLong,
-      }
-    );
+  if (isClientGeoGranted) {
+    return {
+      latitude: mapInitLat,
+      longitude: mapInitLong,
+    };
   }
 
-  const liveUser = globe?.getMapMarkerUserLatLon();
-  if (liveUser) {
-    return liveUser;
-  }
-
-  return {
-    latitude: mapInitLat,
-    longitude: mapInitLong,
-  };
+  return (
+    globe?.getViewportCenterLatLon() ?? {
+      latitude: mapInitLat,
+      longitude: mapInitLong,
+    }
+  );
 }
 
 type GlobeViewportProps = {

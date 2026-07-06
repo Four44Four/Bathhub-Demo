@@ -222,6 +222,11 @@ export const BathroomLocalDB = {
     QUERY_DELAY_MS: 500,
 } as const;
 
+export const Geolocation = {
+    /** Interval between browser geolocation polls for the user position calculator (milliseconds). */
+    GEOLOC_UPDATE_POLL_MS: 1_000,
+} as const;
+
 export const NearestBathroom = {
     /** Time between every check for if the client's location has changed before rerendering path (milliseconds). */
     PATH_POLL_INTERVAL_MS: 1_000,

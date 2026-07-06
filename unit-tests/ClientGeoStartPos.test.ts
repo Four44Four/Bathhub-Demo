@@ -3,18 +3,11 @@ import type { GlobeViewportHandle } from "../app/_client/globe/GlobeViewport";
 
 describe("readClientStartPos", () => {
   test("delegates to getStartPos using the supplied client geo snapshot", () => {
-    const globe = {
-      getMapMarkerUserLatLon: () => ({
-        latitude: 40.7,
-        longitude: -74.0,
-      }),
-    } as GlobeViewportHandle;
-
     expect(
-      readClientStartPos(globe, {
+      readClientStartPos(null, {
         isClientGeoGranted: true,
-        mapInitLat: 12.5,
-        mapInitLong: -45.25,
+        mapInitLat: 40.7,
+        mapInitLong: -74.0,
       }),
     ).toEqual({
       latitude: 40.7,

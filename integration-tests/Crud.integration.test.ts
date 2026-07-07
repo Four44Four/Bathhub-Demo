@@ -16,6 +16,7 @@ import {
   type InputCoordinate,
   printCrudReport,
 } from "./formatCrudReport";
+import { disconnectRedisTestGlobals } from "./disconnectRedisTestGlobals";
 import { loadLocations } from "./loadLocations";
 import { requireLocalSupabaseEnv } from "./requireLocalSupabase";
 
@@ -209,7 +210,7 @@ describe("bathroom_data_primary CRUD against local Supabase", () => {
     }
   });
 
-  afterAll(() => {
+  afterAll(async () => {
     if (failedRows.length > 0 || created.length !== expectedBathrooms.length) {
       testsPassed = false;
     }
@@ -220,6 +221,8 @@ describe("bathroom_data_primary CRUD against local Supabase", () => {
       failedRows,
       testsPassed,
     });
+
+    await disconnectRedisTestGlobals();
   });
 
   test("local Supabase env is configured", () => {

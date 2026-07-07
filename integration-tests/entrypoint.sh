@@ -23,19 +23,42 @@ trap cleanup EXIT
 echo "entrypoint: preparing tmpfs storage for inner Docker daemon..."
 "$SCRIPT_DIR/setup-docker-storage.sh"
 
-echo "entrypoint: starting in-container Docker daemon..."
-dockerd >/var/log/dockerd.log 2>&1 &
-dockerd_pid=$!
+start_inner_dockerd() {
+  dockerd >/var/log/dockerd.log 2>&1 &
+  dockerd_pid=$!
 
-for attempt in $(seq 1 60); do
-  if docker info >/dev/null 2>&1; then
-    storage_driver="$(docker info -f '{{.Driver}}' 2>/dev/null || true)"
-    echo "entrypoint: Docker daemon is ready (storage driver: ${storage_driver:-unknown})"
-    exec ./integration-tests/run-tests.sh
+  for attempt in $(seq 1 90); do
+    if docker info >/dev/null 2>&1; then
+      storage_driver="$(docker info -f '{{.Driver}}' 2>/dev/null || true)"
+      echo "entrypoint: Docker daemon is ready (storage driver: ${storage_driver:-unknown})"
+      return 0
+    fi
+    sleep 1
+  done
+
+  return 1
+}
+
+stop_inner_dockerd() {
+  if [[ -n "$dockerd_pid" ]] && kill -0 "$dockerd_pid" 2>/dev/null; then
+    kill -TERM "$dockerd_pid" 2>/dev/null || true
+    wait "$dockerd_pid" 2>/dev/null || true
   fi
-  sleep 1
-done
+  dockerd_pid=""
+}
 
-echo "entrypoint: Docker daemon failed to start within 60s" >&2
-tail -n 50 /var/log/dockerd.log >&2 || true
-exit 1
+echo "entrypoint: starting in-container Docker daemon..."
+if ! start_inner_dockerd; then
+  echo "entrypoint: inner Docker daemon failed; cleaning stale locks and retrying once..." >&2
+  stop_inner_dockerd
+  find "$DOCKER_DATA_MNT/containerd" -name '*.lock' -delete 2>/dev/null || true
+  sleep 2
+
+  if ! start_inner_dockerd; then
+    echo "entrypoint: Docker daemon failed to start within 90s" >&2
+    tail -n 50 /var/log/dockerd.log >&2 || true
+    exit 1
+  fi
+fi
+
+exec ./integration-tests/run-tests.sh

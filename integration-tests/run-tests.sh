@@ -8,8 +8,24 @@ setup_supabase_project() {
   cp "$SCRIPT_DIR/supabase/config.toml" "$WORKSPACE_DIR/supabase/config.toml"
 }
 
+SUPABASE_PROJECT_ID="bathhub-integration-tests"
+
+stop_supabase_stack() {
+  echo "run-tests: stopping any stale Supabase state from previous runs..."
+  supabase stop --yes >/dev/null 2>&1 || true
+
+  local container
+  while IFS= read -r container; do
+    [[ -z "$container" ]] && continue
+    docker rm -f "$container" >/dev/null 2>&1 || true
+  done < <(
+    docker ps -aq --filter "name=supabase_.*_${SUPABASE_PROJECT_ID}" 2>/dev/null || true
+  )
+}
+
 start_supabase_stack() {
   local -a start_args=()
+  local attempt
 
   if [[ "${SUPABASE_DEBUG:-}" == "1" ]]; then
     start_args+=(--debug)
@@ -20,11 +36,21 @@ start_supabase_stack() {
   echo "run-tests: this step is slow on the first run; later runs reuse the bathhub-integration-inner-docker volume cache."
   echo "run-tests: set SUPABASE_DEBUG=1 for per-container progress from the Supabase CLI."
 
-  if ! supabase start "${start_args[@]}"; then
-    echo "run-tests: supabase start failed" >&2
+  stop_supabase_stack
+
+  for attempt in $(seq 1 3); do
+    if supabase start "${start_args[@]}"; then
+      return 0
+    fi
+
+    echo "run-tests: supabase start attempt ${attempt}/3 failed" >&2
     supabase status >&2 || true
-    exit 1
-  fi
+    stop_supabase_stack
+    sleep 5
+  done
+
+  echo "run-tests: supabase start failed after 3 attempts" >&2
+  exit 1
 }
 
 export_supabase_env() {
@@ -118,6 +144,12 @@ start_redis
 
 echo "run-tests: running bathroom_data_primary CRUD integration checks..."
 npx jest --runInBand --verbose "$SCRIPT_DIR/Crud.integration.test.ts"
+
+echo "run-tests: running bathroom H3 cell RPC integration checks..."
+npx jest --runInBand --verbose "$SCRIPT_DIR/H3CellRpc.integration.test.ts"
+
+echo "run-tests: running Redis read cache integration checks..."
+npx jest --runInBand --verbose "$SCRIPT_DIR/ReadCache.integration.test.ts"
 
 echo "run-tests: running find nearest bathroom integration checks..."
 npx jest --runInBand --verbose "$SCRIPT_DIR/FindNearestBathroom.integration.test.ts"

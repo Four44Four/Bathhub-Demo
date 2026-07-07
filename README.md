@@ -54,3 +54,7 @@
     - Remote database
  - SQLite
     - Local cache database
+ - Redis
+    - Server database caching
+ - Uber H3
+    - Geospatial data organization

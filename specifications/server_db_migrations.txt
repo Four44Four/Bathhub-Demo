@@ -1,0 +1,11 @@
+ - All the points made here should apply to database migrations 20260706000000 and after
+    - The ones before that point were made before this spec document was created and therefore should not be modified
+ - Migrations to the server PostgreSQL database should be atomic and roll back to pre-migration state if an error occurs
+    - Developer should be immediately notified of a migration error
+    - Failed migrations should be allowed to rerun later when modified to a working state
+ - PostgreSQL migrations should be written in a way that when the same PostgreSQL migration is ran multiple times in a row (successfully):
+    - No adverse side effects occur
+    - The database state after any amount of runs should be the same
+    - EXAMPLE:
+       - Running a migration that adds a column should only add it once if ran multiple times
+       - Running a migration that adds a function multiple times should remove the previous version of the function and then add it again to ensure the function is up to date

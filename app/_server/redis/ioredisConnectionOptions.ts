@@ -1,4 +1,6 @@
 /** Shared `ioredis` client options derived from a Redis connection URL. */
+import { REDIS_IOREDIS_CLIENT_DEFAULTS } from "./RedisConfig";
+
 export function buildIoredisConnectionOptions(redisUrl: string) {
   const parsed = new URL(redisUrl);
   const options: {
@@ -6,8 +8,7 @@ export function buildIoredisConnectionOptions(redisUrl: string) {
     enableReadyCheck: boolean;
     tls?: { servername: string };
   } = {
-    maxRetriesPerRequest: 2,
-    enableReadyCheck: true,
+    ...REDIS_IOREDIS_CLIENT_DEFAULTS,
   };
 
   if (parsed.protocol === "rediss:") {

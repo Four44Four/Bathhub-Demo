@@ -5,6 +5,7 @@ import {
   findNearest as bathroomDbFindNearest,
 } from "../app/_server/database/bathroom-data-primary/CrudCore";
 import { FIND_NEAREST_BATHROOM_ERROR_CONTEXT } from "../app/_server/pure/bathroom-data-primary/FindNearestBathroom";
+import { disconnectRedisTestGlobals } from "./disconnectRedisTestGlobals";
 import { requireLocalSupabaseEnv } from "./requireLocalSupabase";
 
 /**
@@ -35,19 +36,21 @@ describe("find nearest bathroom against local Supabase", () => {
   });
 
   afterAll(async () => {
-    if (createdBathroomIds.length === 0) return;
+    if (createdBathroomIds.length > 0) {
+      const { url, key } = requireLocalSupabaseEnv();
+      const { error } = await createClient(url, key)
+        .from("bathroom_data_primary")
+        .delete()
+        .in("id", createdBathroomIds);
 
-    const { url, key } = requireLocalSupabaseEnv();
-    const { error } = await createClient(url, key)
-      .from("bathroom_data_primary")
-      .delete()
-      .in("id", createdBathroomIds);
-
-    if (error !== null) {
-      throw new Error(
-        `Failed to clean up FindNearestBathroom test rows: ${error.message}`,
-      );
+      if (error !== null) {
+        throw new Error(
+          `Failed to clean up FindNearestBathroom test rows: ${error.message}`,
+        );
+      }
     }
+
+    await disconnectRedisTestGlobals();
   });
 
   test("returns the closest bathroom within max distance", async () => {

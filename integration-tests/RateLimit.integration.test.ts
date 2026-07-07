@@ -6,6 +6,7 @@ import {
 } from "../app/_server/rate-limit/enforceRateLimit";
 import { getRedisPort } from "../app/_server/redis/getRedisPort";
 import { SERVER_RATE_LIMITS } from "../app/_server/ServerConstants";
+import { disconnectRedisTestGlobals } from "./disconnectRedisTestGlobals";
 import { requireLocalRedis } from "./requireLocalRedis";
 
 function redisRateLimitDeps(clientIp: string): EnforceRateLimitDependencies {
@@ -43,8 +44,7 @@ describe("Redis-backed server rate limits", () => {
   });
 
   afterAll(async () => {
-    await getRedisPort().disconnect?.();
-    global.__bathhubRedisPort = undefined;
+    await disconnectRedisTestGlobals();
   });
 
   test("local Redis env is configured", () => {
@@ -64,7 +64,7 @@ describe("Redis-backed server rate limits", () => {
       await new Promise((resolve) => setTimeout(resolve, 1_100));
 
       expect(await redis.incrementWithExpiry(key, windowSeconds)).toBe(1);
-      await redis.deleteKey?.(key);
+      await redis.deleteKey(key);
     });
 
     test("enforceRateLimit allows requests again after the window key expires", async () => {
@@ -87,7 +87,7 @@ describe("Redis-backed server rate limits", () => {
         RateLimitExceededError,
       );
 
-      await redis.deleteKey?.(key);
+      await redis.deleteKey(key);
 
       await expect(enforceRateLimit("bathroom-create", deps)).resolves.toBeUndefined();
     });

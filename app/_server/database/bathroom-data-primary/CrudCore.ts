@@ -24,6 +24,13 @@ import {
   parseSyncBathroomRpcPayload,
 } from "../../pure/bathroom-data-primary/SyncBathrooms";
 import {
+  GET_BATHROOM_H3_CELLS_RPC_NAME,
+  buildBathroomH3CellRpcParams,
+  loadBathroomRowsInBoundsViaH3Cache,
+  parseBathroomH3CellRpcRows,
+  type BathroomH3CellRpcRow,
+} from "../../pure/bathroom-data-primary/H3BoundsCache";
+import {
   FIND_NEAREST_BATHROOM_ERROR_CONTEXT,
   FIND_NEAREST_BATHROOM_RPC_NAME,
   buildFindNearestBathroomRpcParams,
@@ -38,7 +45,16 @@ import {
   type UpdateBathroomVerifyStatusRpc,
 } from "../../pure/bathroom-data-primary/UpdateBathroom";
 import { type LatLong } from "../../../_shared/BathroomDataPrimary";
+import {
+  H3_BATHROOM_CELL_RESOLUTION,
+  H3_BATHROOM_MAX_BOUNDS_CACHE_CELLS,
+} from "../../ServerConstants";
 import { getSupabaseKey, getSupabaseUrl } from "../../EnvironmentVariables";
+import { getReadCache, runReadCacheSideEffect } from "../../redis/ReadCache";
+import {
+  bathroomLatLongToH3Cell,
+  type BathroomH3CellPolygon,
+} from "../../pure/geospatial/BathroomH3Cells";
 
 export type { BathroomDataPrimaryRow, ViewportBounds };
 
@@ -89,7 +105,17 @@ export async function createAt(
     return { data: data as BathroomDataPrimaryRow | null, error };
   };
 
-  return createBathroomAt(latitude, longitude, rpc);
+  return createBathroomAt(latitude, longitude, rpc).then(async (row) => {
+    await runReadCacheSideEffect(async () => {
+      const readCache = getReadCache();
+      await readCache.cacheBathroomRow(row);
+      await readCache.invalidateBathroomH3Cell(
+        bathroomRowToH3Cell(row),
+        H3_BATHROOM_CELL_RESOLUTION,
+      );
+    });
+    return row;
+  });
 }
 
 export async function updateVerifyStatus(
@@ -104,7 +130,17 @@ export async function updateVerifyStatus(
     return { data: data as BathroomDataPrimaryRow | null, error };
   };
 
-  return updateBathroomVerifyStatus(id, verifyStatus, rpc);
+  return updateBathroomVerifyStatus(id, verifyStatus, rpc).then(async (row) => {
+    await runReadCacheSideEffect(async () => {
+      const readCache = getReadCache();
+      await readCache.invalidateBathroom(id);
+      await readCache.invalidateBathroomH3Cell(
+        bathroomRowToH3Cell(row),
+        H3_BATHROOM_CELL_RESOLUTION,
+      );
+    });
+    return row;
+  });
 }
 
 export async function getInBounds(
@@ -112,6 +148,17 @@ export async function getInBounds(
 ): Promise<BathroomDataPrimaryRow[]> {
   assertFiniteViewportBounds(bounds);
 
+  const rows = await loadBathroomRowsInBoundsViaH3Cache(
+    bounds,
+    createH3BoundsCacheDependencies(bounds),
+  );
+  await runReadCacheSideEffect(() => getReadCache().cacheBathroomRows(rows));
+  return rows;
+}
+
+async function fetchBathroomRowsInBoundsFromDatabase(
+  bounds: ViewportBounds,
+): Promise<BathroomDataPrimaryRow[]> {
   const { data, error } = await getSupabaseClient().rpc(
     "get_bathroom_data_primary_in_bbox",
     {
@@ -131,7 +178,28 @@ export async function getInBounds(
     );
   }
 
-  return (data ?? []) as BathroomDataPrimaryRow[];
+  const rows = (data ?? []) as BathroomDataPrimaryRow[];
+  return rows;
+}
+
+async function fetchBathroomRowsForH3Cells(
+  cellPolygons: readonly BathroomH3CellPolygon[],
+): Promise<BathroomH3CellRpcRow[]> {
+  const { data, error } = await getSupabaseClient().rpc(
+    GET_BATHROOM_H3_CELLS_RPC_NAME,
+    buildBathroomH3CellRpcParams(cellPolygons),
+  );
+
+  if (error !== null) {
+    throw new Error(
+      formatSupabaseError(
+        "Failed to list bathroom_data_primary rows in H3 cells",
+        error.message,
+      ),
+    );
+  }
+
+  return parseBathroomH3CellRpcRows(data);
 }
 
 export async function findNearest(
@@ -156,7 +224,13 @@ export async function findNearest(
     );
   }
 
-  return parseFindNearestBathroomRpcData(data);
+  const row = parseFindNearestBathroomRpcData(data);
+  if (row !== null) {
+    await runReadCacheSideEffect(() =>
+      getReadCache().cacheNearestBathroomLocation(row),
+    );
+  }
+  return row;
 }
 
 export async function syncInBounds(
@@ -165,6 +239,15 @@ export async function syncInBounds(
 ): Promise<BathroomSyncResponse> {
   assertFiniteViewportBounds(bounds);
 
+  // Sync must compare against authoritative database state. H3 cell cache rows can
+  // be stale and would miss deleteIds when bathrooms were removed server-side.
+  return syncInBoundsFromDatabase(bounds, clientCache);
+}
+
+async function syncInBoundsFromDatabase(
+  bounds: ViewportBounds,
+  clientCache: BathroomClientCacheEntry[],
+): Promise<BathroomSyncResponse> {
   const { data, error } = await getSupabaseClient().rpc(
     SYNC_BATHROOM_RPC_NAME,
     buildSyncBathroomRpcParams(bounds, clientCache),
@@ -176,5 +259,31 @@ export async function syncInBounds(
     );
   }
 
-  return parseSyncBathroomRpcPayload(data);
+  const response = parseSyncBathroomRpcPayload(data);
+  await runReadCacheSideEffect(async () => {
+    const readCache = getReadCache();
+    await readCache.cacheBathroomSyncUpserts(response.upserts);
+    await readCache.removeBathrooms(response.deleteIds);
+  });
+  return response;
+}
+
+function createH3BoundsCacheDependencies(bounds: ViewportBounds) {
+  return {
+    resolution: H3_BATHROOM_CELL_RESOLUTION,
+    maxCellCount: H3_BATHROOM_MAX_BOUNDS_CACHE_CELLS,
+    readCell: (cell: string, resolution: number) =>
+      getReadCache().getBathroomH3Cell(cell, resolution),
+    cacheCell: (
+      cell: string,
+      rows: readonly BathroomDataPrimaryRow[],
+      resolution: number,
+    ) => getReadCache().cacheBathroomH3Cell(cell, rows, resolution),
+    fetchCells: fetchBathroomRowsForH3Cells,
+    fallbackFetch: () => fetchBathroomRowsInBoundsFromDatabase(bounds),
+  };
+}
+
+function bathroomRowToH3Cell(row: Pick<BathroomDataPrimaryRow, "latitude" | "longitude">) {
+  return bathroomLatLongToH3Cell(row, H3_BATHROOM_CELL_RESOLUTION);
 }

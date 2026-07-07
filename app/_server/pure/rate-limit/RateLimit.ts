@@ -1,3 +1,5 @@
+import { REDIS_RATE_LIMIT_KEY_PREFIX } from "../redis/RedisConstants";
+
 export type RateLimitScope =
   | "bathroom-create"
   | "bathroom-read-sync"
@@ -31,7 +33,7 @@ export function buildRateLimitKey(
   clientIp: string,
   windowSeconds: number,
 ): string {
-  return `rl:${scope}:${clientIp}:${windowSeconds}`;
+  return `${REDIS_RATE_LIMIT_KEY_PREFIX}${scope}:${clientIp}:${windowSeconds}`;
 }
 
 export function isRateLimitExceeded(

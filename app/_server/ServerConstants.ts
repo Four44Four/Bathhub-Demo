@@ -5,6 +5,15 @@ import { type RateLimitWindowConfig } from "./pure/rate-limit/RateLimit";
 /** When true, log rate limit violations (scope and client IP) to the server console. */
 export const RATE_LIMIT_VIOLATE_LOG = true;
 
+/** TTL in seconds for Redis-backed serverside DB read cache entries. */
+export const READ_CACHE_TTL_SECS = 3600;
+
+/** H3 resolution used for Redis-backed bathroom bounds cache cells. */
+export const H3_BATHROOM_CELL_RESOLUTION = 10;
+
+/** Max H3 cells to use for one bathroom bounds cache lookup before DB fallback. */
+export const H3_BATHROOM_MAX_BOUNDS_CACHE_CELLS = 2500;
+
 export type { RateLimitWindowConfig };
 
 export const SERVER_RATE_LIMITS = {

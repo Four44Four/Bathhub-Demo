@@ -17,7 +17,8 @@ else
   docker run -d \
     --name "$REDIS_CONTAINER_NAME" \
     -p "${REDIS_PORT}:6379" \
-    redis:7-alpine >/dev/null
+    redis:7-alpine \
+    redis-server --maxmemory-policy allkeys-lru >/dev/null
 fi
 
 if ! wait_for_redis; then

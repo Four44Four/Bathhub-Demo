@@ -1,10 +1,10 @@
 # Sprint 2 (basic backend)
- - Redis caching for reads
+ - Add schema number to Supabase bathroom primary data DB
+ - Make the "specified" values in spec concrete based on the actual constants in the implementation currently
  - Add rating system on bathrooms (stars 1-5)
  - Add comments system on bathrooms
  - Setup S3 for Supabase
  - Add media upload system on bathrooms
- - Make a Dockerfile for building a Docker container that exposes both the Supabase DB and the Redis server in one container when ran
 
 # Sprint 3 (accounts)
  - Add account system

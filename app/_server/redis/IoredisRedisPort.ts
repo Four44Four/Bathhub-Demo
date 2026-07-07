@@ -2,7 +2,11 @@ import "server-only";
 
 import { Redis } from "ioredis";
 
+import { REDIS_MAX_MEMORY_EVICTION_POLICY } from "../pure/redis/RedisConstants";
 import { type RedisPort } from "./RedisPort";
+import {
+  REDIS_ERROR_LOG_INTERVAL_MS,
+} from "./RedisConfig";
 import { buildIoredisConnectionOptions } from "./ioredisConnectionOptions";
 
 const INCR_WITH_EXPIRE_SCRIPT = `
@@ -12,8 +16,6 @@ if current == 1 then
 end
 return current
 `;
-
-const REDIS_ERROR_LOG_INTERVAL_MS = 10_000;
 
 export function createIoredisRedisPort(redisUrl: string): RedisPort {
   const client = new Redis(redisUrl, buildIoredisConnectionOptions(redisUrl));
@@ -26,6 +28,10 @@ export function createIoredisRedisPort(redisUrl: string): RedisPort {
     }
     lastErrorLoggedAt = now;
     console.error("[redis] connection error:", error.message);
+  });
+
+  client.once("ready", () => {
+    void ensureMaxMemoryEvictionPolicy(client);
   });
 
   return {
@@ -41,6 +47,16 @@ export function createIoredisRedisPort(redisUrl: string): RedisPort {
       );
       return Number(result);
     },
+    async getString(key: string): Promise<string | null> {
+      return client.get(key);
+    },
+    async setStringWithExpiry(
+      key: string,
+      value: string,
+      expirySeconds: number,
+    ): Promise<void> {
+      await client.set(key, value, "EX", expirySeconds);
+    },
     async deleteKey(key: string): Promise<void> {
       await client.del(key);
     },
@@ -48,4 +64,21 @@ export function createIoredisRedisPort(redisUrl: string): RedisPort {
       await client.quit();
     },
   };
+}
+
+async function ensureMaxMemoryEvictionPolicy(client: Redis): Promise<void> {
+  try {
+    await client.call(
+      "CONFIG",
+      "SET",
+      "maxmemory-policy",
+      REDIS_MAX_MEMORY_EVICTION_POLICY,
+    );
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn(
+      "[redis] failed to set maxmemory-policy:",
+      message,
+    );
+  }
 }

@@ -17,7 +17,15 @@ declare module "ioredis" {
       numkeys: number,
       ...args: (string | number)[]
     ): Promise<unknown>;
+    get(key: string): Promise<string | null>;
+    set(
+      key: string,
+      value: string,
+      expiryMode: "EX",
+      expirySeconds: number,
+    ): Promise<string>;
     del(key: string): Promise<number>;
+    call(...args: (string | number)[]): Promise<unknown>;
     quit(): Promise<string>;
   }
 

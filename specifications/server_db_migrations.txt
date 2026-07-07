@@ -9,3 +9,5 @@
     - EXAMPLE:
        - Running a migration that adds a column should only add it once if ran multiple times
        - Running a migration that adds a function multiple times should remove the previous version of the function and then add it again to ensure the function is up to date
+ - All migrations will increment a schema version number in the database
+    - This number starts at 9 due to the schema version number requirement being added after migration 20260706000000 (the 8th migration)

@@ -24,8 +24,8 @@ This version has breaking changes — APIs, conventions, and file structure may 
  - If any database schema changes are prompted:
     - Do not edit old database migration scripts that create the table
     - Create a new migration script instead
-    - All migration scripts (for SQLite or PostgreSQL) should be atomic
-       - If a failure occurs during the migration, the DB should not be left in a partially migrated state
+ - Everytime a DB migration is created:
+    - Ensure that it increments the DB schema version for whatever DB it will change
  - When creating unit or integration tests:
     - Use as much of the logic from the source code
     - The tests are intended to test logic from the source code, not invent new application logic solely for the test

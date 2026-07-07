@@ -1,5 +1,4 @@
 # Sprint 2 (basic backend)
- - Add schema number to Supabase bathroom primary data DB
  - Make the "specified" values in spec concrete based on the actual constants in the implementation currently
  - Add rating system on bathrooms (stars 1-5)
  - Add comments system on bathrooms

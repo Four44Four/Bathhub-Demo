@@ -3,20 +3,12 @@
 import { useState, type CSSProperties, type MouseEventHandler } from "react";
 
 import {
+  AddBathroom as AddBathroomConsts,
   BtnInteractAnim,
   Button as ButtonConsts,
   Shared as SharedConsts,
 } from "../../ComponentConstants";
 import { multiplyHexColorBrightness } from "../../pure/viewport2d/ButtonInteractColor";
-import {
-  ADD_BATHROOM_ACTION_BUTTON_BOTTOM_MARGIN_PX,
-  ADD_BATHROOM_ACTION_BUTTON_GAP_PX,
-  ADD_BATHROOM_ACTION_BUTTON_HEIGHT_PX,
-  ADD_BATHROOM_ACTION_BUTTON_SIDE_MARGIN_PX,
-  ADD_BATHROOM_ACTION_ICON_SIZE_PX,
-  ADD_BATHROOM_CANCEL_ICON,
-  ADD_BATHROOM_CONFIRM_ICON,
-} from "./Constants";
 import { useRecoloredSvgSrc } from "./useRecoloredSvgSrc";
 
 export type ActionButtonsProps = {
@@ -27,7 +19,7 @@ export type ActionButtonsProps = {
 
 function actionIconStyle(): CSSProperties {
   return {
-    height: ADD_BATHROOM_ACTION_ICON_SIZE_PX,
+    height: AddBathroomConsts.ACTION_ICON_SIZE_PX,
     width: "auto",
     display: "block",
     userSelect: "none",
@@ -77,7 +69,7 @@ function TintedActionButton({
   const buttonStyle: CSSProperties = {
     flex: 1,
     minWidth: 0,
-    height: ADD_BATHROOM_ACTION_BUTTON_HEIGHT_PX,
+    height: AddBathroomConsts.ACTION_BUTTON_HEIGHT_PX,
     margin: 0,
     padding: 0,
     border: `${ButtonConsts.LINE_THICKNESS}px solid ${resolvedFillColor}`,
@@ -120,13 +112,13 @@ export function ActionButtons({
 }: ActionButtonsProps) {
   const rowStyle: CSSProperties = {
     position: "absolute",
-    left: ADD_BATHROOM_ACTION_BUTTON_SIDE_MARGIN_PX,
-    right: ADD_BATHROOM_ACTION_BUTTON_SIDE_MARGIN_PX,
-    bottom: ADD_BATHROOM_ACTION_BUTTON_BOTTOM_MARGIN_PX,
+    left: AddBathroomConsts.ACTION_BUTTON_SIDE_MARGIN_PX,
+    right: AddBathroomConsts.ACTION_BUTTON_SIDE_MARGIN_PX,
+    bottom: AddBathroomConsts.ACTION_BUTTON_BOTTOM_MARGIN_PX,
     display: "flex",
     flexDirection: "row",
     alignItems: "stretch",
-    gap: ADD_BATHROOM_ACTION_BUTTON_GAP_PX,
+    gap: AddBathroomConsts.ACTION_BUTTON_GAP_PX,
     pointerEvents: "auto",
   };
 
@@ -136,14 +128,14 @@ export function ActionButtons({
         ariaLabel="Cancel add bathroom"
         fillColor={SharedConsts.NEGATIVE_COLOR}
         disabled={disabled}
-        iconPath={ADD_BATHROOM_CANCEL_ICON}
+        iconPath={AddBathroomConsts.CANCEL_ICON}
         onClick={onCancel}
       />
       <TintedActionButton
         ariaLabel="Confirm add bathroom"
         fillColor={SharedConsts.POSITIVE_COLOR}
         disabled={disabled}
-        iconPath={ADD_BATHROOM_CONFIRM_ICON}
+        iconPath={AddBathroomConsts.CONFIRM_ICON}
         onClick={onConfirm}
       />
     </div>

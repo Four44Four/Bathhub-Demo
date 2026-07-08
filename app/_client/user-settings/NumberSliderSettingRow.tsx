@@ -9,7 +9,6 @@ import {
   numberSliderValueRatio,
 } from "../pure/user-settings/UserSettingsSliderLayout";
 import { clamp, TextWeight } from "../Utils";
-import { USER_SETTINGS_LABEL_COLOR, USER_SETTINGS_ROW_BORDER_COLOR } from "./UserSettingsConstants";
 
 const TRACK_HEIGHT_PX = UserSettingsConsts.NUMBER_SLIDER_TRACK_HEIGHT_PX;
 const KNOB_SIZE_PX = UserSettingsConsts.NUMBER_SLIDER_KNOB_SIZE_PX;
@@ -79,7 +78,7 @@ export function NumberSliderSettingRow({
       }}
       style={{
         padding: "14px 16px",
-        borderBottom: `1px solid ${USER_SETTINGS_ROW_BORDER_COLOR}`,
+        borderBottom: `1px solid ${UserSettingsConsts.ROW_BORDER_COLOR}`,
         opacity: disabled ? 0.55 : 1,
       }}
     >
@@ -95,7 +94,7 @@ export function NumberSliderSettingRow({
         <span
           className={TextWeight.REGULAR}
           style={{
-            color: USER_SETTINGS_LABEL_COLOR,
+            color: UserSettingsConsts.LABEL_COLOR,
             fontSize: 15,
             lineHeight: 1.3,
             textAlign: "left",
@@ -106,7 +105,7 @@ export function NumberSliderSettingRow({
         <span
           className={TextWeight.BOLD}
           style={{
-            color: USER_SETTINGS_LABEL_COLOR,
+            color: UserSettingsConsts.LABEL_COLOR,
             fontSize: 14,
             flexShrink: 0,
           }}

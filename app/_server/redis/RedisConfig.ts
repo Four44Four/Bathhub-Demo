@@ -1,10 +1,5 @@
 import "server-only";
 
-import {
-  REDIS_MAX_MEMORY_EVICTION_POLICY,
-  REDIS_RATE_LIMIT_KEY_PREFIX,
-} from "../pure/redis/RedisConstants";
-
 export {
   REDIS_MAX_MEMORY_EVICTION_POLICY,
   REDIS_RATE_LIMIT_KEY_PREFIX,

@@ -5,9 +5,9 @@ import { useState, type CSSProperties } from "react";
 import {
   BtnInteractAnim,
   SwipeMenu as SwipeMenuConsts,
+  UserSettings as UserSettingsConsts,
 } from "../ComponentConstants";
 import { TextWeight } from "../Utils";
-import { USER_SETTINGS_CLOSE_BTN_SIZE_PX } from "./UserSettingsConstants";
 
 const SETTINGS_ACTION_BTN_BG_COLOR = "#FFFFFF";
 const SETTINGS_ACTION_BTN_INTERACT_BG_COLOR = "#E6E6F0";
@@ -48,7 +48,7 @@ export function SettingsSaveChangesButton({
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    height: USER_SETTINGS_CLOSE_BTN_SIZE_PX,
+    height: UserSettingsConsts.CLOSE_BTN_SIZE_PX,
     minWidth: 108,
     padding: "8px 16px",
     boxSizing: "border-box",

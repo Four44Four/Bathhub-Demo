@@ -34,6 +34,7 @@ import {
   initialUserSettingsUiState,
   reduceUserSettingsUiState,
 } from "@/app/_shared/user-settings/UserSettingsProviderState";
+import { UserSettings as UserSettingsConsts } from "../ComponentConstants";
 import { getUserSettingsDb } from "../user-settings-db/web/UserSettingsDbWeb";
 import {
   getActiveUserSettings,
@@ -46,7 +47,6 @@ import {
 import { currentUserSettingsPageId } from "@/app/_shared/user-settings/UserSettingsPageStack";
 import {
   saveActiveUserSettingsToPersistentDb,
-  USER_SETTINGS_SCHEMA_RETRY_INTERVAL_MS,
   defaultUserSettingsSchemaMigrationRunnerDeps,
   type UserSettingsSchemaMigrationRunnerDeps,
 } from "./UserSettingsSchemaMigrationRunner";
@@ -181,13 +181,13 @@ export function UserSettingsProvider({ children }: UserSettingsProviderProps) {
         }
         retryTimer = setTimeout(() => {
           void loop();
-        }, USER_SETTINGS_SCHEMA_RETRY_INTERVAL_MS);
+        }, UserSettingsConsts.SCHEMA_RETRY_INTERVAL_MS);
       } catch {
         if (!cancelled) {
           setBootstrapPhase("schema_out_of_date");
           retryTimer = setTimeout(() => {
             void loop();
-          }, USER_SETTINGS_SCHEMA_RETRY_INTERVAL_MS);
+          }, UserSettingsConsts.SCHEMA_RETRY_INTERVAL_MS);
         }
       }
     };

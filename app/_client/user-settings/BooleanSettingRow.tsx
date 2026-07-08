@@ -3,7 +3,6 @@
 import { UserSettings as UserSettingsConsts } from "../ComponentConstants";
 import { booleanToggleKnobOffsetPx } from "../pure/user-settings/UserSettingsSliderLayout";
 import { TextWeight } from "../Utils";
-import { USER_SETTINGS_LABEL_COLOR, USER_SETTINGS_ROW_BORDER_COLOR } from "./UserSettingsConstants";
 
 const TRACK_WIDTH_PX = UserSettingsConsts.BOOLEAN_SWITCH_TRACK_WIDTH_PX;
 const TRACK_HEIGHT_PX = UserSettingsConsts.BOOLEAN_SWITCH_TRACK_HEIGHT_PX;
@@ -46,7 +45,7 @@ export function BooleanSettingRow({
         justifyContent: "space-between",
         gap: 12,
         padding: "14px 16px",
-        borderBottom: `1px solid ${USER_SETTINGS_ROW_BORDER_COLOR}`,
+        borderBottom: `1px solid ${UserSettingsConsts.ROW_BORDER_COLOR}`,
         cursor: disabled ? "default" : "pointer",
         opacity: disabled ? 0.55 : 1,
       }}
@@ -54,7 +53,7 @@ export function BooleanSettingRow({
       <span
         className={TextWeight.REGULAR}
         style={{
-          color: USER_SETTINGS_LABEL_COLOR,
+          color: UserSettingsConsts.LABEL_COLOR,
           fontSize: 15,
           lineHeight: 1.3,
           textAlign: "left",
@@ -111,9 +110,11 @@ export function BooleanSettingRow({
             width: KNOB_SIZE_PX,
             height: KNOB_SIZE_PX,
             borderRadius: "50%",
-            backgroundColor: UserSettingsConsts.COMPONENT_KNOB_COLOR,
+            backgroundColor: checked
+              ? UserSettingsConsts.COMPONENT_KNOB_COLOR
+              : UserSettingsConsts.COMPONENT_BOOLEAN_OFF_KNOB_COLOR,
             transform: `translateX(${knobOffsetPx}px)`,
-            transition: "transform 150ms ease",
+            transition: "transform 150ms ease, background-color 150ms ease",
             pointerEvents: "none",
           }}
         />

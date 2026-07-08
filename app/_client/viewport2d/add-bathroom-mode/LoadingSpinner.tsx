@@ -2,15 +2,15 @@
 
 import type { CSSProperties } from "react";
 
-import { ADD_BATHROOM_LOADING_SPINNER_SIZE_PX } from "./Constants";
+import { AddBathroom as AddBathroomConsts } from "../../ComponentConstants";
 
 const SPINNER_BORDER_COLOR = "rgba(255, 255, 255, 0.22)";
 const SPINNER_ACCENT_COLOR = "#ffffff";
 
 export function LoadingSpinner() {
   const style: CSSProperties = {
-    width: ADD_BATHROOM_LOADING_SPINNER_SIZE_PX,
-    height: ADD_BATHROOM_LOADING_SPINNER_SIZE_PX,
+    width: AddBathroomConsts.LOADING_SPINNER_SIZE_PX,
+    height: AddBathroomConsts.LOADING_SPINNER_SIZE_PX,
     borderRadius: "50%",
     border: `3px solid ${SPINNER_BORDER_COLOR}`,
     borderTopColor: SPINNER_ACCENT_COLOR,

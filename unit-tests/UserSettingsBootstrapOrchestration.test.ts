@@ -3,7 +3,7 @@ import {
   shouldEnterSchemaOutOfDateDuringBootstrap,
   shouldScheduleUserSettingsBootstrapRetry,
 } from "../app/_shared/user-settings/UserSettingsBootstrapOrchestration";
-import { USER_SETTINGS_SCHEMA_RETRY_INTERVAL_MS } from "../app/_client/user-settings/UserSettingsSchemaMigrationRunner";
+import { UserSettings } from "../app/_client/ComponentConstants";
 
 describe("UserSettingsBootstrapOrchestration", () => {
   test("enters schema_out_of_date when persistent and frontend versions differ", () => {
@@ -32,6 +32,6 @@ describe("UserSettingsBootstrapOrchestration", () => {
   });
 
   test("exports a retry interval for schema update polling", () => {
-    expect(USER_SETTINGS_SCHEMA_RETRY_INTERVAL_MS).toBeGreaterThan(0);
+    expect(UserSettings.SCHEMA_RETRY_INTERVAL_MS).toBeGreaterThan(0);
   });
 });

@@ -1,4 +1,3 @@
-export { ADD_BATHROOM_ACTION_BUTTON_HEIGHT_PX } from "./Constants";
 export { AddBathroomMode } from "./Mode";
 export {
   AddBathroomModeProvider,

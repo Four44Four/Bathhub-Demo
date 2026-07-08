@@ -2,6 +2,7 @@
 
 import * as Fonts from "../_server/Fonts";
 import { PathColorMode } from "./globe/Path";
+import { lerpHex } from "./pure/HexColor";
 
 export const Shared = {
     FONT_REGULAR_CLASS: Fonts.NOTOSANS_REGULAR_CLASS,
@@ -51,6 +52,25 @@ export const MapMarker = {
     IMAGE: "/bathhub_map_marker.svg",
     COLOR: "#FFF",
     OPACITY: 1.0,
+} as const;
+
+export const AddBathroom = {
+    /** CSS pixel height of the cancel (X) and confirm (✓) action buttons. */
+    ACTION_BUTTON_HEIGHT_PX: 50,
+    /** Screen-space height of the cancel/confirm icon images. */
+    ACTION_ICON_SIZE_PX: 22,
+    CANCEL_ICON: "/cross.svg",
+    CONFIRM_ICON: "/checkmark.svg",
+    ACTION_BUTTON_SIDE_MARGIN_PX: 12,
+    ACTION_BUTTON_GAP_PX: 8,
+    ACTION_BUTTON_BOTTOM_MARGIN_PX: 16,
+    MARKER_SIZE_PX: MapMarker.SIZE,
+    MARKER_IMAGE: "/bathhub_add_new_map_marker.svg",
+    MARKER_OPACITY: MapMarker.OPACITY,
+    /** Spinner diameter in CSS pixels while a create request is in flight. */
+    LOADING_SPINNER_SIZE_PX: 40,
+    /** Server create request timeout per add-bathroom spec (milliseconds). */
+    REQUEST_TIMEOUT_MS: 15_000,
 } as const;
 
 export const DebugCrosshair = {
@@ -109,6 +129,8 @@ export const Path = {
     STROKE_EDGE_SOFT_PIXELS: 1.25,
     MAX_POLYLINE_SAMPLES: 128,
     MIN_VERTEX_SEPARATION_PIXELS: 10,
+    /** Debounce before rebuilding path LOD geometry after the client becomes idle (milliseconds). */
+    PATH_REBUILD_LOD_GEOM_DEBOUNCE_MS: 500,
     /** Base ellipsoid height (m) for path vertices at low camera altitudes. */
     SURFACE_CLEARANCE_METERS: 10,
     /**
@@ -183,19 +205,48 @@ export const SchemaLoadingScreen = {
     ANIMATE_OUT_MS: 500,
 } as const;
 
-export const UserSettings = {
+const UserSettings0 = {
+    /** Full-screen user settings overlay; above swipe menu and viewport controls. */
+    OVERLAY_Z_INDEX: 50,
+    CLOSE_BTN_SIZE_PX: CircularCloseButton.SIZE_PX,
+    CLOSE_BTN_INSET_PX: 16,
+    HEADER_FONT_SIZE_PX: 22,
+    HEADER_HORIZONTAL_PADDING_PX: 16,
+    HEADER_TEXT_COLOR: "#0E0F11",
+    HEADER_SEPARATOR_BRIGHTNESS_RATIO: 0.7,
+    PAGE_BG: "#FFFFFF",
+    ROW_BORDER_COLOR: "#E6E6F0",
+    LABEL_COLOR: "#3A3D4A",
+    SUBPAGE_CHEVRON_COLOR: "#B5B5C4",
+    DANGER_BAND_MESSAGE: "Danger: user settings cannot be changed",
     /** Off boolean switch background; number-slider bar right of the knob (CSS hex). */
     COMPONENT_BG_COLOR: "#DCDCE4",
     /** On boolean switch background; number-slider accent bar left of the knob (CSS hex). */
     COMPONENT_ACCENT_COLOR: "#B1B1FF",
-    /** Knob color for boolean switch and number slider (CSS hex). */
+    /** Knob color for boolean switch (on) and number slider (CSS hex). */
     COMPONENT_KNOB_COLOR: "#45454D",
+    /** Knob color for boolean switch when off (CSS hex). */
+    COMPONENT_BOOLEAN_OFF_KNOB_COLOR: "#8F8F93",
     BOOLEAN_SWITCH_TRACK_WIDTH_PX: 44,
     BOOLEAN_SWITCH_TRACK_HEIGHT_PX: 24,
     BOOLEAN_SWITCH_KNOB_SIZE_PX: 20,
     NUMBER_SLIDER_TRACK_HEIGHT_PX: 6,
     NUMBER_SLIDER_KNOB_SIZE_PX: 20,
+    SETTINGS_BACK_BTN_FONT_COLOR: "#B5B5C4",
+    /** Interval between schema update requests while schema is out of date (milliseconds). */
+    SCHEMA_RETRY_INTERVAL_MS: 5000,
 } as const;
+
+export const UserSettings = {
+    ...UserSettings0,
+    BOTTOM_SCROLL_MARGIN_PX:
+        UserSettings0.CLOSE_BTN_SIZE_PX + UserSettings0.CLOSE_BTN_INSET_PX + 12,
+    HEADER_SEPARATOR_COLOR: lerpHex(
+        UserSettings0.HEADER_TEXT_COLOR,
+        UserSettings0.PAGE_BG,
+        UserSettings0.HEADER_SEPARATOR_BRIGHTNESS_RATIO,
+    ),
+};
 
 export const BathroomRemoteDB = {
     READ_RETRY_MS: 2000,
@@ -236,8 +287,6 @@ export const NearestBathroom = {
     BATHROOM_PATH_UPDATE_DEBOUNCE_MS: 3_000,
     /** Minimum client movement before re-requesting path data (meters). */
     BATHROOM_PATH_UPDATE_MIN_DISTANCE_M: 10,
-    /** Debounce before rebuilding path LOD geometry after the client becomes idle (milliseconds). */
-    PATH_REBUILD_LOD_GEOM_DEBOUNCE_MS: 500,
     /** Distance from target bathroom that ends active navigation (meters). */
     BATHROOM_ARRIVAL_DISTANCE_M: 10,
     BATHROOM_REACHED_TARGET_BAND_MESSAGE: "Reached target bathroom",

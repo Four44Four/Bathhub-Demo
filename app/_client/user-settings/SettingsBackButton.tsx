@@ -2,13 +2,10 @@
 
 import { useState, type CSSProperties } from "react";
 
-import { BtnInteractAnim } from "../ComponentConstants";
+import { BtnInteractAnim, UserSettings as UserSettingsConsts } from "../ComponentConstants";
 import { multiplyHexColorBrightness } from "../pure/viewport2d/ButtonInteractColor";
 import { TextWeight } from "../Utils";
-import { USER_SETTINGS_CLOSE_BTN_SIZE_PX } from "./UserSettingsConstants";
 
-const SETTINGS_BACK_BTN_BG_COLOR = "#FFFFFF";
-const SETTINGS_BACK_BTN_FONT_COLOR = "#B5B5C4";
 const SETTINGS_BACK_BTN_FONT_SIZE = 13;
 const SETTINGS_BACK_BTN_SHADOW_ALPHA = 0.25;
 
@@ -29,11 +26,11 @@ export function SettingsBackButton({ onClick }: SettingsBackButtonProps) {
     border: "none",
     borderRadius: 15,
     backgroundColor: multiplyHexColorBrightness(
-      SETTINGS_BACK_BTN_BG_COLOR,
+      UserSettingsConsts.PAGE_BG,
       brightnessMult,
     ),
     color: multiplyHexColorBrightness(
-      SETTINGS_BACK_BTN_FONT_COLOR,
+      UserSettingsConsts.SETTINGS_BACK_BTN_FONT_COLOR,
       brightnessMult,
     ),
     fontSize: SETTINGS_BACK_BTN_FONT_SIZE,
@@ -42,7 +39,7 @@ export function SettingsBackButton({ onClick }: SettingsBackButtonProps) {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    height: USER_SETTINGS_CLOSE_BTN_SIZE_PX,
+    height: UserSettingsConsts.CLOSE_BTN_SIZE_PX,
     minWidth: 72,
     padding: "8px 16px",
     boxSizing: "border-box",

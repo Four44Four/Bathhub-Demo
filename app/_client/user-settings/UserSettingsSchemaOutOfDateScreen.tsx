@@ -2,12 +2,8 @@
 
 import { useEffect, useState, type CSSProperties } from "react";
 
-import { SchemaLoadingScreen } from "../ComponentConstants";
+import { SchemaLoadingScreen, UserSettings as UserSettingsConsts } from "../ComponentConstants";
 import { TextWeight } from "../Utils";
-import {
-  USER_SETTINGS_HEADER_HORIZONTAL_PADDING_PX,
-  USER_SETTINGS_PAGE_BG,
-} from "./UserSettingsConstants";
 
 const SPINNER_SIZE_PX = 40;
 const SPINNER_BORDER_COLOR = "rgba(14, 15, 17, 0.22)";
@@ -75,11 +71,11 @@ export function UserSettingsSchemaOutOfDateScreen({
         position: "absolute",
         inset: 0,
         zIndex: 100000,
-        backgroundColor: USER_SETTINGS_PAGE_BG,
+        backgroundColor: UserSettingsConsts.PAGE_BG,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        padding: USER_SETTINGS_HEADER_HORIZONTAL_PADDING_PX,
+        padding: UserSettingsConsts.HEADER_HORIZONTAL_PADDING_PX,
         boxSizing: "border-box",
         transform: slideOut ? "translateY(100%)" : "translateY(0)",
         transition: `transform ${SchemaLoadingScreen.ANIMATE_OUT_MS}ms ease-in`,

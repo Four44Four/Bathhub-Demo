@@ -16,8 +16,6 @@ import {
   setActiveUserSettings,
 } from "./UserSettingsMemoryStore";
 
-export const USER_SETTINGS_SCHEMA_RETRY_INTERVAL_MS = 5000;
-
 export type UserSettingsSchemaMigrationRunnerDeps = {
   getMigration: (fromVersion: number) => Promise<UserSettingsSchemaMigrationResult>;
   reportError: typeof reportUserSettingsSchemaUpdateError;

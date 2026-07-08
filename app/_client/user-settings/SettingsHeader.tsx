@@ -7,13 +7,8 @@ import {
   userSettingsBreadcrumbPlainText,
   userSettingsBreadcrumbSegmentsWidthPx,
 } from "@/app/_client/pure/user-settings/UserSettingsBreadcrumbDisplay";
+import { UserSettings as UserSettingsConsts } from "../ComponentConstants";
 import { TextWeight } from "../Utils";
-import {
-  USER_SETTINGS_HEADER_FONT_SIZE_PX,
-  USER_SETTINGS_HEADER_HORIZONTAL_PADDING_PX,
-  USER_SETTINGS_HEADER_SEPARATOR_COLOR,
-  USER_SETTINGS_HEADER_TEXT_COLOR,
-} from "./UserSettingsConstants";
 
 export type SettingsHeaderProps = {
   segments: string[];
@@ -21,10 +16,10 @@ export type SettingsHeaderProps = {
 
 const headerStyle = {
   margin: 0,
-  padding: `20px ${USER_SETTINGS_HEADER_HORIZONTAL_PADDING_PX}px 12px`,
-  fontSize: USER_SETTINGS_HEADER_FONT_SIZE_PX,
+  padding: `20px ${UserSettingsConsts.HEADER_HORIZONTAL_PADDING_PX}px 12px`,
+  fontSize: UserSettingsConsts.HEADER_FONT_SIZE_PX,
   lineHeight: 1.2,
-  color: USER_SETTINGS_HEADER_TEXT_COLOR,
+  color: UserSettingsConsts.HEADER_TEXT_COLOR,
   textAlign: "left" as const,
   overflow: "hidden",
   whiteSpace: "nowrap" as const,
@@ -38,7 +33,7 @@ function BreadcrumbSegments({ segments }: { segments: string[] }) {
           {index > 0 ? (
             <>
               {" "}
-              <span style={{ color: USER_SETTINGS_HEADER_SEPARATOR_COLOR }}>
+              <span style={{ color: UserSettingsConsts.HEADER_SEPARATOR_COLOR }}>
                 {">"}
               </span>
               {" "}
@@ -114,7 +109,7 @@ export function SettingsHeader({ segments }: SettingsHeaderProps) {
           visibility: "hidden",
           pointerEvents: "none",
           whiteSpace: "nowrap",
-          fontSize: USER_SETTINGS_HEADER_FONT_SIZE_PX,
+          fontSize: UserSettingsConsts.HEADER_FONT_SIZE_PX,
           lineHeight: 1.2,
         }}
       />

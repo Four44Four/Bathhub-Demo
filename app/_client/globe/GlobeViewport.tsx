@@ -10,7 +10,7 @@ import {
 } from "react";
 import type * as CesiumTypes from "cesium";
 
-import { Globe as GlobeConsts, MapMarker as MapMarkerConsts, NearestBathroom as NearestBathroomConsts } from "../ComponentConstants";
+import { Globe as GlobeConsts, MapMarker as MapMarkerConsts, Path as PathConsts } from "../ComponentConstants";
 import { loadCesium } from "./loadCesium";
 import * as Utils from "../Utils";
 import * as ServerDebug from "../../_server/Debug";
@@ -701,7 +701,7 @@ export function GlobeViewport({
         pathLodStateRef.current.debounceTimerId = window.setTimeout(() => {
           pathLodStateRef.current.debounceTimerId = null;
           runPathLodRebuildNow();
-        }, NearestBathroomConsts.PATH_REBUILD_LOD_GEOM_DEBOUNCE_MS);
+        }, PathConsts.PATH_REBUILD_LOD_GEOM_DEBOUNCE_MS);
       };
 
       const runPendingPathLodRebuildAfterMotion = () => {

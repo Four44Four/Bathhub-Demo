@@ -1,11 +1,7 @@
 "use client";
 
+import { UserSettings as UserSettingsConsts } from "../ComponentConstants";
 import { TextWeight } from "../Utils";
-import {
-  USER_SETTINGS_LABEL_COLOR,
-  USER_SETTINGS_ROW_BORDER_COLOR,
-  USER_SETTINGS_SUBPAGE_CHEVRON_COLOR,
-} from "./UserSettingsConstants";
 
 export type SubsettingsRowProps = {
   label: string;
@@ -40,7 +36,7 @@ export function SubsettingsRow({
         width: "100%",
         padding: "14px 16px",
         border: "none",
-        borderBottom: `1px solid ${USER_SETTINGS_ROW_BORDER_COLOR}`,
+        borderBottom: `1px solid ${UserSettingsConsts.ROW_BORDER_COLOR}`,
         background: "transparent",
         cursor: disabled ? "default" : "pointer",
         textAlign: "left",
@@ -50,7 +46,7 @@ export function SubsettingsRow({
       <span
         className={TextWeight.REGULAR}
         style={{
-          color: USER_SETTINGS_LABEL_COLOR,
+          color: UserSettingsConsts.LABEL_COLOR,
           fontSize: 15,
           lineHeight: 1.3,
         }}
@@ -61,7 +57,7 @@ export function SubsettingsRow({
         aria-hidden="true"
         className={TextWeight.BOLD}
         style={{
-          color: USER_SETTINGS_SUBPAGE_CHEVRON_COLOR,
+          color: UserSettingsConsts.SUBPAGE_CHEVRON_COLOR,
           fontSize: 18,
           lineHeight: 1,
           flexShrink: 0,

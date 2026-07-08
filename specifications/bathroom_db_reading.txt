@@ -1,5 +1,17 @@
+# Constants
+## Zoom stop distance from surface
+ - 250 meters
+## Maximum display bathroom map markers height
+ - 150,000 meters
+## Remote DB read timeout
+ - 2 seconds
+## Local cache DB scan delay
+ - 500 milliseconds
+## Local cache DB expiry time
+ - 1 day
+# Description
 - Retrieving all bathrooms given a lower left location and an upper right location
-   - These will be calculated from the Globe viewport when the zoom level is close enough when the camera is within a specified distance from the surface of the Globe
+   - These will be calculated from the Globe viewport when the zoom level is close enough when the camera is within [this amount of distance from](##zoom-stop-distance-from-surface) the surface of the Globe
    - The server should only send down the `location`, `verify_status`, `version`, and `id` for an upsert OR the server can send down a specific DELETE payload with just `id` to signal a local deletion
    - When a bounds query is received by the server:
       - All [h3 cells](./bathroom_db_creation.txt) that are within those bounds will be returned and [cached](./serverside_caching.txt)
@@ -21,14 +33,14 @@
             - Send all of the missing ones down as a special DELETE response with the attached `id`s so the client's local DB knows what to remove
    - Whenever a UPSERT response is prcoessed:
       - Insert it into the rendered found bathrooms datastructure
-      - Update the local cache DB as specified below in the Localized caching section
+      - Update the local cache DB as [detailed below](##localized-caching)
    - Whenever a DELETE response is processed:
       - Remove it from the rendered found bathrooms datastructure
-      - Update the local cache DB as specified below in the Localized caching section
+      - Update the local cache DB as [detailed below](##localized-caching)
    - Signal a update to the Globe to sync the rendering state to the state of the rendered found bathrooms datastructure
    - A new request to remote DB should not be attempted until a response from the server after querying the remote DB is received
-      - However, if the remote DB takes longer than a specified maximum delay, then allow for a retry of requesting server for remote DB fresh data
-   - There will be a specified minimum delay (**not** debounce) for local in-memory DB scans
+      - However, if the remote DB takes longer than a [this amount of time](##remote-db-read-timeout), then allow for a retry of requesting server for remote DB fresh data
+   - There will be a [minimum delay](##local-cache-db-scan-delay) (**not** debounce) for local in-memory DB scans
       - While user is zooming or dragging on the Globe viewport, the local sync will occur every duration of time that this delay takes so that bathroom map markers will be updated as the client is panning or zooming around the Globe
       - These happen regardless of if the remote DB is not responding
       - If the remote DB does respond, always override the local in-memory DB with the remote DB
@@ -41,44 +53,44 @@
    - Any new ones should be rendered
    - If any have the same id and have the same verification status, leave them as is
 - All bathroom markers that are offscreeen from the Globe viewport should be culled
-   - Once the bathroom markers are far enough away from the center of the Globe viewport by a specified amount:
+   - Once the bathroom markers are far enough away from the center of the Globe viewport by a [this amount](##maximum-display-bathroom-map-markers-height):
       - Destroy them (though this will incur a time cost if the client decides to return)
 - When zooming beyond the level that bathrooms would be queried at:
    - Stop rendering all the bathroom markers
-- Localized caching:
-   - Maintain a local SQLite database with GeoPackage which will be backed up to disk in a .gpkg file
-      - There will be a client platform agnostic interface to perform operations on this local DB
-      - On the web app demo:
-         - The interface will be implemented with [SQLite WASM](https://developer.chrome.com/blog/sqlite-wasm-in-the-browser-backed-by-the-origin-private-file-system) and [GeoPackage JS](https://github.com/ngageoint/geopackage-js)
-         - Use the browser's File System Access API to write it to disk
-      - On a native app:
-         - The interface will be implemented with whatever SQLite driver exists for the native app implementation language
-      - Local cache table name: bathroom_data_primary_cache
-      - SCHEMA for local cache table (not including Geopackage mandatory tables):
-         - location as type `BLOB`
-         - remote_id as type `BIGINT`
-         - version as type `BIGINT`
-         - verify_status as type `TEXT CHECK(verify_status IN ('pending', 'verified'))`
-            - This column should always have possible values that match specifications/bathroom_db.txt's `bathroom_data_primary` table's Verify_Status enum type
-         - updated_at as type `DATETIME DEFAULT CURRENT_TIMESTAMP`
-   - Whenever a (new/updated) Bathroom is retrieved:
-      - Upsert it to the local SQLite Geopackage DB
-         - Convert the location from a Postgis GEOGRAPHY type to a GPKG Geometry BLOB
-         - Store the `id` column
-         - Store the `version` column
-         - Convert the `verify_status` column from the Postgres enum to the TEXT equivalent
-   - The local cache will be an in-memory DB in write-ahead logging mode that will sync changes to the disk in the background as new bathroom entries are upserted or deleted
-      - Changes to DB should happen to in-memory DB first and then it will cascade to disk back-up eventually
-   - When the server sends back down bathroom entries in a UPSERT response:
-       - Upsert all of them into the local DB
-   - When the server sends back down the bathroom entry ids in a special DELETE response:
-       - Delete all of the ids specified
-   - There will be a configurable expiration time on each cached bathroom entry to evict the first expired bathroom entry whenever a new bathroom entry is upserted
-       - When a new bathroom is upserted:
-          - Check if the oldest updated bathroom entry in the local cache DB is beyond the configured time from the current time and evict it if so
-   - When the client "opens the app":
-      - When as a web-app demo: this means when the website is visited
-      - When as a native app: this means when the app is actually opened
-      - The local cache DB will be checked for if the correct tables (for Geopackage as well) are created_at
-         - If not, create them
-      - Then load up the local cache DB as an in-memory DB that is writing to a on-disk gpkg file
+## Localized caching
+- Maintain a local SQLite database with GeoPackage which will be backed up to disk in a .gpkg file
+   - There will be a client platform agnostic interface to perform operations on this local DB
+   - On the web app demo:
+      - The interface will be implemented with [SQLite WASM](https://developer.chrome.com/blog/sqlite-wasm-in-the-browser-backed-by-the-origin-private-file-system) and [GeoPackage JS](https://github.com/ngageoint/geopackage-js)
+      - Use the browser's File System Access API to write it to disk
+   - On a native app:
+      - The interface will be implemented with whatever SQLite driver exists for the native app implementation language
+   - Local cache table name: bathroom_data_primary_cache
+   - SCHEMA for local cache table (not including Geopackage mandatory tables):
+      - location as type `BLOB`
+      - remote_id as type `BIGINT`
+      - version as type `BIGINT`
+      - verify_status as type `TEXT CHECK(verify_status IN ('pending', 'verified'))`
+         - This column should always have possible values that match specifications/bathroom_db.txt's `bathroom_data_primary` table's Verify_Status enum type
+      - updated_at as type `DATETIME DEFAULT CURRENT_TIMESTAMP`
+- Whenever a (new/updated) Bathroom is retrieved:
+   - Upsert it to the local SQLite Geopackage DB
+      - Convert the location from a Postgis GEOGRAPHY type to a GPKG Geometry BLOB
+      - Store the `id` column
+      - Store the `version` column
+      - Convert the `verify_status` column from the Postgres enum to the TEXT equivalent
+- The local cache will be an in-memory DB in write-ahead logging mode that will sync changes to the disk in the background as new bathroom entries are upserted or deleted
+   - Changes to DB should happen to in-memory DB first and then it will cascade to disk back-up eventually
+- When the server sends back down bathroom entries in a UPSERT response:
+      - Upsert all of them into the local DB
+- When the server sends back down the bathroom entry ids in a special DELETE response:
+      - Delete all of the ids included in the response
+- When a bathroom is upserted:
+   - Evict the first bathroom that has stayed in the cache for longer than [this amount of time](##local-cache-db-expiry-time)
+      - Check if the oldest updated bathroom entry in the local cache DB is beyond that time from the current time and evict it if so
+- When the client "opens the app":
+   - When as a web-app demo: this means when the website is visited
+   - When as a native app: this means when the app is actually opened
+   - The local cache DB will be checked for if the correct tables (for Geopackage as well) are created_at
+      - If not, create them
+   - Then load up the local cache DB as an in-memory DB that is writing to a on-disk gpkg file

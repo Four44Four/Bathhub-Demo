@@ -1,15 +1,21 @@
 "use client";
 
 import { Shared as SharedConsts } from "./ComponentConstants";
+import {
+  hexToRgb,
+  lerp,
+  lerpHex,
+  rgbToHex,
+} from "./pure/HexColor";
 
 export type Vec3 = { x: number; y: number; z: number };
 
 export type Hsl = { h: number; s: number; l: number };
 
 export const TextWeight = {
-  REGULAR: SharedConsts.FONT_REGULAR_CLASS, 
-  BOLD: SharedConsts.FONT_BOLD_CLASS, 
-  LIGHT: SharedConsts.FONT_LIGHT_CLASS
+  REGULAR: SharedConsts.FONT_REGULAR_CLASS,
+  BOLD: SharedConsts.FONT_BOLD_CLASS,
+  LIGHT: SharedConsts.FONT_LIGHT_CLASS,
 } as const;
 export type TextWeight = (typeof TextWeight)[keyof typeof TextWeight];
 
@@ -29,16 +35,7 @@ export type RectBorderWidths = {
   left: number;
 };
 
-export function hexToRgb(hex: string): { r: number; g: number; b: number } {
-    const normalized = hex.replace("#", "").trim();
-    const full = normalized.length === 3 ? normalized.split("").map((c) => c + c).join("") : normalized;
-    const num = parseInt(full, 16);
-    return {
-      r: (num >> 16) & 255,
-      g: (num >> 8) & 255,
-      b: num & 255,
-    };
-}
+export { hexToRgb, lerp, lerpHex, rgbToHex };
   
 export function rgbToHsl(r255: number, g255: number, b255: number): { h: number; s: number; l: number } {
     const r = r255 / 255;
@@ -71,7 +68,7 @@ export function rgbToHsl(r255: number, g255: number, b255: number): { h: number;
   
     return { h, s, l };
 }
-  
+
 export function hslToRgb(h: number, s: number, l: number) {
     const c = (1 - Math.abs(2 * l - 1)) * s;
     const hp = (h % 360) / 60;
@@ -96,32 +93,12 @@ export function hslToRgb(h: number, s: number, l: number) {
     };
 }
 
-export function rgbToHex(r: number, g: number, b: number): string {
-  const to = (x: number) => Math.round(Math.min(255, Math.max(0, x))).toString(16).padStart(2, "0");
-  return `#${to(r)}${to(g)}${to(b)}`;
-}
-
-export function lerpHex(fromHex: string, toHex: string, t: number): string {
-  const a = hexToRgb(fromHex);
-  const b = hexToRgb(toHex);
-  const u = clamp01(t);
-  return rgbToHex(
-    lerp(a.r, b.r, u),
-    lerp(a.g, b.g, u),
-    lerp(a.b, b.b, u),
-  );
-}
-  
 export function clamp01(n: number) {
     return Math.min(1, Math.max(0, n));
 }
 
 export function clamp(n: number, min: number, max: number) {
   return Math.min(max, Math.max(min, n));
-}
-
-export function lerp(a: number, b: number, t: number) {
-  return a + (b - a) * t;
 }
 
 export function wrapAngleRad(a: number) {

@@ -1,7 +1,7 @@
 "use client";
 
+import { UserSettings as UserSettingsConsts } from "../ComponentConstants";
 import { BandAlert } from "../viewport2d/alerts/BandAlert";
-import { USER_SETTINGS_DANGER_BAND_MESSAGE } from "./UserSettingsConstants";
 import { useUserSettings } from "./UserSettingsContext";
 
 export function UserSettingsDangerBand() {
@@ -12,6 +12,6 @@ export function UserSettingsDangerBand() {
   }
 
   return (
-    <BandAlert message={USER_SETTINGS_DANGER_BAND_MESSAGE} persistUntilRemoved />
+    <BandAlert message={UserSettingsConsts.DANGER_BAND_MESSAGE} persistUntilRemoved />
   );
 }

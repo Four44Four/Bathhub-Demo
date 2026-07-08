@@ -1,10 +1,14 @@
+# Constants
+## Cached data TTL
+ - 3600 seconds
+# Description
  - All serverside DB reading will be cached in Redis
- - TTL for the cached data will be 3600 seconds
+ - Redis TTL will be [this](##cached-data-ttl)
  - Updates to data will invalidate its cached equivalent (if it is cached)
  - Deletes to the data will remove it from the cache (if it is cached)
  - Max memory eviction policy will be least recently used
     - This will be shared across *all* Redis keys, including [rate limiting](./server_rate_limits.txt)
- - If cache keys do not follow the below specified schemes:
+ - If cache keys do not follow the below schemes:
     - They will be treated as cache misses
  - Cache keys will follow this naming scheme for individual resource queries:
     - <namespace>:<resource>:<id>

@@ -27,13 +27,8 @@ import {
   USER_SETTINGS_MIGRATION_FAILURE_SAVE_ALERT,
   USER_SETTINGS_UNSAVED_CHANGES_ALERT,
 } from "@/app/_shared/user-settings/UserSettingsOverlayBehavior";
+import { UserSettings as UserSettingsConsts } from "../ComponentConstants";
 import { useUserSettings } from "./UserSettingsContext";
-import {
-  USER_SETTINGS_BOTTOM_SCROLL_MARGIN_PX,
-  USER_SETTINGS_CLOSE_BTN_INSET_PX,
-  USER_SETTINGS_OVERLAY_Z_INDEX,
-  USER_SETTINGS_PAGE_BG,
-} from "./UserSettingsConstants";
 
 function renderSettingItem(
   item: UserSettingsPageItem,
@@ -204,8 +199,8 @@ export function UserSettingsOverlay() {
       style={{
         position: "absolute",
         inset: 0,
-        zIndex: USER_SETTINGS_OVERLAY_Z_INDEX,
-        backgroundColor: USER_SETTINGS_PAGE_BG,
+        zIndex: UserSettingsConsts.OVERLAY_Z_INDEX,
+        backgroundColor: UserSettingsConsts.PAGE_BG,
         display: "flex",
         flexDirection: "column",
         overflow: "hidden",
@@ -218,7 +213,7 @@ export function UserSettingsOverlay() {
           minHeight: 0,
           overflowY: "auto",
           WebkitOverflowScrolling: "touch",
-          paddingBottom: USER_SETTINGS_BOTTOM_SCROLL_MARGIN_PX,
+          paddingBottom: UserSettingsConsts.BOTTOM_SCROLL_MARGIN_PX,
         }}
       >
         <SettingsHeader segments={headerSegments} />
@@ -237,8 +232,8 @@ export function UserSettingsOverlay() {
       <div
         style={{
           position: "absolute",
-          right: USER_SETTINGS_CLOSE_BTN_INSET_PX,
-          bottom: USER_SETTINGS_CLOSE_BTN_INSET_PX,
+          right: UserSettingsConsts.CLOSE_BTN_INSET_PX,
+          bottom: UserSettingsConsts.CLOSE_BTN_INSET_PX,
           display: "flex",
           flexDirection: "row-reverse",
           alignItems: "flex-end",

@@ -14,7 +14,7 @@ import {
   type AddBathroomRequestPhase,
   type AddBathroomRequestState,
 } from "../../pure/viewport2d/AddBathroomModeState";
-import { ADD_BATHROOM_REQUEST_TIMEOUT_MS } from "./Constants";
+import { AddBathroom as AddBathroomConsts } from "../../ComponentConstants";
 
 type RequestAction =
   | { type: "begin" }
@@ -104,7 +104,7 @@ export function useAddBathroomRequest() {
 
       const requestPromise = withTimeout(
         createBathroomAt(latitude, longitude),
-        ADD_BATHROOM_REQUEST_TIMEOUT_MS,
+        AddBathroomConsts.REQUEST_TIMEOUT_MS,
       );
 
       showLoadingScreen();

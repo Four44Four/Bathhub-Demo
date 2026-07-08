@@ -1,7 +1,7 @@
 /**
  * True while viewport-center sampling should keep ticking.
  * Independent from pointer-idle: continues through wheel/rotate smoothing after input stops
- * (see specifications/GlobeViewport.txt lines 22–27).
+ * (see specifications/GlobeViewport.md lines 22–27).
  */
 export function shouldContinueGlobeViewportCenterSampling(params: {
   pointersDownCount: number;

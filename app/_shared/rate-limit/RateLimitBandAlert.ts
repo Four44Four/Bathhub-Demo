@@ -1,6 +1,6 @@
 export const RATE_LIMIT_EXCEEDED_MESSAGE_PREFIX = "Rate limit exceeded:";
 
-/** User-facing server task names for rate-limit band alerts (see server_rate_limits.txt). */
+/** User-facing server task names for rate-limit band alerts (see server_rate_limits.md). */
 export const RATE_LIMIT_BAND_TASK_NAMES = {
   "bathroom-create": "bathroom creation",
   "bathroom-read-sync": "retrieving bathrooms",

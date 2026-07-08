@@ -164,27 +164,31 @@
  - DO NOT IMPLEMENT THIS NOW, THIS IS JUST A PROPOSAL:
     - One day, there will be an option to upload your settings into the remote DB to sync up settings between multiple devices
 # Settings
- - Boolean option for toggling Globe movement animations on and off (for recentering and when user allows for geolocation permissions after loading the app)
-    - Client name: Globe movement smooth animations
-    - SQL Name: globe_movement_smooth
-    - SQL Type: BOOLEAN
-    - SQL Restrictions: CHECK (globe_movement_smooth IN (0, 1))
- - Number slider option for setting how far up the camera will start from the Globe's surface:
-    - Client name: Init camera height (meters)
-    - Min: 500
-    - Max: 10000
-    - SQL Name: camera_init_surface_offset_m
-    - SQL Type: INTEGER
-    - SQL Restrictions: CHECK (camera_init_surface_offset_m >= <Min-value-for-this-setting> AND camera_init_surface_offset_m <= <Max-value-for-this-setting>)
- - Bathroom settings subsettings page:
-    - Number slider option for maximum distance of finding nearest bathroom
-       - Client name: Find nearest bathroom max. distance (meters)
-       - Min: 0
-       - Max: 10000
-       - SQL Name: find_nearest_bathroom_max_dist_m
-       - SQL Type: INTEGER
-       - SQL Restrictions: CHECK (find_nearest_bathroom_max_dist_m >= <Min-value-for-this-setting> AND find_nearest_bathroom_max_dist_m <= <Max-value-for-this-setting>)
-Integration tests:
+## Toggle globe movement animations
+ - Setting type: Boolean
+ - Client name: Globe movement smooth animations
+ - SQL Name: globe_movement_smooth
+ - SQL Type: BOOLEAN
+ - SQL Restrictions: CHECK (globe_movement_smooth IN (0, 1))
+## Initial camera height
+ - Setting type: Number slider
+ - Client name: Init camera height (meters)
+ - Min: 500
+ - Max: 10000
+ - SQL Name: camera_init_surface_offset_m
+ - SQL Type: INTEGER
+ - SQL Restrictions: CHECK (camera_init_surface_offset_m >= <Min-value-for-this-setting> AND camera_init_surface_offset_m <= <Max-value-for-this-setting>)
+## Bathroom settings subsettings page:
+ - Setting type: Subsettings page
+### Find nearest bathroom maximum distance
+ - Setting type: Number slider
+ - Client name: Find nearest bathroom max. distance (meters)
+ - Min: 0
+ - Max: 10000
+ - SQL Name: find_nearest_bathroom_max_dist_m
+ - SQL Type: INTEGER
+ - SQL Restrictions: CHECK (find_nearest_bathroom_max_dist_m >= <Min-value-for-this-setting> AND find_nearest_bathroom_max_dist_m <= <Max-value-for-this-setting>)
+# Integration tests
  - Migrations between every sequential pair of user setting schema versions should be tested
     - If a new user setting schema version is published or added:
        - Add a test between the previous most up to date schema version and the new one

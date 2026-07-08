@@ -22,10 +22,10 @@
     - On initially loading the app, do not render the ClickedIndicator at all
  - If the user has not allowed geolocation data permission or has blocked access to geolocation data, render a 2D static image according to ./app/_client/MapMarker.ts with its bottom midpoint centered on the center of the GlobeViewport 
  - When the user allows geolocation data permissions:
-    - If user settings config for "Globe movement smooth animations" is set to true:
-       - Play an animation to smoothly ease Globe rotation and client zoom level at the same time until the center of viewport is over the location of the client at the zoom level of the user settings value for "Init camera height (meters)"
+    - If [globe movement user setting](./user_settings.txt##toggle-globe-movement-animations) is set to true:
+       - Play an animation to smoothly ease Globe rotation and client zoom level at the same time until the center of viewport is over the location of the client at the zoom level of the [initial camera height user setting](##initial-camera-height)
     - Else:
-       - Instantly snap Globe rotation so that the center of the client's viewport is over the client's location and zoom level is of the user settings value for "Init camera height (meters)"
+       - Instantly snap Globe rotation so that the center of the client's viewport is over the client's location and zoom level is of the [initial camera height user setting](##initial-camera-height)
  - If the user already allowed geolocation data permission upon loading the app:
     - Load the GlobeViewport, Globe, and camera to have the user's geolocation position already centered on the GlobeViewport with the zoom level already set to the user settings value for "Init camera height (meters):
     - There should not be a moment where the Globe is at the default rotation and the camera is at the default distance from the surface of the Globe
@@ -42,23 +42,16 @@
 Viewport2d:
  - 2D UI at static positions overlayed on the Globe viewport
  - Elements:
-    - Test pathfind button:
-       - Rectangular button
-       - Has text "Test pathfind"
-       - Located at the top left corner
-       - When interacted with:
-          - If the user has clicked or tapped on the Globe and a valid ClickedIndicator exists:
-             - Call the appropriate function from ./app/_server/Pathfind.ts to calculate the path between the clicked point on the Globe and either the 3D point on the Globe directly on the GlobeViewport's center if geolocation permission is denied or yet to be granted, or the user's current geolocation position, if it has been granted
-             - Render this path as an anti-aliased line on the Globe with several gradient, shader-based rendering effect options 
-          - Else:
-             - Render a positional alert below the button
     - Recenter button:
        - Circular button
        - Has image public/crosshairs_center.svg
        - Located at the bottom left corner
        - Only appears when the geolocation of the client is detected (and permissions are granted)
        - When interacted with:
-          - The Globe will play the animation to smoothly ease, or snap if the correct user config option is enabled, the Globe's rotation and camera zoom to the correct level to be directly over the current geolocation position if geolocation permissions were granted
+           - If [globe movement user setting](./user_settings.txt##toggle-globe-movement-animations) is set to true:
+              - Play an animation to smoothly ease Globe rotation and client zoom level at the same time until the center of viewport is over the location of the client at the zoom level of the [initial camera height user setting](##initial-camera-height)
+           - Else:
+              - Instantly snap Globe rotation so that the center of the client's viewport is over the client's location and zoom level is of the [initial camera height user setting](##initial-camera-height)
     - Find nearest bathroom button:
        - Circular button
        - Has image public/find_bathroom_icon.svg

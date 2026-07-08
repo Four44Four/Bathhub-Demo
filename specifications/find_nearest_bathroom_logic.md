@@ -38,7 +38,7 @@
             - Clear the rendered path
 # Actions after interacting with Find bathroom button
  - Save the camera position and zoom level that the client is currently at at the moment that they interact with the Find nearest bathroom button from viewport2d
- - Client sends their current location + user settings from under their bathroom settings subsettings (see specifications/user_settings.txt) to use as constraints
+ - Client sends their current location + [user settings from under their bathroom settings subsettings](./user_settings.md##bathroom-settings-subsettings-page) to use as constraints
  - On the server:
     - Using the provided user location and user bathroom constraints:
        - The nearest bathroom is calculated from the bathroom DB
@@ -87,7 +87,7 @@
           - (re)Render the path from the client to the target bathroom with the path data
              - The rendered path will be an anti-aliased line on the Globe with several gradient, shader-based rendering effect options
              - Sharp corners should be smoothed out
-             - At different zoom levels when the client is determined to be (see specifications/GlobeViewport.txt for definition of "idle"):
+             - At different zoom levels when the client is determined to be [idle](./GlobeViewport.md):
                 - The geometry of the line will be updated so that the points will not be within a [this amount of pixels](##min-vertex-separation-pixel-distance) within each other on screen space coordinates
                 - It should be simplified and render the line using less points at distant levels of zoom
                 - It should be detailed and render the line using more points at close levels of zoom

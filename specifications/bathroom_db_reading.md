@@ -14,7 +14,7 @@
    - These will be calculated from the Globe viewport when the zoom level is close enough when the camera is within [this amount of distance from](##zoom-stop-distance-from-surface) the surface of the Globe
    - The server should only send down the `location`, `verify_status`, `version`, and `id` for an upsert OR the server can send down a specific DELETE payload with just `id` to signal a local deletion
    - When a bounds query is received by the server:
-      - All [h3 cells](./bathroom_db_creation.txt) that are within those bounds will be returned and [cached](./serverside_caching.txt)
+      - All [h3 cells](./bathroom_db_creation.md) that are within those bounds will be returned and [cached](./serverside_caching.md)
       - H3 cells will store full bathroom rows
          - They may also store empty row arrays (if there are no bathrooms in an cell's area)
       - If the bounds query is beyond 2500 cells large (in area):
@@ -71,7 +71,7 @@
       - remote_id as type `BIGINT`
       - version as type `BIGINT`
       - verify_status as type `TEXT CHECK(verify_status IN ('pending', 'verified'))`
-         - This column should always have possible values that match specifications/bathroom_db.txt's `bathroom_data_primary` table's Verify_Status enum type
+         - This column should always have possible values that match [`bathroom_data_primary` table's](./bathroom_db.md) [Verify_Status](./bathroom_db.md##verify_status) enum type
       - updated_at as type `DATETIME DEFAULT CURRENT_TIMESTAMP`
 - Whenever a (new/updated) Bathroom is retrieved:
    - Upsert it to the local SQLite Geopackage DB

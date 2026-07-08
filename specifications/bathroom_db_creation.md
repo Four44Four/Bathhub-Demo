@@ -13,4 +13,4 @@
        - This should be consistent across creation, updates, reading, and caching
  - When a bathroom is created:
     - It will be assigned to a h3 cell that covers its geographic region
- - See [caching policy](./serverside_caching.txt) for what happens to cached bathroom data/h3 cells when a bathroom is created
+ - See [caching policy](./serverside_caching.md) for what happens to cached bathroom data/h3 cells when a bathroom is created

@@ -4,7 +4,7 @@
 ## Menu screen height snap down or up percentage
  - 35%
 # Description
- - Has a pull handle at the base of the Globe viewport when not in Add Bathroom Mode (see specifications/add_bathroom_mode.txt for details)
+ - Has a pull handle at the base of the Globe viewport when not in [Add Bathroom Mode](./add_bathroom_mode.md)
     - When dragged up:
        - The entire menu will translate up at the same rate as the cursor or finger dragging it up
     - When clicked or tapped:

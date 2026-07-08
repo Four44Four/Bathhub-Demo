@@ -30,4 +30,4 @@
     - Pulling migration scripts:
        - 5 per minute
        - 50 per day
- - [Redis maximum memory eviction policy is least recently used](./serverside_caching.txt)
+ - [Redis maximum memory eviction policy is least recently used](./serverside_caching.md)

@@ -1,6 +1,8 @@
+# Custom types
+## Verify_Status 
+ - Enum of 'pending' and 'verified'
+# Description
  - Use PostGIS extension
- - Custom types:
-    - `Verify_Status` -> enum of 'pending' and 'verified'
  - Table name: bathroom_data_primary
  - SCHEMA:
     - id as type `BIGSERIAL`

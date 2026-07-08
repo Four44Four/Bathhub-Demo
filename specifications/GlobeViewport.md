@@ -22,7 +22,7 @@
     - On initially loading the app, do not render the ClickedIndicator at all
  - If the user has not allowed geolocation data permission or has blocked access to geolocation data, render a 2D static image according to ./app/_client/MapMarker.ts with its bottom midpoint centered on the center of the GlobeViewport 
  - When the user allows geolocation data permissions:
-    - If [globe movement user setting](./user_settings.txt##toggle-globe-movement-animations) is set to true:
+    - If [globe movement user setting](./user_settings.md##toggle-globe-movement-animations) is set to true:
        - Play an animation to smoothly ease Globe rotation and client zoom level at the same time until the center of viewport is over the location of the client at the zoom level of the [initial camera height user setting](##initial-camera-height)
     - Else:
        - Instantly snap Globe rotation so that the center of the client's viewport is over the client's location and zoom level is of the [initial camera height user setting](##initial-camera-height)
@@ -48,7 +48,7 @@ Viewport2d:
        - Located at the bottom left corner
        - Only appears when the geolocation of the client is detected (and permissions are granted)
        - When interacted with:
-           - If [globe movement user setting](./user_settings.txt##toggle-globe-movement-animations) is set to true:
+           - If [globe movement user setting](./user_settings.md##toggle-globe-movement-animations) is set to true:
               - Play an animation to smoothly ease Globe rotation and client zoom level at the same time until the center of viewport is over the location of the client at the zoom level of the [initial camera height user setting](##initial-camera-height)
            - Else:
               - Instantly snap Globe rotation so that the center of the client's viewport is over the client's location and zoom level is of the [initial camera height user setting](##initial-camera-height)
@@ -58,6 +58,6 @@ Viewport2d:
        - Located at the bottom right corner
        - Only appears when the geolocation of the client is detected (and permissions are granted)
        - When interacted with:
-          - See specifications/find_nearest_bathroom_logic.txt
+          - Trigger [this](./find_nearest_bathroom_logic.md)
  - If the user has clicked or tapped on the Globe and a valid ClickedIndicator exists:
     - If the user clicks or taps on the UI button to run a Test pathfind:

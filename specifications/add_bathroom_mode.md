@@ -2,7 +2,7 @@
 ## Request timeout limit
  - 15 seconds
 # Description
- - Entered when user interacts with add bathroom button from the swipe up menu (see specifications/swipe_up_menu.txt for details)
+ - Entered when user interacts with add bathroom button from the swipe up menu (see [swipe_up_menu](./swipe_up_menu.md) for details)
  - Hide all viewport2d elements except for the Cesium attribution text
  - Hide the pull handle for the swipe up menu
     - The user should not be able to enter the swipe up menu in this mode 

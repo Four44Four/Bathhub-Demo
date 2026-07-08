@@ -19,7 +19,7 @@
  - #45454D
 # Description
  - Will have header text "Settings" at the top left in large bold text
- - Will have a circular and "X" button with a white/"#FFFFFF" colored "X" and [this bg fill color](##./positive_negative_buttons.txt##negative-color) on the bottom right of the screen at all TIMESTAMP
+ - Will have a circular and "X" button with a white/"#FFFFFF" colored "X" and [this bg fill color](./positive_negative_buttons.md##negative-color) on the bottom right of the screen at all TIMESTAMP
     - Should be anchored to the same screen coordinates so that it remains static even if client scrolls down on the page 
     - Will close the settings screen entirely
        - Returns the client to the swipe-up menu
@@ -178,7 +178,7 @@
  - SQL Name: camera_init_surface_offset_m
  - SQL Type: INTEGER
  - SQL Restrictions: CHECK (camera_init_surface_offset_m >= <Min-value-for-this-setting> AND camera_init_surface_offset_m <= <Max-value-for-this-setting>)
-## Bathroom settings subsettings page:
+## Bathroom settings subsettings page
  - Setting type: Subsettings page
 ### Find nearest bathroom maximum distance
  - Setting type: Number slider

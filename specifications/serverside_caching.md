@@ -3,7 +3,7 @@
  - 3600 seconds
 # Description
  - All serverside DB reading will be cached in Redis
- - Redis TTL will be [this](##cached-data-ttl)
+ - Redis TTL will be [this](#cached-data-ttl)
  - Updates to data will invalidate its cached equivalent (if it is cached)
  - Deletes to the data will remove it from the cache (if it is cached)
  - Max memory eviction policy will be least recently used

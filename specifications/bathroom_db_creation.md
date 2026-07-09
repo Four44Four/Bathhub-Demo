@@ -8,7 +8,7 @@
     - Will create a version number: 0
     - (TESTING) Will generate a random 64 character [a-zA-Z0-9] string as `temp_data` 
  - On the serverside:
-    - Bathrooms will be grouped into H3 cells of [this resolution](##h3-cell-resolution)
+    - Bathrooms will be grouped into H3 cells of [this resolution](#h3-cell-resolution)
     - Bathrooms can only belong to 1 cell
        - This should be consistent across creation, updates, reading, and caching
  - When a bathroom is created:

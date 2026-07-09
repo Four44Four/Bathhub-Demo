@@ -19,19 +19,19 @@
        - When pressed:
           - Send off a request to server to save a new Bathroom entry with a verify status of 'pending'
           - Present a darkened overlay with a loading spinner at the center
-          - When the server responds with a success payload within [timeout duration](##request-timeout-limit):
+          - When the server responds with a success payload within [timeout duration](#request-timeout-limit):
              - Remove the loading icon but keep the bg
              - Present an important (popup) notification alert with the message text "Bathroom added !!" and a button at the bottom with greenish bg with the text "Ok"
              - When the user presses the "Ok" button:
                 - Remove the bg and exit this Add bathroom mode with a new Bathroom flag
                 - Requery the server for all Bathrooms in the viewport
                 - Render them as they are received
-          - When the server responds with a failure payload within [timeout duration](##request-timeout-limit):
+          - When the server responds with a failure payload within [timeout duration](#request-timeout-limit):
              - Remove the loading icon but keep the bg
              - Present an important (popup) notification alert with the message text "Something when wrong while adding Bathroom" and a button at the bottom with a reddish bg with the text "Ok"
              - When the user presses the "Ok" button:
                 - Remove the bg and exit this Add bathroom mode without a new Bathroom flag
-          - When the server does not respond within [timeout duration](##request-timeout-limit):
+          - When the server does not respond within [timeout duration](#request-timeout-limit):
              - Remove the loading icon but keep the bg
              - Present an important (popup) notification alert with the message text "Timed out while adding Bathroom" and a button at the bottom with a reddish bg with the text "Ok"
              - When the user presses the "Ok" button:

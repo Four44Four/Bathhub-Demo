@@ -14,7 +14,7 @@
        - Set <maybe-user-geo-position> to a newly polled user location
        - Set <maybe-user-geo-position-accuracy-meters> to the accuracy in meters of the newest polled position
        - Set <user-geo-position> to <maybe-user-geo-position>
- - Every [poll delay](##device-geolocation-poll-delay):
+ - Every [poll delay](#device-geolocation-poll-delay):
     - Update <maybe-user-geo-position> to a newly polled user location
     - Update <maybe-user-geo-position-accuracy-meters> to the accuracy in meters of the newest polled position
     - If <maybe-user-geo-position> with a radius of <maybe-user-geo-position-accuracy-meters> includes <user-geo-position>:

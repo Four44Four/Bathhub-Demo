@@ -1,5 +1,4 @@
 # Sprint 2 (basic backend)
- - Link user settings mentions in specifications to ./specifications/user_settings.md
  - Add rating system on bathrooms (stars 1-5)
  - Add comments system on bathrooms
  - Setup S3 for Supabase

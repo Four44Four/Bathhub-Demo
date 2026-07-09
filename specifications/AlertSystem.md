@@ -15,7 +15,7 @@
           - Has horizontally centered white text
        - When multiple band alerts are made/new band alerts are made before others are removed:
           - Place the most recent ones at the top
-       - Band alerts will stay on screen for [this long](##band-alert-default-persis-duration)
+       - Band alerts will stay on screen for [this long](#band-alert-default-persist-duration)
           - There is an option to have the band alert remain on-screen until it is manually removed
        - Can be a negative or positive alert
           - Negative alerts will have a different accent color for the button (reddish color) than the positive alert (greenish color)

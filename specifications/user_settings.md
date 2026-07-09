@@ -19,12 +19,12 @@
  - #45454D
 # Description
  - Will have header text "Settings" at the top left in large bold text
- - Will have a circular and "X" button with a white/"#FFFFFF" colored "X" and [this bg fill color](./positive_negative_buttons.md##negative-color) on the bottom right of the screen at all TIMESTAMP
+ - Will have a circular and "X" button with a white/"#FFFFFF" colored "X" and [this bg fill color](./positive_negative_buttons.md#negative-color) on the bottom right of the screen at all TIMESTAMP
     - Should be anchored to the same screen coordinates so that it remains static even if client scrolls down on the page 
     - Will close the settings screen entirely
        - Returns the client to the swipe-up menu
  - When the client has entered at least one subsetting page:
-    - Add a new borderless button with [this foreground color](##back-button-foreground-color) to the bottom section to the left of the "X" button with the text "Back"
+    - Add a new borderless button with [this foreground color](#back-button-foreground-color) to the bottom section to the left of the "X" button with the text "Back"
     - When this button is interacted with:
        - Move client to be at the top of the previous settings or subsettings page
  - Application logic affected by the user settings values will be solely drawn from dedicated in-memory datastructures which represent the user settings (this is **not** an in-memory SQLite DB)
@@ -55,20 +55,20 @@
     - Boolean option for turning something on and off
        - Will be a sliding circular switch (toggle slider)
        - When on:
-          - Background will have [this color](##setting-accent-color)
-          - Knob will have [this color](##boolean-setting-on-knob-color)
+          - Background will have [this color](#setting-accent-color)
+          - Knob will have [this color](#boolean-setting-on-knob-color)
        - When off:
-          - Background will have [this color](##setting-secondary-color)
-          - Knob will have [this color](##boolean-setting-off-knob-color)
+          - Background will have [this color](#setting-secondary-color)
+          - Knob will have [this color](#boolean-setting-off-knob-color)
        - Will **not** have a border on the knob or background
     - Number slider for scaling number value between 2 values
        - Will have an inclusive minimum and maximum values
        - Can have an integer variant which snaps to integers between the min and max values
        - Can have a float variant which allows for decimal values between the min and max values
        - Will have a rounded knob and rounded bar ends
-       - Knob will have [this color](##number-setting-knob-color)
-       - The bar on the left side of the knob will be [this color](##setting-accent-color)
-       - The bar on the right side fo the knob will be [this color](##setting-secondary-color)
+       - Knob will have [this color](#number-setting-knob-color)
+       - The bar on the left side of the knob will be [this color](#setting-accent-color)
+       - The bar on the right side fo the knob will be [this color](#setting-secondary-color)
        - Will **not** have a border on the knob or the bar (both on the left and right of the knob)
     - Subsettings page button with a ">" symbol at the right slider
        - Will open a new settings page with the subheader equivalent to the button's name 
@@ -79,7 +79,7 @@
        - If the header gets too long to fit on the screen:
           - Only show the tail end of the header and cut off everything before it with an ellipsis
              - EXAMPLE: "Settings > SubsettingsPage0 > SubsettingsPage1 > SubsettingsPage2" could be "...ubsettingsPage2"
-       - Make the ">" symbol have a value that is a [this fraction](##subsetting-page-separator-brightness-multiply-by) as bright much as the rest of the header text
+       - Make the ">" symbol have a value that is a [this fraction](#subsetting-page-separator-brightness-multiply-by) as bright much as the rest of the header text
  - Settings will be stored in dedicated datastructures which should be synced with a dedicated table in a local persistent SQLite db (the in-memory DB should **not** be a in-memory SQLite)
     - The datastructures representing the user settings should synchronize with the dedicated persistent SQLite table on app open (or page load for web-app demo)
     - The persistent SQLite table should only be written to during user settings migrations and user triggering explicit saves through the settings page's "Save changes" button
@@ -117,8 +117,8 @@
        - There is header text that reads "Loading updated settings"
        - There is a spinner under the text
        - When the screen is to be hidden:
-          - Animate it disappearing by sliding down and off the screen over a [this amount of time](##schema-out-of-date-screen-animate-duration)
-       - Try every [this amount of time](##schema-pull-retry-duration) to request a schema update from the server
+          - Animate it disappearing by sliding down and off the screen over a [this amount of time](#schema-out-of-date-screen-animate-duration)
+       - Try every [this amount of time](#schema-pull-retry-duration) to request a schema update from the server
           - The schema update request will consist of the client's current persistent schema version number
           - If the schema update request successfully reaches the server:
              - Server sends down a USER_SETTING_SCHEMA_UPDATE response along with the schema migration SQL scripts to change the client's schema version **by 1 increment**

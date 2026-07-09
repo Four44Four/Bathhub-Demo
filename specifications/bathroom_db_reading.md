@@ -11,7 +11,7 @@
  - 1 day
 # Description
 - Retrieving all bathrooms given a lower left location and an upper right location
-   - These will be calculated from the Globe viewport when the zoom level is close enough when the camera is within [this amount of distance from](##zoom-stop-distance-from-surface) the surface of the Globe
+   - These will be calculated from the Globe viewport when the zoom level is close enough when the camera is within [this amount of distance from](#zoom-stop-distance-from-surface) the surface of the Globe
    - The server should only send down the `location`, `verify_status`, `version`, and `id` for an upsert OR the server can send down a specific DELETE payload with just `id` to signal a local deletion
    - When a bounds query is received by the server:
       - All [h3 cells](./bathroom_db_creation.md) that are within those bounds will be returned and [cached](./serverside_caching.md)
@@ -33,14 +33,14 @@
             - Send all of the missing ones down as a special DELETE response with the attached `id`s so the client's local DB knows what to remove
    - Whenever a UPSERT response is prcoessed:
       - Insert it into the rendered found bathrooms datastructure
-      - Update the local cache DB as [detailed below](##localized-caching)
+      - Update the local cache DB as [detailed below](#localized-caching)
    - Whenever a DELETE response is processed:
       - Remove it from the rendered found bathrooms datastructure
-      - Update the local cache DB as [detailed below](##localized-caching)
+      - Update the local cache DB as [detailed below](#localized-caching)
    - Signal a update to the Globe to sync the rendering state to the state of the rendered found bathrooms datastructure
    - A new request to remote DB should not be attempted until a response from the server after querying the remote DB is received
-      - However, if the remote DB takes longer than a [this amount of time](##remote-db-read-timeout), then allow for a retry of requesting server for remote DB fresh data
-   - There will be a [minimum delay](##local-cache-db-scan-delay) (**not** debounce) for local in-memory DB scans
+      - However, if the remote DB takes longer than a [this amount of time](#remote-db-read-timeout), then allow for a retry of requesting server for remote DB fresh data
+   - There will be a [minimum delay](#local-cache-db-scan-delay) (**not** debounce) for local in-memory DB scans
       - While user is zooming or dragging on the Globe viewport, the local sync will occur every duration of time that this delay takes so that bathroom map markers will be updated as the client is panning or zooming around the Globe
       - These happen regardless of if the remote DB is not responding
       - If the remote DB does respond, always override the local in-memory DB with the remote DB
@@ -53,7 +53,7 @@
    - Any new ones should be rendered
    - If any have the same id and have the same verification status, leave them as is
 - All bathroom markers that are offscreeen from the Globe viewport should be culled
-   - Once the bathroom markers are far enough away from the center of the Globe viewport by a [this amount](##maximum-display-bathroom-map-markers-height):
+   - Once the bathroom markers are far enough away from the center of the Globe viewport by a [this amount](#maximum-display-bathroom-map-markers-height):
       - Destroy them (though this will incur a time cost if the client decides to return)
 - When zooming beyond the level that bathrooms would be queried at:
    - Stop rendering all the bathroom markers
@@ -71,7 +71,7 @@
       - remote_id as type `BIGINT`
       - version as type `BIGINT`
       - verify_status as type `TEXT CHECK(verify_status IN ('pending', 'verified'))`
-         - This column should always have possible values that match [`bathroom_data_primary` table's](./bathroom_db.md) [Verify_Status](./bathroom_db.md##verify_status) enum type
+         - This column should always have possible values that match [`bathroom_data_primary` table's](./bathroom_db.md) [Verify_Status](./bathroom_db.md#verify_status) enum type
       - updated_at as type `DATETIME DEFAULT CURRENT_TIMESTAMP`
 - Whenever a (new/updated) Bathroom is retrieved:
    - Upsert it to the local SQLite Geopackage DB
@@ -86,7 +86,7 @@
 - When the server sends back down the bathroom entry ids in a special DELETE response:
       - Delete all of the ids included in the response
 - When a bathroom is upserted:
-   - Evict the first bathroom that has stayed in the cache for longer than [this amount of time](##local-cache-db-expiry-time)
+   - Evict the first bathroom that has stayed in the cache for longer than [this amount of time](#local-cache-db-expiry-time)
       - Check if the oldest updated bathroom entry in the local cache DB is beyond that time from the current time and evict it if so
 - When the client "opens the app":
    - When as a web-app demo: this means when the website is visited

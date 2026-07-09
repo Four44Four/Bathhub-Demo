@@ -38,14 +38,14 @@
             - Clear the rendered path
 # Actions after interacting with Find bathroom button
  - Save the camera position and zoom level that the client is currently at at the moment that they interact with the Find nearest bathroom button from viewport2d
- - Client sends their current location + [user settings from under their bathroom settings subsettings](./user_settings.md##bathroom-settings-subsettings-page) to use as constraints
+ - Client sends their current location + [user settings from under their bathroom settings subsettings](./user_settings.md#bathroom-settings-subsettings-page) to use as constraints
  - On the server:
     - Using the provided user location and user bathroom constraints:
        - The nearest bathroom is calculated from the bathroom DB
        - Send the id and location of the nearest bathroom back to the client
     - If an error occurs while finding a bathroom:
        - Send back the error to the client
-    - If the bathroom takes longer than [this timeout duration](##nearest-bathroom-fetch-timeout-duration):
+    - If the bathroom takes longer than [this timeout duration](#nearest-bathroom-fetch-timeout-duration):
        - Send back the error to the client
     - If no bathroom is found with the provided user constraints:
        - Send a no bathroom response to the client
@@ -81,28 +81,28 @@
        - On init:
           - Once the Globe init viewport animation has concluded:
              - Update the LOD geometry of the path to match the camera's current zoom level
-       - On init and once the client has moved [this amount of distance](##path-update-min-distance) with [this debounce](##path-update-debounce-time):
+       - On init and once the client has moved [this amount of distance](#path-update-min-distance) with [this debounce](#path-update-debounce-time):
           - Enter Find bathroom mode
           - Send request to server to calculate/return path data from current client location to target bathroom location
           - (re)Render the path from the client to the target bathroom with the path data
              - The rendered path will be an anti-aliased line on the Globe with several gradient, shader-based rendering effect options
              - Sharp corners should be smoothed out
              - At different zoom levels when the client is determined to be [idle](./GlobeViewport.md):
-                - The geometry of the line will be updated so that the points will not be within a [this amount of pixels](##min-vertex-separation-pixel-distance) within each other on screen space coordinates
+                - The geometry of the line will be updated so that the points will not be within a [this amount of pixels](#min-vertex-separation-pixel-distance) within each other on screen space coordinates
                 - It should be simplified and render the line using less points at distant levels of zoom
                 - It should be detailed and render the line using more points at close levels of zoom
-                - Trigger path LOD rebuilding after [this amount of time](##path-lod-rebuild-debounce-time) that the client spends idling
+                - Trigger path LOD rebuilding after [this amount of time](#path-lod-rebuild-debounce-time) that the client spends idling
                 - The LOD geometry should **not** be updated if the zoom level has not changed if the user interacts with it
           - To implement updating the path when after a duration of time AND when a user moves enough:
             - Store the previous location that the path was updated at, starting with the original location of the client when starting the Find bathroom process
             - Store the previous timestamp that the path was updated at, starting with the time that the first path data was requested
-            - If the current time and the previous time exceeds [this debounce duration](##path-update-debounce-time):
+            - If the current time and the previous time exceeds [this debounce duration](#path-update-debounce-time):
                - Calculate the spherical pythagorean distance between the previous path request location and current client location
-               - If it exceeds [this amount of distance](##path-update-min-distance):
+               - If it exceeds [this amount of distance](#path-update-min-distance):
                   - Update the path data from the server
-                  - If there was an error or the response took longer than [this time duration](##path-data-fetch-timeout-duration) while fetching updated path data:
+                  - If there was an error or the response took longer than [this time duration](#path-data-fetch-timeout-duration) while fetching updated path data:
                      - Display a negative band alert at the top of the screen with white text saying "Error while updating path" if there was an error, or "Timed out while updating path" if the request for new path data timed out
-                     - Wait a [this debounce duration](##path-update-debounce-time)
+                     - Wait a [this debounce duration](#path-update-debounce-time)
                      - Retry fetching updated path data given the user's current location and the current target bathroom location:
                         - This happens independently from the user location and time debounced path updating logic
                      - Depending on if the retry succeeds or fails for whatever reason:
@@ -111,8 +111,8 @@
                      - Update the previous path request timestamp to the current time
                      - Update the previous path request location to the current location
                      - Rerender the path once the path data is received by the client
-       - The client location used for checking for if client has moved or if client has arrived at target bathroom or any other future client location related nearest bathroom finding action will be updated at intervals of [this time duration](##path-client-location-update-delay)
- - Once client reaches within [this distance](##arrived-at-bathroom-distance) from the target bathroom:
+       - The client location used for checking for if client has moved or if client has arrived at target bathroom or any other future client location related nearest bathroom finding action will be updated at intervals of [this time duration](#path-client-location-update-delay)
+ - Once client reaches within [this distance](#arrived-at-bathroom-distance) from the target bathroom:
     - Set `bathroomActiveNavigation` to false
     - Clear the currently rendered path
     - Display a positive band alert at the top of the screen with white text saying "Reached target bathroom"

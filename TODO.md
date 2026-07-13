@@ -1,5 +1,6 @@
 # Sprint 2 (basic backend)
  - Add rating system on bathrooms (stars 1-5)
+ - Add existence voting system on bathrooms
  - Add comments system on bathrooms
  - Setup S3 for Supabase
  - Add media upload system on bathrooms

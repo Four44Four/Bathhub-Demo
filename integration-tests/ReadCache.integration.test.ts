@@ -12,6 +12,7 @@ import { parseCachedBathroomH3CellRecord } from "../app/_server/pure/redis/Cache
 import {
   buildBathroomH3CellCacheKey,
   buildReadCacheKey,
+  READ_CACHE_TABLE_BATHROOM_DATA_PRIMARY,
   resolveReadCacheNamespace,
 } from "../app/_server/pure/redis/RedisConstants";
 import { createReadCache } from "../app/_server/redis/ReadCache";
@@ -63,13 +64,17 @@ describe("Redis-backed serverside read cache", () => {
     await disconnectRedisTestGlobals();
   });
 
-  test("caches bathroom rows with namespace:resource:id keys", async () => {
+  test("caches bathroom rows with namespace:table-name:id keys", async () => {
     const row = await bathroomDbCreate(-6.1, -11.2);
     createdBathroomIds.push(row.id);
 
     const redis = getRedisPort();
     const namespace = resolveReadCacheNamespace(process.env.NODE_ENV);
-    const key = buildReadCacheKey(namespace, "bathroom", row.id);
+    const key = buildReadCacheKey(
+      namespace,
+      READ_CACHE_TABLE_BATHROOM_DATA_PRIMARY,
+      row.id,
+    );
     const cached = await redis.getString(key);
 
     expect(cached).not.toBeNull();
@@ -86,7 +91,7 @@ describe("Redis-backed serverside read cache", () => {
     const redis = getRedisPort();
     const key = buildReadCacheKey(
       resolveReadCacheNamespace(process.env.NODE_ENV),
-      "bathroom",
+      READ_CACHE_TABLE_BATHROOM_DATA_PRIMARY,
       row.id,
     );
 
@@ -127,7 +132,11 @@ describe("Redis-backed serverside read cache", () => {
       },
     });
     const namespace = resolveReadCacheNamespace(process.env.NODE_ENV);
-    const key = buildReadCacheKey(namespace, "bathroom", row.id);
+    const key = buildReadCacheKey(
+      namespace,
+      READ_CACHE_TABLE_BATHROOM_DATA_PRIMARY,
+      row.id,
+    );
     const h3Cell = bathroomLatLongToH3Cell(row, H3_BATHROOM_CELL_RESOLUTION);
     const h3Key = buildBathroomH3CellCacheKey(
       namespace,
@@ -231,7 +240,11 @@ describe("Redis-backed serverside read cache", () => {
     );
     expect(await redis.getString(h3Key)).toBeNull();
 
-    const bathroomKey = buildReadCacheKey(namespace, "bathroom", row.id);
+    const bathroomKey = buildReadCacheKey(
+      namespace,
+      READ_CACHE_TABLE_BATHROOM_DATA_PRIMARY,
+      row.id,
+    );
     expect(await redis.getString(bathroomKey)).not.toBeNull();
   });
 });

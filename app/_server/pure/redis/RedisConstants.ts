@@ -6,7 +6,14 @@ export const REDIS_MAX_MEMORY_EVICTION_POLICY = "allkeys-lru" as const;
 
 export type ReadCacheNamespace = "dev" | "test" | "prod";
 
-export type ReadCacheResource = "bathroom" | "user";
+export const READ_CACHE_TABLE_BATHROOM_DATA_PRIMARY =
+  "bathroom_data_primary" as const;
+
+export const READ_CACHE_TABLE_USER_DATA_PRIMARY = "user_data_primary" as const;
+
+export type ReadCacheTableName =
+  | typeof READ_CACHE_TABLE_BATHROOM_DATA_PRIMARY
+  | typeof READ_CACHE_TABLE_USER_DATA_PRIMARY;
 
 export function resolveReadCacheNamespace(
   nodeEnv: string | undefined,
@@ -22,10 +29,10 @@ export function resolveReadCacheNamespace(
 
 export function buildReadCacheKey(
   namespace: ReadCacheNamespace,
-  resource: ReadCacheResource,
+  tableName: ReadCacheTableName,
   id: number,
 ): string {
-  return `${namespace}:${resource}:${id}`;
+  return `${namespace}:${tableName}:${id}`;
 }
 
 export function buildBathroomH3CellCacheKey(

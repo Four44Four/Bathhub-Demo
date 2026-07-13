@@ -11,6 +11,8 @@ import {
 import {
   buildBathroomH3CellCacheKey,
   buildReadCacheKey,
+  READ_CACHE_TABLE_BATHROOM_DATA_PRIMARY,
+  READ_CACHE_TABLE_USER_DATA_PRIMARY,
   REDIS_MAX_MEMORY_EVICTION_POLICY,
   REDIS_RATE_LIMIT_KEY_PREFIX,
   resolveReadCacheNamespace,
@@ -23,9 +25,13 @@ import {
 } from "../app/_server/ServerConstants";
 
 describe("RedisConstants", () => {
-  test("buildReadCacheKey follows namespace:resource:id scheme", () => {
-    expect(buildReadCacheKey("dev", "bathroom", 8)).toBe("dev:bathroom:8");
-    expect(buildReadCacheKey("prod", "user", 193)).toBe("prod:user:193");
+  test("buildReadCacheKey follows namespace:table-name:id scheme", () => {
+    expect(
+      buildReadCacheKey("dev", READ_CACHE_TABLE_BATHROOM_DATA_PRIMARY, 8),
+    ).toBe("dev:bathroom_data_primary:8");
+    expect(
+      buildReadCacheKey("prod", READ_CACHE_TABLE_USER_DATA_PRIMARY, 193),
+    ).toBe("prod:user_data_primary:193");
   });
 
   test("buildBathroomH3CellCacheKey namespaces resolution-specific cells", () => {

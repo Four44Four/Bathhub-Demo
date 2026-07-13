@@ -20,6 +20,7 @@ import { bathroomLatLongToH3Cell } from "../pure/geospatial/BathroomH3Cells";
 import {
   buildBathroomH3CellCacheKey,
   buildReadCacheKey,
+  READ_CACHE_TABLE_BATHROOM_DATA_PRIMARY,
   resolveReadCacheNamespace,
   type ReadCacheNamespace,
 } from "../pure/redis/RedisConstants";
@@ -66,7 +67,11 @@ declare global {
 }
 
 function bathroomCacheKey(config: ReadCacheConfig, id: number): string {
-  return buildReadCacheKey(config.namespace, "bathroom", id);
+  return buildReadCacheKey(
+    config.namespace,
+    READ_CACHE_TABLE_BATHROOM_DATA_PRIMARY,
+    id,
+  );
 }
 
 function bathroomH3CellCacheKey(

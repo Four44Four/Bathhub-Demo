@@ -12,7 +12,7 @@
 # Description
 - Retrieving all bathrooms given a lower left location and an upper right location
    - These will be calculated from the Globe viewport when the zoom level is close enough when the camera is within [this amount of distance from](#zoom-stop-distance-from-surface) the surface of the Globe
-   - The server should only send down the `location`, `verify_status`, `version`, and `id` for an upsert OR the server can send down a specific DELETE payload with just `id` to signal a local deletion
+   - The server should only send down the [`location`, `verify_status`, `version`, and `id`](./bathroom_db.md#description) for an upsert OR the server can send down a specific DELETE payload with just `id` to signal a local deletion
    - When a bounds query is received by the server:
       - All [h3 cells](./bathroom_db_creation.md) that are within those bounds will be returned and [cached](./serverside_caching.md)
       - H3 cells will store full bathroom rows

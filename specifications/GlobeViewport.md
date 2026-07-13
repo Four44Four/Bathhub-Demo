@@ -17,9 +17,9 @@
     - The interpolated zoom time should be the [same duration](#mouse-zoom-interpolated-animate-duration) regardless of camera altitude
  - When using 2 fingers on the Globe, panning and zooming can happen simultaneously
  - When any action that triggers a zoom occurs, render a 2D image on the viewport according to ./app/_client/ZoomIndicator.tsx, centered on the spot on the screen where the mouse cursor is (in the case of mouse scroll wheel zoom or right click drag zoom), or the midpoint between the 2 fingers (in the case of 2 finger pinch zooming) 
- - The following references to GlobeImage refer to a Cesium billboard entity/image that always faces the camera
- - Clicking or tapping on the Globe moves GlobeImage according to ./app/_client/ClickedIndicator.ts to be centered on the calculated 3D point on the Globe
-    - On initially loading the app, do not render the ClickedIndicator at all
+ - The following references to GlobeImage refer to a Cesium billboard entity/image that always faces the 
+ - If the user clicks or taps on the Globe AND [the zoom level is low enough to render bathroom markers](./bathroom_db_reading.md#maximum-display-bathroom-map-markers-height) AND the user clicks or taps on the image of the Bathroom map markers:
+     - Open that bathroom map marker's [bathroom page](./bathroom_page.md)
  - If the user has not allowed geolocation data permission or has blocked access to geolocation data, render a 2D static image according to ./app/_client/MapMarker.ts with its bottom midpoint centered on the center of the GlobeViewport 
  - When the user allows geolocation data permissions:
     - If [globe movement user setting](./user_settings.md#toggle-globe-movement-animations) is set to true:
@@ -59,5 +59,3 @@ Viewport2d:
        - Only appears when the geolocation of the client is detected (and permissions are granted)
        - When interacted with:
           - Trigger [this](./find_nearest_bathroom_logic.md)
- - If the user has clicked or tapped on the Globe and a valid ClickedIndicator exists:
-    - If the user clicks or taps on the UI button to run a Test pathfind:

@@ -3,6 +3,8 @@
  - 90%
 ## Menu screen height snap down or up percentage
  - 35%
+## Move animation duration
+ - 600 milliseconds
 # Description
  - Has a pull handle at the base of the Globe viewport when not in [Add Bathroom Mode](./add_bathroom_mode.md)
     - When dragged up:
@@ -13,7 +15,7 @@
     - The menu has a maximum top edge Y position that is [this percentage](#menu-screen-height-maximum-percentage) of the screen height, which leaves a portion of the background elements (viewport2d and Globe viewport) visible above the top of the menu
     - All viewport2d and Globe viewport elements are hidden behind a darkened overlay that progressively fades into maximum opacity as the menu approaches maximum translation up
        - Those elements behind the overlay cannot be interacted with
-       - Any click or tap on the elements behind the overlay that are visible behind the darkened overlay above the top of the menu will cause the menu to collapse back down
+       - Any click or tap on the elements behind the overlay that are visible behind the darkened overlay above the top of the menu will cause the menu to collapse back down over [this duration](#move-animation-duration)
     - When the user drags vertically on a part of the menu that is part of the background or the pull handle of the menu:
        - Drag the entire menu in that direction as well
     - When the user clicks or taps on the pull handle:

@@ -315,6 +315,27 @@ export function swipeMenuHeightAfterHandlePointerUp(
   );
 }
 
+/** Quadratic ease-in-out progress for timed menu move animations. */
+export function swipeMenuMoveEasingProgress01(linearProgress01: number): number {
+  const t = Utils.clamp01(linearProgress01);
+  if (t < 0.5) return 2 * t * t;
+  return 1 - (-2 * t + 2) ** 2 / 2;
+}
+
+/** Interpolate menu height during a timed move animation. */
+export function swipeMenuAnimatedHeightPx(
+  fromHeightPx: number,
+  toHeightPx: number,
+  elapsedMs: number,
+  durationMs: number,
+): { heightPx: number; complete: boolean } {
+  const linearProgress01 =
+    durationMs > 0 ? Utils.clamp01(elapsedMs / durationMs) : 1;
+  const progress01 = swipeMenuMoveEasingProgress01(linearProgress01);
+  const heightPx = fromHeightPx + (toHeightPx - fromHeightPx) * progress01;
+  return { heightPx, complete: linearProgress01 >= 1 };
+}
+
 /** Collapse to the handle strip when the menu is open above collapsed height. */
 export function swipeMenuHeightAfterOutsideTap(
   currentHeightPx: number,

@@ -148,6 +148,8 @@ const SwipeMenu0 = {
     BG_COLOR: "#FFFFFF",
     /** Fraction of viewport height the menu can expand to when fully open. */
     MAX_EXPAND_RATIO: 0.9,
+    /** Milliseconds for menu move animations (e.g. backdrop dismiss collapse). */
+    MOVE_ANIMATION_DURATION_MS: 200,
     /** Pull handle pill height in CSS pixels. */
     PULL_HANDLE_HEIGHT_PX: 4,
     // ensure it's always a pill

@@ -1,4 +1,6 @@
 import {
+  swipeMenuMoveEasingProgress01,
+  swipeMenuAnimatedHeightPx,
   swipeMenuBackdropOpacity,
   swipeMenuBackdropOpacityLerp,
   swipeMenuContentHeightPx,
@@ -238,6 +240,32 @@ describe("SwipeMenu", () => {
     expect(swipeMenuHeightAfterOutsideTap(inactive, inactive, max)).toBe(
       inactive,
     );
+  });
+
+  test("swipeMenuMoveEasingProgress01 uses quadratic ease-in-out", () => {
+    expect(swipeMenuMoveEasingProgress01(0)).toBe(0);
+    expect(swipeMenuMoveEasingProgress01(0.25)).toBe(0.125);
+    expect(swipeMenuMoveEasingProgress01(0.5)).toBe(0.5);
+    expect(swipeMenuMoveEasingProgress01(0.75)).toBe(0.875);
+    expect(swipeMenuMoveEasingProgress01(1)).toBe(1);
+  });
+
+  test("swipeMenuAnimatedHeightPx interpolates with quadratic easing", () => {
+    expect(
+      swipeMenuAnimatedHeightPx(100, 20, 0, 600),
+    ).toEqual({ heightPx: 100, complete: false });
+    expect(
+      swipeMenuAnimatedHeightPx(100, 20, 150, 600),
+    ).toEqual({ heightPx: 90, complete: false });
+    expect(
+      swipeMenuAnimatedHeightPx(100, 20, 300, 600),
+    ).toEqual({ heightPx: 60, complete: false });
+    expect(
+      swipeMenuAnimatedHeightPx(100, 20, 600, 600),
+    ).toEqual({ heightPx: 20, complete: true });
+    expect(
+      swipeMenuAnimatedHeightPx(100, 20, 900, 600),
+    ).toEqual({ heightPx: 20, complete: true });
   });
 
   test("swipeMenuHeightAfterHandlePointerUp ignores drags and non-handle taps", () => {

@@ -20,6 +20,7 @@ import { viewport2dChromeHidden } from "../pure/viewport2d/FindNearestBathroomSt
 
 import {
   SWIPE_MENU_HANDLE_ATTR,
+  swipeMenuAnimatedHeightPx,
   swipeMenuBackdropOpacity,
   swipeMenuContentHeightPx,
   swipeMenuHeightAfterHandlePointerUp,
@@ -108,10 +109,13 @@ export function MainMenu({
     startClientY: number;
     startedOnHandle: boolean;
   } | null>(null);
+  const heightPxRef = useRef(inactiveHeightPx);
+  const heightAnimFrameRef = useRef<number | null>(null);
   const outsideDismissRef = useRef<HTMLDivElement>(null);
 
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
   const [heightPx, setHeightPx] = useState(inactiveHeightPx);
+  heightPxRef.current = heightPx;
   const {
     opacity: backdropOpacity,
     animateTo: animateBackdropOpacityTo,
@@ -184,21 +188,71 @@ export function MainMenu({
     resolveMaxHeightPx,
   ]);
 
+  const cancelHeightAnimation = useCallback(() => {
+    if (heightAnimFrameRef.current !== null) {
+      cancelAnimationFrame(heightAnimFrameRef.current);
+      heightAnimFrameRef.current = null;
+    }
+  }, []);
+
+  const animateHeightTo = useCallback(
+    (targetHeightPx: number) => {
+      cancelHeightAnimation();
+      const fromHeightPx = heightPxRef.current;
+      if (fromHeightPx === targetHeightPx) return;
+
+      const dragMaxHeightPx = resolveMaxHeightPx();
+      const durationMs = SwipeMenuConsts.MOVE_ANIMATION_DURATION_MS;
+      const startMs =
+        typeof performance !== "undefined" ? performance.now() : Date.now();
+
+      const tick = (nowMs: number) => {
+        const { heightPx: nextHeightPx, complete } = swipeMenuAnimatedHeightPx(
+          fromHeightPx,
+          targetHeightPx,
+          nowMs - startMs,
+          durationMs,
+        );
+        heightPxRef.current = nextHeightPx;
+        setHeightPx(nextHeightPx);
+        setBackdropOpacityImmediate(
+          swipeMenuBackdropOpacity(
+            nextHeightPx,
+            inactiveHeightPx,
+            dragMaxHeightPx,
+          ),
+        );
+        if (complete) {
+          heightAnimFrameRef.current = null;
+        } else {
+          heightAnimFrameRef.current = requestAnimationFrame(tick);
+        }
+      };
+
+      heightAnimFrameRef.current = requestAnimationFrame(tick);
+    },
+    [
+      cancelHeightAnimation,
+      inactiveHeightPx,
+      resolveMaxHeightPx,
+      setBackdropOpacityImmediate,
+    ],
+  );
+
+  useEffect(() => () => cancelHeightAnimation(), [cancelHeightAnimation]);
+
   const collapseIfOpenAboveCollapsedRef = useRef<() => void>(() => {});
   useLayoutEffect(() => {
     collapseIfOpenAboveCollapsedRef.current = () => {
       const dragMaxHeightPx = resolveMaxHeightPx();
-      setHeightPx((current) => {
-        const next = swipeMenuHeightAfterOutsideTap(
-          current,
-          inactiveHeightPx,
-          dragMaxHeightPx,
-        );
-        setBackdropOpacityImmediate(
-          swipeMenuBackdropOpacity(next, inactiveHeightPx, dragMaxHeightPx),
-        );
-        return next;
-      });
+      const current = heightPxRef.current;
+      const targetHeightPx = swipeMenuHeightAfterOutsideTap(
+        current,
+        inactiveHeightPx,
+        dragMaxHeightPx,
+      );
+      if (targetHeightPx === current) return;
+      animateHeightTo(targetHeightPx);
     };
   });
 
@@ -208,7 +262,7 @@ export function MainMenu({
     if (!el) return;
     return subscribeOnTap(
       () => {
-        suppressViewportClicksBriefly();
+        suppressViewportClicksBriefly(SwipeMenuConsts.MOVE_ANIMATION_DURATION_MS);
         collapseIfOpenAboveCollapsedRef.current();
       },
       el,
@@ -238,6 +292,7 @@ export function MainMenu({
     if (immersiveModeActive) return;
     if (e.button !== 0) return;
     if (swipeMenuPointerTargetIsInteractive(e.target)) return;
+    cancelHeightAnimation();
     measureViewport();
     dragRef.current = {
       pointerId: e.pointerId,
@@ -278,41 +333,35 @@ export function MainMenu({
     }
     const dragMaxHeightPx = resolveMaxHeightPx();
     const pointerDeltaY = e.clientY - drag.startClientY;
-    setHeightPx((current) => {
-      const afterHandleTap = swipeMenuHeightAfterHandlePointerUp(
-        drag.startedOnHandle,
-        pointerDeltaY,
-        current,
-        inactiveHeightPx,
-        dragMaxHeightPx,
-      );
-      if (afterHandleTap !== current) {
-        animateBackdropOpacityTo(
-          swipeMenuBackdropOpacity(
-            afterHandleTap,
-            inactiveHeightPx,
-            dragMaxHeightPx,
-          ),
-        );
-        return afterHandleTap;
-      }
+    const current = heightPxRef.current;
+    const afterHandleTap = swipeMenuHeightAfterHandlePointerUp(
+      drag.startedOnHandle,
+      pointerDeltaY,
+      current,
+      inactiveHeightPx,
+      dragMaxHeightPx,
+    );
+    if (afterHandleTap !== current) {
+      animateHeightTo(afterHandleTap);
+      return;
+    }
 
-      const target = swipeMenuSnapTarget(
-        current,
-        inactiveHeightPx,
-        dragMaxHeightPx,
-        SwipeMenuConsts.EXPAND_SNAP_THRESHOLD_RATIO,
-      );
-      const snapped = swipeMenuSnapHeightPx(
-        target,
-        inactiveHeightPx,
-        dragMaxHeightPx,
-      );
-      setBackdropOpacityImmediate(
-        swipeMenuBackdropOpacity(snapped, inactiveHeightPx, dragMaxHeightPx),
-      );
-      return snapped;
-    });
+    const target = swipeMenuSnapTarget(
+      current,
+      inactiveHeightPx,
+      dragMaxHeightPx,
+      SwipeMenuConsts.EXPAND_SNAP_THRESHOLD_RATIO,
+    );
+    const snapped = swipeMenuSnapHeightPx(
+      target,
+      inactiveHeightPx,
+      dragMaxHeightPx,
+    );
+    heightPxRef.current = snapped;
+    setHeightPx(snapped);
+    setBackdropOpacityImmediate(
+      swipeMenuBackdropOpacity(snapped, inactiveHeightPx, dragMaxHeightPx),
+    );
   };
 
   const shellStyle: CSSProperties = {

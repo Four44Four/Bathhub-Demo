@@ -9,6 +9,7 @@
  - 500 milliseconds
 ## Local cache DB expiry time
  - 1 day
+
 # Description
 - Retrieving all bathrooms given a lower left location and an upper right location
    - These will be calculated from the Globe viewport when the zoom level is close enough when the camera is within [this amount of distance from](#zoom-stop-distance-from-surface) the surface of the Globe
@@ -21,6 +22,7 @@
          - Bypass the h3 cells and directly use a bounding box query to return the bathroom rows
 - Maintain a separate datastructure for all currently rendered found bathrooms
    - This should have the `id`s of the bathrooms as keys so that duplicate bathrooms from the local DB and the remote UPSERT response are deduplicated
+   - Each one of these will be displayed as a [bathroom marker](#bathroom-marker)
 - Every time the client moves the viewport/Globe and the zoom level is close enough:
    - Find all bathrooms in the local SQLite Geopackage DB that fall within the viewport bounds
    - Save the current contents of the rendered found bathrooms datastructure
@@ -52,12 +54,21 @@
    - Destroy and render all of the ones that are different (same id but different verification status)
    - Any new ones should be rendered
    - If any have the same id and have the same verification status, leave them as is
-- All bathroom markers that are offscreeen from the Globe viewport should be culled
-   - Once the bathroom markers are far enough away from the center of the Globe viewport by a [this amount](#maximum-display-bathroom-map-markers-height):
+- All bathroom markers that are offscreen from the Globe viewport should be culled
+   - Once the [bathroom markers](#bathroom-marker) are far enough away from the center of the Globe viewport by a [this amount](#maximum-display-bathroom-map-markers-height):
       - Destroy them (though this will incur a time cost if the client decides to return)
 - When zooming beyond the level that bathrooms would be queried at:
-   - Stop rendering all the bathroom markers
-## Localized caching
+   - Stop rendering all the [bathroom markers](#bathroom-marker)
+
+# Bathroom marker
+ - A 3D billboard map marker that is located on the location of a bathroom record
+    - Bottom middle edge is on the point of the Globe where the bathroom is located
+ - If the bathroom is verified:
+    - It's image is the [verified bathroom marker image](./resources.md#verified-bathroom-marker-image)
+ - Else:
+    - It's image is the [pending verify bathroom marker image](./resources.md#pending-verify-bathroom-marker-image)
+
+# Localized caching
 - Maintain a local SQLite database with GeoPackage which will be backed up to disk in a .gpkg file
    - There will be a client platform agnostic interface to perform operations on this local DB
    - On the web app demo:

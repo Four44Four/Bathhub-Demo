@@ -293,6 +293,8 @@ const BLACK_BASE_FILTER = "brightness(0) saturate(100%)";
 const PRECOMPUTED_BLACK_MONO_ICON_CSS_FILTERS: Readonly<Record<string, string>> = {
   "#e4e4ff":
     "brightness(0) saturate(100%) invert(86%) sepia(11%) saturate(1160%) hue-rotate(198deg) brightness(104%) contrast(101%)",
+  "#00001b":
+    "brightness(0) saturate(100%) invert(7%) sepia(16%) saturate(7088%) hue-rotate(232deg) brightness(91%) contrast(125%)",
 };
 
 const filterCache = new Map<string, string>(

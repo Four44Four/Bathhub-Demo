@@ -1,6 +1,12 @@
 "use client";
 
-import { useState, type CSSProperties, type MouseEventHandler, type ReactNode } from "react";
+import {
+  useMemo,
+  useState,
+  type CSSProperties,
+  type MouseEventHandler,
+  type ReactNode,
+} from "react";
 
 import { BtnInteractAnim, Button as ButtonConsts } from "../ComponentConstants";
 import {
@@ -67,6 +73,22 @@ function ButtonImage({
   isSvg: boolean;
   imageColor?: string;
 }) {
+  const invertedImageColor = useMemo(
+    () => (imageColor != null ? invertHexHslValue(imageColor) : undefined),
+    [imageColor],
+  );
+  const normalIconFilter = useMemo(
+    () => (imageColor != null ? blackMonoIconCssFilter(imageColor) : undefined),
+    [imageColor],
+  );
+  const invertedIconFilter = useMemo(
+    () =>
+      invertedImageColor != null
+        ? blackMonoIconCssFilter(invertedImageColor)
+        : undefined,
+    [invertedImageColor],
+  );
+
   const imageStyle: CSSProperties = {
     height: imageSizePx,
     width: imageSizePx,
@@ -75,21 +97,49 @@ function ButtonImage({
     objectFit: "contain",
   };
 
-  if (isSvg && imageColor != null && normalSrc != null) {
-    const filter = blackMonoIconCssFilter(
-      isHighlighted ? invertHexHslValue(imageColor) : imageColor,
-    );
+  if (
+    isSvg &&
+    imageColor != null &&
+    normalSrc != null &&
+    normalIconFilter != null &&
+    invertedIconFilter != null
+  ) {
     return (
-      <img
-        src={normalSrc}
-        alt=""
-        draggable={false}
+      <div
         style={{
-          ...imageStyle,
-          filter,
-          transition: `filter ${interactTransition}`,
+          position: "relative",
+          width: imageSizePx,
+          height: imageSizePx,
+          flexShrink: 0,
         }}
-      />
+      >
+        <img
+          src={normalSrc}
+          alt=""
+          draggable={false}
+          style={{
+            ...imageStyle,
+            position: "absolute",
+            inset: 0,
+            filter: normalIconFilter,
+            opacity: isHighlighted ? 0 : 1,
+            transition: `opacity ${interactTransition}`,
+          }}
+        />
+        <img
+          src={normalSrc}
+          alt=""
+          draggable={false}
+          style={{
+            ...imageStyle,
+            position: "absolute",
+            inset: 0,
+            filter: invertedIconFilter,
+            opacity: isHighlighted ? 1 : 0,
+            transition: `opacity ${interactTransition}`,
+          }}
+        />
+      </div>
     );
   }
 

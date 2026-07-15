@@ -24,6 +24,13 @@ describe("blackMonoIconCssFilter", () => {
     expect(blackMonoIconCssFilter("#e4e4ff")).toBe(blackMonoIconCssFilter("#E4E4FF"));
   });
 
+  test("uses SSR-stable precomputed filter for inverted viewport icon color", () => {
+    expect(blackMonoIconCssFilter("#00001B")).toBe(
+      "brightness(0) saturate(100%) invert(7%) sepia(16%) saturate(7088%) hue-rotate(232deg) brightness(91%) contrast(125%)",
+    );
+    expect(blackMonoIconCssFilter("#00001b")).toBe(blackMonoIconCssFilter("#00001B"));
+  });
+
   test("caches repeated lookups", () => {
     const first = blackMonoIconCssFilter("#FF0000");
     const second = blackMonoIconCssFilter("#FF0000");

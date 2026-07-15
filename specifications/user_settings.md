@@ -3,6 +3,10 @@
  - #000000
 ## Background color
  - #FFFFFF
+## Setting hover brightness value multiply factor
+ - 0.9
+## Setting hover animate duration
+ - 200 milliseconds
 ## Back button foreground color
  - #B5B5C4
 ## Schema out of date screen animate duration
@@ -91,6 +95,8 @@
           - Hide [this again](#save-user-settings-button) until another setting changes
 
 ## Setting types
+ - When any setting is hovered:
+    - Multiply the entire setting's (including the background and foreground elements) brightness value by [this factor](#setting-hover-brightness-value-multiply-factor) over [this duration](#setting-hover-animate-duration)
 ### Boolean setting
  - Sliding circular switch/toggle slider that animates over [this duration](#boolean-setting-toggle-animate-duration)
  - Knob and background are borderless
@@ -110,7 +116,7 @@
  - Has an integer variant which snaps to integers between the min and max values
  - Has a float variant which allows for decimal values between the min and max values
 ### Subpage setting
- - Has a ">" symbol on the right side
+ - Has the [arrow icon](./resources.md#arrow-icon) with [this color](#setting-secondary-color) on the right side
  - When interacted with:
     - Enter into that subpage
        - Header will show "Settings > <current-settings-page-header>"

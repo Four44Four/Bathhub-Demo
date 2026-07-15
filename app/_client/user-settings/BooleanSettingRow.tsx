@@ -3,6 +3,7 @@
 import { UserSettings as UserSettingsConsts } from "../ComponentConstants";
 import { booleanToggleKnobOffsetPx } from "../pure/user-settings/UserSettingsSliderLayout";
 import { TextWeight } from "../Utils";
+import { useUserSettingsRowHover } from "./useUserSettingsRowHover";
 
 const TRACK_WIDTH_PX = UserSettingsConsts.BOOLEAN_SWITCH_TRACK_WIDTH_PX;
 const TRACK_HEIGHT_PX = UserSettingsConsts.BOOLEAN_SWITCH_TRACK_HEIGHT_PX;
@@ -24,6 +25,7 @@ export function BooleanSettingRow({
   onBlockedInteraction,
   onChange,
 }: BooleanSettingRowProps) {
+  const { rowHoverProps, rowHoverStyle } = useUserSettingsRowHover(disabled);
   const knobOffsetPx = booleanToggleKnobOffsetPx(
     checked,
     TRACK_WIDTH_PX,
@@ -34,6 +36,7 @@ export function BooleanSettingRow({
   return (
     <label
       aria-disabled={disabled}
+      {...rowHoverProps}
       onPointerDown={(event) => {
         if (!disabled) return;
         event.preventDefault();
@@ -48,6 +51,7 @@ export function BooleanSettingRow({
         borderBottom: `1px solid ${UserSettingsConsts.ROW_BORDER_COLOR}`,
         cursor: disabled ? "default" : "pointer",
         opacity: disabled ? 0.55 : 1,
+        ...rowHoverStyle,
       }}
     >
       <span

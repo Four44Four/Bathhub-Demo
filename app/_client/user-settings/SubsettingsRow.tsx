@@ -1,7 +1,11 @@
 "use client";
 
+import { useMemo } from "react";
+
 import { UserSettings as UserSettingsConsts } from "../ComponentConstants";
+import { blackMonoIconCssFilter } from "../pure/svg/BlackMonoIconCssFilter";
 import { TextWeight } from "../Utils";
+import { useUserSettingsRowHover } from "./useUserSettingsRowHover";
 
 export type SubsettingsRowProps = {
   label: string;
@@ -16,10 +20,17 @@ export function SubsettingsRow({
   onBlockedInteraction,
   onClick,
 }: SubsettingsRowProps) {
+  const { rowHoverProps, rowHoverStyle } = useUserSettingsRowHover(disabled);
+  const arrowIconFilter = useMemo(
+    () => blackMonoIconCssFilter(UserSettingsConsts.SUBPAGE_ARROW_COLOR),
+    [],
+  );
+
   return (
     <button
       type="button"
       aria-disabled={disabled}
+      {...rowHoverProps}
       onClick={(event) => {
         if (disabled) {
           event.preventDefault();
@@ -37,10 +48,10 @@ export function SubsettingsRow({
         padding: "14px 16px",
         border: "none",
         borderBottom: `1px solid ${UserSettingsConsts.ROW_BORDER_COLOR}`,
-        background: "transparent",
         cursor: disabled ? "default" : "pointer",
         textAlign: "left",
         opacity: disabled ? 0.55 : 1,
+        ...rowHoverStyle,
       }}
     >
       <span
@@ -53,18 +64,20 @@ export function SubsettingsRow({
       >
         {label}
       </span>
-      <span
+      <img
+        src={UserSettingsConsts.SUBPAGE_ARROW_ICON}
+        alt=""
         aria-hidden="true"
-        className={TextWeight.BOLD}
+        draggable={false}
         style={{
-          color: UserSettingsConsts.SUBPAGE_CHEVRON_COLOR,
-          fontSize: 18,
-          lineHeight: 1,
+          width: UserSettingsConsts.SUBPAGE_ARROW_SIZE_PX,
+          height: UserSettingsConsts.SUBPAGE_ARROW_SIZE_PX,
           flexShrink: 0,
+          display: "block",
+          objectFit: "contain",
+          filter: arrowIconFilter,
         }}
-      >
-        &gt;
-      </span>
+      />
     </button>
   );
 }

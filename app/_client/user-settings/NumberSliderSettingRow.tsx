@@ -9,6 +9,7 @@ import {
   numberSliderValueRatio,
 } from "../pure/user-settings/UserSettingsSliderLayout";
 import { clamp, TextWeight } from "../Utils";
+import { useUserSettingsRowHover } from "./useUserSettingsRowHover";
 
 const TRACK_HEIGHT_PX = UserSettingsConsts.NUMBER_SLIDER_TRACK_HEIGHT_PX;
 const KNOB_SIZE_PX = UserSettingsConsts.NUMBER_SLIDER_KNOB_SIZE_PX;
@@ -34,6 +35,7 @@ export function NumberSliderSettingRow({
   onBlockedInteraction,
   onChange,
 }: NumberSliderSettingRowProps) {
+  const { rowHoverProps, rowHoverStyle } = useUserSettingsRowHover(disabled);
   const trackRef = useRef<HTMLDivElement>(null);
   const [trackWidthPx, setTrackWidthPx] = useState(0);
 
@@ -71,6 +73,7 @@ export function NumberSliderSettingRow({
   return (
     <div
       aria-disabled={disabled}
+      {...rowHoverProps}
       onPointerDown={(event) => {
         if (!disabled) return;
         event.preventDefault();
@@ -80,6 +83,7 @@ export function NumberSliderSettingRow({
         padding: "14px 16px",
         borderBottom: `1px solid ${UserSettingsConsts.ROW_BORDER_COLOR}`,
         opacity: disabled ? 0.55 : 1,
+        ...rowHoverStyle,
       }}
     >
       <div

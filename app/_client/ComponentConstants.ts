@@ -221,9 +221,12 @@ const UserSettings0 = {
     HEADER_TEXT_COLOR: "#0E0F11",
     HEADER_SEPARATOR_BRIGHTNESS_RATIO: 0.7,
     PAGE_BG: "#FFFFFF",
+    ROW_HOVER_BRIGHTNESS_FACTOR: 0.9,
+    ROW_HOVER_TRANSITION_MS: 200,
     ROW_BORDER_COLOR: "#E6E6F0",
     LABEL_COLOR: "#3A3D4A",
-    SUBPAGE_CHEVRON_COLOR: "#B5B5C4",
+    SUBPAGE_ARROW_ICON: "/arrow.svg",
+    SUBPAGE_ARROW_SIZE_PX: 18,
     DANGER_BAND_MESSAGE: "Danger: user settings cannot be changed",
     /** Off boolean switch background; number-slider bar right of the knob (CSS hex). */
     COMPONENT_BG_COLOR: "#DCDCE4",
@@ -245,6 +248,8 @@ const UserSettings0 = {
 
 export const UserSettings = {
     ...UserSettings0,
+    /** Setting secondary color; subpage arrow icon tint (see user_settings.md). */
+    SUBPAGE_ARROW_COLOR: UserSettings0.COMPONENT_BG_COLOR,
     BOTTOM_SCROLL_MARGIN_PX:
         UserSettings0.CLOSE_BTN_SIZE_PX + UserSettings0.CLOSE_BTN_INSET_PX + 12,
     HEADER_SEPARATOR_COLOR: lerpHex(

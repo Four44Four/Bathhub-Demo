@@ -43,6 +43,9 @@
 # Bathhub logo
  - "public/bathhub_logo_no_bg.svg"
 
+# Arrow icon
+ - "public/arrow.svg"
+
 # Regular font
  - "fonts/NotoSans-Regular.ttf"
 

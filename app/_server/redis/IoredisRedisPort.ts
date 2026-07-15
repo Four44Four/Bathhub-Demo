@@ -1,3 +1,4 @@
+import { EventEmitter } from "node:events";
 import "server-only";
 
 import { Redis } from "ioredis";
@@ -30,7 +31,7 @@ export function createIoredisRedisPort(redisUrl: string): RedisPort {
     console.error("[redis] connection error:", error.message);
   });
 
-  client.once("ready", () => {
+  (client as unknown as EventEmitter).once("ready", () => {
     void ensureMaxMemoryEvictionPolicy(client);
   });
 

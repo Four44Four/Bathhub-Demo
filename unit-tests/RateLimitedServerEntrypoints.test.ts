@@ -57,6 +57,7 @@ import {
 import { getPathBetweenPoints } from "../app/_server/Pathfind";
 import { getUserSettingsSchemaMigration } from "../app/_server/user-settings/UserSettingsSchemaMigration";
 import { RateLimitExceededError } from "../app/_server/rate-limit/enforceRateLimit";
+import { type ViewportBounds } from "../app/_shared/BathroomDataPrimary";
 
 describe("rate-limited server entrypoints", () => {
   beforeEach(() => {
@@ -163,11 +164,9 @@ describe("rate-limited server entrypoints", () => {
       allowed: false,
       message,
     });
-    const bounds = {
-      minLatitude: 0,
-      maxLatitude: 1,
-      minLongitude: 0,
-      maxLongitude: 1,
+    const bounds: ViewportBounds = {
+      lowerLeft: { latitude: 0, longitude: 0 },
+      upperRight: { latitude: 1, longitude: 1 },
     };
 
     await expect(bathroomDbReadInBounds(bounds)).rejects.toThrow(message);

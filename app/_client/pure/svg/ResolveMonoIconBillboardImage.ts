@@ -1,4 +1,4 @@
-import { recolorBlackSvgMarkup, recoloredBlackSvgDataUrl } from "./RecolorBlackSvg";
+import { recoloredBlackSvgDataUrl } from "./RecolorBlackSvg";
 
 export type MonoIconBillboardMode = "baked" | "tint";
 
@@ -17,7 +17,7 @@ export async function resolveMonoIconBillboardImage(
   const response = await fetch(imagePath);
   const markup = await response.text();
   const bakedColor = mode === "baked" ? color : WHITE_BILLBOARD_TINT;
-  return recoloredBlackSvgDataUrl(recolorBlackSvgMarkup(markup, bakedColor));
+  return recoloredBlackSvgDataUrl(markup, bakedColor);
 }
 
 /** Billboard tint to pair with a baked mono-color SVG texture. */

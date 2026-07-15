@@ -26,7 +26,7 @@ describe("installInitialUserSettingsDbFromServer", () => {
     const db = createMockDb();
     const bytes = new Uint8Array([0x53, 0x51, 0x4c, 0x69]);
     const deps: InstallInitialUserSettingsDbDeps = {
-      fetchDefaultDbBytes: jest.fn(async () => ({ ok: true, bytes })),
+      fetchDefaultDbBytes: jest.fn(async () => ({ ok: true as const, bytes })),
       isValidSqliteBytes: jest.fn(() => true),
     };
 
@@ -44,7 +44,7 @@ describe("installInitialUserSettingsDbFromServer", () => {
     });
     const deps: InstallInitialUserSettingsDbDeps = {
       fetchDefaultDbBytes: jest.fn(async () => ({
-        ok: true,
+        ok: true as const,
         bytes: new Uint8Array([1, 2, 3]),
       })),
       isValidSqliteBytes: jest.fn(() => true),
@@ -61,8 +61,8 @@ describe("installInitialUserSettingsDbFromServer", () => {
     const onRateLimitViolation = jest.fn();
     const deps: InstallInitialUserSettingsDbDeps = {
       fetchDefaultDbBytes: jest.fn(async () => ({
-        ok: false,
-        reason: "rate_limited",
+        ok: false as const,
+        reason: "rate_limited" as const,
         errorMsg:
           "Rate limit exceeded: default user settings database download is limited to 5 requests per minute.",
       })),

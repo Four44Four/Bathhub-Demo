@@ -24,6 +24,7 @@ export function installClickedIndicator(
     opacity: ClickedIndicatorConsts.OPACITY,
     image: ClickedIndicatorConsts.IMAGE,
     size: ClickedIndicatorConsts.SIZE,
+    monoColorIconMode: "baked",
   });
 
   const request = () => scene.requestRender();

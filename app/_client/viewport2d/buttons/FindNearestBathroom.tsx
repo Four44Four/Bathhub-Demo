@@ -85,6 +85,7 @@ export function FindNearestBathroom({
         circular
         circularPaddingPx={BTN_CIRCULAR_PADDING_PX}
         imageSrc={BTN_IMG_SRC}
+        imageColor={ButtonConsts.ICON_COLOR}
         imageSizePx={btnImgSizePx}
         onClick={onClick ?? beginFindNearestBathroom}
       />

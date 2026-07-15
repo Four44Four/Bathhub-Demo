@@ -15,6 +15,7 @@ export type ButtonSvgInteractSrc = {
 
 export function useButtonSvgInteractSrc(
   imageSrc: string | undefined,
+  buildInvertedMarkup = true,
 ): ButtonSvgInteractSrc {
   const [normalSrc, setNormalSrc] = useState<string | undefined>();
   const [invertedSrc, setInvertedSrc] = useState<string | undefined>();
@@ -34,7 +35,11 @@ export function useButtonSvgInteractSrc(
       .then((svgMarkup) => {
         if (cancelled) return;
         setNormalSrc(svgMarkupToDataUrl(svgMarkup));
-        setInvertedSrc(svgMarkupToDataUrl(invertSvgMarkupHexColors(svgMarkup)));
+        setInvertedSrc(
+          buildInvertedMarkup
+            ? svgMarkupToDataUrl(invertSvgMarkupHexColors(svgMarkup))
+            : undefined,
+        );
       })
       .catch(() => {
         if (!cancelled) {
@@ -46,7 +51,7 @@ export function useButtonSvgInteractSrc(
     return () => {
       cancelled = true;
     };
-  }, [imageSrc, isSvg]);
+  }, [buildInvertedMarkup, imageSrc, isSvg]);
 
   return {
     isSvg,

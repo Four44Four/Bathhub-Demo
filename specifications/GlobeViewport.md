@@ -7,6 +7,8 @@
  - 50 milliseconds
 ## Init animate duration
  - 1500 milliseconds
+## User location marker color
+ - #E4E4FF
 
 # Description
  - Globe can be rotated/panned by dragging left click, dragging 1 finger across screen, or dragging 2 fingers across screen
@@ -50,7 +52,7 @@
     - Geographic location or `null`
 ## Description (user current location marker)
  - If [`location` property](#location-user-current-location-marker) is `null`:
-    - Render the [user location marker icon](./resources.md#user-location-marker-image) as a 2D static image with the middle of the bottom edge centered on the horizontal and vertical center of the Globe viewport
+    - Render the [user location marker icon](./resources.md#user-location-marker-image) with [this color](#user-location-marker-color) as a 2D static image with the middle of the bottom edge centered on the horizontal and vertical center of the Globe viewport
     - There should be a slight drop shadow to match the 3D billboard image version of this
  - Else:
-    - Render the [user location marker icon](./resources.md#user-location-marker-image) as a 3D billboard image that always faces the camera on [`location` property](#location-user-current-location-marker)
+    - Render the [user location marker icon](./resources.md#user-location-marker-image) with [this color](#user-location-marker-color) as a 3D billboard image that always faces the camera on [`location` property](#location-user-current-location-marker)

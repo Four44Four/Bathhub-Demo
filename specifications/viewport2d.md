@@ -7,6 +7,8 @@
  - 1 second
 ## Zoom indicator flash duration
  - 500 milliseconds
+## Find bathroom icon color
+ - #E4E4FF
 
 # Description
  - 2D UI at static positions overlayed on the [Globe viewport](./GlobeViewport.md)
@@ -25,7 +27,7 @@
 
 ## Find nearest bathroom button
  - Circular button
- - Has [find bathroom icon](./resources.md#find-bathroom-icon) image
+ - Has [find bathroom icon](./resources.md#find-bathroom-icon) with [this color](#find-bathroom-icon-color) image
  - Located at the bottom right corner
  - Only appears when the geolocation of the client is detected (and permissions are granted)
  - When interacted with:

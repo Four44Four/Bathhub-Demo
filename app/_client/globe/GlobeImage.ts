@@ -1,5 +1,11 @@
 import type * as CesiumTypes from "cesium";
 
+import {
+  monoIconBakedBillboardTint,
+  resolveMonoIconBillboardImage,
+  type MonoIconBillboardMode,
+} from "../pure/svg/ResolveMonoIconBillboardImage";
+
 export type GlobeImageInitOptions = {
   /** Entity label in the viewer entity collection */
   name?: string;
@@ -14,6 +20,11 @@ export type GlobeImageInitOptions = {
   heightAboveEllipsoidM?: number;
   horizontalOrigin?: CesiumTypes.HorizontalOrigin;
   verticalOrigin?: CesiumTypes.VerticalOrigin;
+  /**
+   * When set, fetches a black mono-color SVG `image` and prepares it for Cesium:
+   * `baked` recolors fills to `color`; `tint` recolors fills to white and keeps `color` as billboard tint.
+   */
+  monoColorIconMode?: MonoIconBillboardMode;
 };
 
 export type GlobeImageHandle = {
@@ -39,7 +50,13 @@ export function installGlobeImage(
     heightAboveEllipsoidM = 10,
     horizontalOrigin: horizontalOriginOpt,
     verticalOrigin: verticalOriginOpt,
+    monoColorIconMode,
   } = options;
+
+  const bakedTint =
+    monoColorIconMode === "baked"
+      ? monoIconBakedBillboardTint(opacity)
+      : { color, opacity };
 
   const scene = viewer.scene;
   const ellipsoid = scene.globe.ellipsoid;
@@ -48,7 +65,7 @@ export function installGlobeImage(
   const position = new Cesium.ConstantPositionProperty(positionValue);
 
   const billboardColor = new Cesium.ConstantProperty(
-    Cesium.Color.fromCssColorString(color).withAlpha(opacity),
+    Cesium.Color.fromCssColorString(bakedTint.color).withAlpha(bakedTint.opacity),
   );
 
   const entity = viewer.entities.add({
@@ -67,6 +84,18 @@ export function installGlobeImage(
   });
 
   const requestRender = () => scene.requestRender();
+
+  if (monoColorIconMode != null) {
+    void resolveMonoIconBillboardImage(image, monoColorIconMode, color)
+      .then((resolvedImage) => {
+        if (entity.billboard == null) return;
+        entity.billboard.image = new Cesium.ConstantProperty(resolvedImage);
+        requestRender();
+      })
+      .catch(() => {
+        // Keep the unresolved public path if recoloring fails.
+      });
+  }
 
   const setLatLonDegrees = (latDeg: number, lonDeg: number) => {
     const latRad = Cesium.Math.toRadians(latDeg);

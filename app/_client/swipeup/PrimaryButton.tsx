@@ -13,6 +13,7 @@ import {
   BtnInteractAnim,
   SwipeMenu as SwipeMenuConsts,
 } from "../ComponentConstants";
+import { blackMonoIconCssFilter } from "../pure/svg/BlackMonoIconCssFilter";
 
 export type PrimaryButtonProps = {
   label: string;
@@ -99,6 +100,7 @@ export function PrimaryButton({
     height: "auto",
     objectFit: "contain",
     display: "block",
+    filter: blackMonoIconCssFilter(SwipeMenuConsts.PRIMARY_BTN_ICON_COLOR),
   };
 
   return (

@@ -32,6 +32,7 @@ export function installDebugCrosshair(
     size: DebugCrosshairConsts.SIZE,
     horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
     verticalOrigin: Cesium.VerticalOrigin.CENTER,
+    monoColorIconMode: "tint",
   });
 
   let cancelled = false;

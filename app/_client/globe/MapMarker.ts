@@ -68,6 +68,7 @@ export function installMapMarker(
     size: MapMarkerConsts.SIZE,
     horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
     verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+    monoColorIconMode: "baked",
   });
 
   let geoLocked = false;

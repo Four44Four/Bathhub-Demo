@@ -6,7 +6,9 @@ import { BtnInteractAnim, Button as ButtonConsts } from "../ComponentConstants";
 import {
   viewportButtonBrightnessInteractColors,
   viewportButtonInteractColors,
+  invertHexHslValue,
 } from "../pure/viewport2d/ButtonInteractColor";
+import { blackMonoIconCssFilter } from "../pure/svg/BlackMonoIconCssFilter";
 import {
   areViewportClicksSuppressed,
   useSwipeMenuBlocksViewport,
@@ -43,6 +45,8 @@ export type ButtonProps = {
   circularPaddingPx?: number;
   /** When set, dims fill/outline/text via brightness multiply on hover/press instead of HSL invert. */
   interactBrightnessMult?: number;
+  /** CSS hex tint for mono-color SVG icons (see resources.md mono-color icon policy). */
+  imageColor?: string;
   onClick?: MouseEventHandler<HTMLButtonElement>;
 };
 
@@ -53,6 +57,7 @@ function ButtonImage({
   normalSrc,
   invertedSrc,
   isSvg,
+  imageColor,
 }: {
   imageSizePx: number;
   isHighlighted: boolean;
@@ -60,6 +65,7 @@ function ButtonImage({
   normalSrc: string | undefined;
   invertedSrc: string | undefined;
   isSvg: boolean;
+  imageColor?: string;
 }) {
   const imageStyle: CSSProperties = {
     height: imageSizePx,
@@ -68,6 +74,24 @@ function ButtonImage({
     flexShrink: 0,
     objectFit: "contain",
   };
+
+  if (isSvg && imageColor != null && normalSrc != null) {
+    const filter = blackMonoIconCssFilter(
+      isHighlighted ? invertHexHslValue(imageColor) : imageColor,
+    );
+    return (
+      <img
+        src={normalSrc}
+        alt=""
+        draggable={false}
+        style={{
+          ...imageStyle,
+          filter,
+          transition: `filter ${interactTransition}`,
+        }}
+      />
+    );
+  }
 
   if (isSvg && invertedSrc != null && normalSrc != null) {
     return (
@@ -136,6 +160,7 @@ export function Button({
   circular = false,
   circularPaddingPx = 0,
   interactBrightnessMult,
+  imageColor,
   onClick,
 }: ButtonProps) {
   const viewportPointerBlocked = useSwipeMenuBlocksViewport();
@@ -164,7 +189,10 @@ export function Button({
           isHighlighted,
         );
 
-  const { isSvg, normalSrc, invertedSrc } = useButtonSvgInteractSrc(imageSrc);
+  const { isSvg, normalSrc, invertedSrc } = useButtonSvgInteractSrc(
+    imageSrc,
+    imageColor == null,
+  );
 
   const hasText = text != null && text.length > 0;
   const hasImage = imageSrc != null && imageSrc.length > 0;
@@ -186,6 +214,7 @@ export function Button({
       normalSrc={normalSrc}
       invertedSrc={invertedSrc}
       isSvg={isSvg}
+      imageColor={imageColor}
     />
   ) : null;
 

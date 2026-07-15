@@ -11,6 +11,7 @@ import {
 import type * as CesiumTypes from "cesium";
 
 import { Globe as GlobeConsts, MapMarker as MapMarkerConsts, Path as PathConsts } from "../ComponentConstants";
+import { composeCssFilters, blackMonoIconCssFilter } from "../pure/svg/BlackMonoIconCssFilter";
 import { loadCesium } from "./loadCesium";
 import * as Utils from "../Utils";
 import * as ServerDebug from "../../_server/Debug";
@@ -1263,8 +1264,10 @@ export function GlobeViewport({
                 style={{
                   opacity: MapMarkerConsts.OPACITY,
                   // Thin dark rim around the alpha silhouette (Cesium-style billboard edge).
-                  filter:
+                  filter: composeCssFilters(
+                    blackMonoIconCssFilter(MapMarkerConsts.COLOR),
                     "drop-shadow(0 0 0.55px rgba(12, 13, 18, 0.92)) drop-shadow(0 0 1.15px rgba(12, 13, 18, 0.42))",
+                  ),
                 }}
                 width={MapMarkerConsts.SIZE}
               />

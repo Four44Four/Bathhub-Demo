@@ -20,6 +20,8 @@ export const Button = {
     DEFAULT_LINE_COLOR: "#20232D",
     LINE_THICKNESS: 1,
     TEXT_COLOR: "#AFB4C6",
+    /** Mono-color icon tint for viewport2d circular buttons (find bathroom, etc.). */
+    ICON_COLOR: "#E4E4FF",
 } as const;
 
 export const BtnInteractAnim = {
@@ -43,14 +45,14 @@ export const ClickedIndicator = {
     // Public asset path for the clicked-location indicator.
     // Default points at `./public/bathhub_logo_no_bg.svg`.
     IMAGE: "/bathhub_logo_no_bg.svg",
-    COLOR: "#FFF",
+    COLOR: "#E4E4FF",
     OPACITY: 1.0,
 } as const;
 
 export const MapMarker = {
     SIZE: 50,
     IMAGE: "/bathhub_map_marker.svg",
-    COLOR: "#FFF",
+    COLOR: "#E4E4FF",
     OPACITY: 1.0,
 } as const;
 
@@ -167,6 +169,8 @@ const SwipeMenu0 = {
     PRIMARY_BTN_HEIGHT_PX: 100,
     PRIMARY_BTN_FONT_SIZE: 10,
     PRIMARY_BTN_FONT_COLOR: "#B5B5C4",
+    /** Main-menu primary button icon tint (see swipe_up_menu/main_menu.md). */
+    PRIMARY_BTN_ICON_COLOR: "#E4E4FF",
     BTN_INTERACT_BG_COLOR: "#E6E6F0",
     BTN_INTERACT_FG_VALUE_FACTOR: 0.7,
     PRIMARY_BTN_IMG_WIDTH_RATIO: 0.5,

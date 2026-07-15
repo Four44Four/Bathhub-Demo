@@ -6,6 +6,7 @@ import type { OrsDirectionsGeoJsonResponse } from "@/types/ors-directions-geojso
 
 import { type PathParams, type Point } from "../../_shared/Utils";
 import { getOpenRouteServiceApiKey } from "../EnvironmentVariables";
+import { OPEN_ROUTE_SERVICE_API_HOST } from "../pure/openRouteServiceApi";
 
 /** Request timeout for remote OpenRouteService API calls (ms). */
 const ORS_TIMEOUT_MS = 5000;
@@ -16,12 +17,13 @@ const ORS_DIRECTIONS_FORMAT = "geojson" as const;
 export type ORSProfile = "driving-car" | "driving-hgv" | "cycling-regular" | "cycling-mountain" | "cycling-road" | "cycling-electric" | "foot-walking" | "foot-hiking" | "wheelchair";
 
 /**
- * Creates a Directions client for the public ORS API (`https://api.openrouteservice.org`).
+ * Creates a Directions client for the public ORS API ({@link OPEN_ROUTE_SERVICE_API_HOST}).
  * Uses {@link getOpenRouteServiceApiKey} and {@link ORS_TIMEOUT_MS}.
  */
 function createOpenRouteDirectionsClient() {
   return new Openrouteservice.Directions({
     api_key: getOpenRouteServiceApiKey(),
+    host: OPEN_ROUTE_SERVICE_API_HOST,
     timeout: ORS_TIMEOUT_MS,
   });
 }

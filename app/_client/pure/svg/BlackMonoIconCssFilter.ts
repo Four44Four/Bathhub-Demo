@@ -137,14 +137,31 @@ class FilterColor {
 
 type SolverResult = { loss: number; values: number[] };
 
+/** Deterministic PRNG so SSR and client hydration produce identical CSS filters. */
+function createSeededRandom(seed: number): () => number {
+  let state = seed >>> 0;
+  return () => {
+    state = (state + 0x6d2b79f5) >>> 0;
+    let t = Math.imul(state ^ (state >>> 15), 1 | state);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function seedFromRgb(r: number, g: number, b: number): number {
+  return (Math.imul(r, 2654435761) ^ Math.imul(g, 2246822519) ^ Math.imul(b, 3266489917)) >>> 0;
+}
+
 class CssFilterSolver {
   private readonly target: FilterColor;
   private readonly targetHsl: Hsl;
   private readonly reusedColor = new FilterColor(0, 0, 0);
+  private readonly random: () => number;
 
   constructor(target: FilterColor) {
     this.target = target;
     this.targetHsl = target.hsl();
+    this.random = createSeededRandom(seedFromRgb(target.r, target.g, target.b));
   }
 
   solve(): SolverResult {
@@ -194,7 +211,7 @@ class CssFilterSolver {
     for (let k = 0; k < iters; k++) {
       const ck = c / (k + 1) ** gamma;
       for (let i = 0; i < 6; i++) {
-        deltas[i] = Math.random() > 0.5 ? 1 : -1;
+        deltas[i] = this.random() > 0.5 ? 1 : -1;
         highArgs[i] = current[i] + ck * deltas[i];
         lowArgs[i] = current[i] - ck * deltas[i];
       }
@@ -267,13 +284,31 @@ function formatFilterValues(values: number[]): string {
 }
 
 const BLACK_BASE_FILTER = "brightness(0) saturate(100%)";
-const filterCache = new Map<string, string>();
+
+/**
+ * SSR-stable filters for colors used in server-rendered markup. The SPSA solver
+ * can converge to different values in Node (SSR) vs the browser, causing React
+ * hydration mismatches on inline `style.filter`.
+ */
+const PRECOMPUTED_BLACK_MONO_ICON_CSS_FILTERS: Readonly<Record<string, string>> = {
+  "#e4e4ff":
+    "brightness(0) saturate(100%) invert(86%) sepia(11%) saturate(1160%) hue-rotate(198deg) brightness(104%) contrast(101%)",
+};
+
+const filterCache = new Map<string, string>(
+  Object.entries(PRECOMPUTED_BLACK_MONO_ICON_CSS_FILTERS),
+);
 
 /** CSS `filter` chain that tints a uniformly black mono-color icon to `targetColor`. */
 export function blackMonoIconCssFilter(targetColor: string): string {
   const normalized = targetColor.trim().toLowerCase();
   if (normalized === "#000" || normalized === "#000000" || normalized === "black") {
     return BLACK_BASE_FILTER;
+  }
+
+  const precomputed = PRECOMPUTED_BLACK_MONO_ICON_CSS_FILTERS[normalized];
+  if (precomputed != null) {
+    return precomputed;
   }
 
   const cached = filterCache.get(normalized);

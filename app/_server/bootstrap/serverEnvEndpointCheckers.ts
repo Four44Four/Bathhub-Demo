@@ -1,7 +1,11 @@
 import {
   classifyEndpointFailure,
-  isHttpAuthFailureStatus,
 } from "../pure/classifyEndpointFailure.ts";
+import {
+  buildOpenRouteServiceApiKeyProbeUrl,
+  classifyOpenRouteServiceKeyProbeResponse,
+  HEIGIT_API_BASE_URL,
+} from "../pure/openRouteServiceApiKeyProbe.ts";
 import {
   classifySupabaseKeyProbeResponse,
   formatSupabaseKeyProbeDetail,
@@ -16,20 +20,13 @@ import {
 } from "../pure/RequiredEnvVars.ts";
 export const ENV_ENDPOINT_CHECK_TIMEOUT_MS = 5000;
 
-export const OPEN_ROUTE_SERVICE_API_BASE_URL =
-  "https://api.openrouteservice.org" as const;
+export { HEIGIT_API_BASE_URL };
 
 /** GoTrue endpoint used to verify a Supabase API key is accepted by the gateway. */
 export const SUPABASE_KEY_PROBE_PATH = "/auth/v1/user" as const;
 
 /** Lightweight health probe for Supabase reachability (no auth required). */
 export const SUPABASE_HEALTH_PROBE_PATH = "/auth/v1/health" as const;
-
-/** Minimal ORS directions probe coordinates (Karlsruhe sample from ORS docs). */
-const ORS_AUTH_PROBE_COORDINATES = [
-  [8.681495, 49.41461],
-  [8.686507, 49.41943],
-] as const;
 
 export type ServerEnvEndpointCheckers = {
   checkOpenRouteServiceApiKey: (
@@ -69,23 +66,23 @@ export async function checkOpenRouteServiceApiKey(
   apiKey: string,
   timeoutMs: number = ENV_ENDPOINT_CHECK_TIMEOUT_MS,
 ): Promise<EnvVarUsabilityIssue | null> {
-  const url = `${OPEN_ROUTE_SERVICE_API_BASE_URL}/v2/directions/driving-car/geojson`;
+  const url = buildOpenRouteServiceApiKeyProbeUrl();
 
   try {
     const response = await fetch(url, {
-      method: "POST",
+      method: "GET",
       headers: {
         Authorization: apiKey,
         Accept: "application/json",
-        "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        coordinates: ORS_AUTH_PROBE_COORDINATES,
-      }),
       signal: AbortSignal.timeout(timeoutMs),
     });
 
-    if (isHttpAuthFailureStatus(response.status)) {
+    const probeResult = classifyOpenRouteServiceKeyProbeResponse(
+      response.status,
+    );
+
+    if (probeResult === "unauthenticated") {
       return {
         name: OPEN_ROUTE_SERVICE_API_KEY_ENV,
         kind: "unauthenticated",
@@ -93,7 +90,7 @@ export async function checkOpenRouteServiceApiKey(
       };
     }
 
-    if (response.status >= 500) {
+    if (probeResult === "server_error") {
       return {
         name: OPEN_ROUTE_SERVICE_API_KEY_ENV,
         kind: "unreachable",

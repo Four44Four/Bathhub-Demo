@@ -1262,7 +1262,6 @@ export function GlobeViewport({
                 height={MapMarkerConsts.SIZE}
                 src={MapMarkerConsts.IMAGE}
                 style={{
-                  opacity: MapMarkerConsts.OPACITY,
                   // Thin dark rim around the alpha silhouette (Cesium-style billboard edge).
                   filter: composeCssFilters(
                     blackMonoIconCssFilter(MapMarkerConsts.COLOR),

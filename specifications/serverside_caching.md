@@ -1,6 +1,7 @@
 # Constants
 ## Cached data TTL
  - 3600 seconds
+
 # Description
  - All serverside DB reading will be cached in Redis
  - Redis TTL will be [this](#cached-data-ttl)

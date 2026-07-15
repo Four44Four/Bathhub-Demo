@@ -15,6 +15,7 @@
  - 15 seconds
 ## Path client location update delay
  - 1 second
+
 # Components definitions
  - `bathroomActiveNavigation` is a variable that should persist across sessions
     - On the web-app demo:
@@ -23,7 +24,7 @@
        - It should stay on if the client closes app or turns off device
  - Confirm Find Bathroom mode:
     - Similar to Add bathroom mode, where most viewport2d elements + swipe-up menu are removed
-    - Has X and checkmark buttons at bottom to reject navigation or start navigating
+    - Has [X and checkmark buttons](./add_bathroom_mode.md#reject-or-confirm-buttons) at bottom to reject navigation or start navigating
  - Find bathroom mode
     - Restore viewport2d buttons EXCEPT for Find nearest bathroom button
     - Replace Find nearest bathroom button with a circular button reddish button of the same size with an X
@@ -36,6 +37,7 @@
             - Restore Find bathroom button
             - Set `bathroomActiveNavigation` to false
             - Clear the rendered path
+
 # Actions after interacting with Find bathroom button
  - Save the camera position and zoom level that the client is currently at at the moment that they interact with the Find nearest bathroom button from viewport2d
  - Client sends their current location + [user settings from under their bathroom settings subsettings](./user_settings.md#bathroom-settings-subsettings-page) to use as constraints
@@ -51,19 +53,19 @@
        - Send a no bathroom response to the client
  - On the client:
     - If the bathroom response timed out:
-       - Render a negative important notification that the bathroom response timed out with text "Finding bathroom timed out" and a single accent colored button with text "Ok"
+       - Render a [negative important notification](./AlertSystem.md#major-alerts) that the bathroom response timed out with text "Finding bathroom timed out" and a single button with text "Ok"
     - If an error is received:
-       - Render a negative important notification with text "An error occurred while finding nearest bathroom" with single button with text "Ok"
+       - Render a [negative important notification](./AlertSystem.md#major-alerts) with text "An error occurred while finding nearest bathroom" with single button with text "Ok"
     - If no bathrooms were found:
-       - Render a negative important notification with text "No valid nearby bathrooms were found" with single button with text "Ok"
+       - Render a [negative important notification](./AlertSystem.md#major-alerts) with text "No valid nearby bathrooms were found" with single button with text "Ok"
     - If the bathroom response came back in time:
        - Enter into Confirm Find Bathroom mode:
           - Camera animates (depending on config option) over found bathroom at height from Globe surface "Init camera height" from user settings:
              - Upon reaching the found bathroom:
                 - Force a query for the bathrooms visible in the current Globe viewport so that the found bathroom marker will be rendered
-          - If client interacts with X button to reject the bathroom:
+          - If client interacts with [X button](./add_bathroom_mode.md#reject-button) to reject the bathroom:
              - Animate (depending on config option) camera back to position and zoom level when the bathroom navigation started
-          - If client interacts with checkmark button to accept the bathroom:
+          - If client interacts with [checkmark button](./add_bathroom_mode.md#confirm-button) to accept the bathroom:
              - Set `bathroomActiveNavigation` to true
              - Exit Confirm Find Bathroom mode
              - Enter Find Bathroom mode
@@ -115,4 +117,4 @@
  - Once client reaches within [this distance](#arrived-at-bathroom-distance) from the target bathroom:
     - Set `bathroomActiveNavigation` to false
     - Clear the currently rendered path
-    - Display a positive band alert at the top of the screen with white text saying "Reached target bathroom"
+    - Display a [positive band alert](./AlertSystem.md#band-alerts) at the top of the screen with white text saying "Reached target bathroom"

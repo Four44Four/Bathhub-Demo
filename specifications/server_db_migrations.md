@@ -1,3 +1,4 @@
+# Description
  - All the points made here should apply to database migrations 20260706000000 and after
     - The ones before that point were made before this spec document was created and therefore should not be modified
  - Migrations to the server PostgreSQL database should be atomic and roll back to pre-migration state if an error occurs

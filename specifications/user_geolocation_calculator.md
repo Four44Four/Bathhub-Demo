@@ -1,6 +1,7 @@
 # Constants
 ## Device geolocation poll delay
  - 1 second
+
 # Description
  - Keep track of the current confirmed user location in a variable <user-geo-position>
  - Keep track of the tentative possible user location in a variable <maybe-user-geo-position>

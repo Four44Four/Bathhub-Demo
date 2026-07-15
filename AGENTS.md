@@ -48,5 +48,5 @@ This version has breaking changes — APIs, conventions, and file structure may 
     - Test the rate limit in integration tests
  - All files in ./specifications are the intended technical specifications of the project so far
     - Do not treat them as reflective of what is currently implemented in the source code
-    - If code is encountered that does not match the tecnical specifications:
+    - If code is encountered that does not match the technical specifications:
        - Create a notification when outputting the summary of the changes is made indicating that some part of the implementation is/might not be functioning as intended, but do not modify it unless explicitly instructed to

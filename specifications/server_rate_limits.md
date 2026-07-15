@@ -1,3 +1,4 @@
+# Description
  - Store all rate limits as constants in the dedicated constants file in the server directory
  - Should be per IP address
     - IP address should be valid even if application backend server is behind a proxy

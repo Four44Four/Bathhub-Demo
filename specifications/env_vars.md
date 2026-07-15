@@ -1,3 +1,4 @@
+# Description
  - All required server environment variables will be centralized in one place
  - Before starting server:
     - Ensure that all required server env vars are present

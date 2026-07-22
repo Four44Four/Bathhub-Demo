@@ -35,6 +35,14 @@
  - When interacted with:
     - Trigger [this](./find_nearest_bathroom_logic.md)
 
+## Show swipe-up menu button
+ - Is a [viewport2d button](./components/viewport2d_button.md) with the following properties:
+    - Located at the top left corner (see [x position](./components/viewport2d_button.md#x-position) and [y position](./components/viewport2d_button.md#y-position))
+    - Is [rectangular](./components/viewport2d_button.md#circular-flag)
+    - Has [hamburger icon](./resources.md#hamburger-icon) as the [image](./components/viewport2d_button.md#image)
+ - When interacted with:
+    - The [swipe-up menu](./swipe_up_menu/swipe_up_menu.md) enters into [expanded mode](./swipe_up_menu/swipe_up_menu.md#expanded-mode) using the same transition as if its [pull handle](./swipe_up_menu/swipe_up_menu.md#pull-handle) was interacted with
+
 ## Zoom indicator
  - Display the [crosshairs icon](./resources.md#crosshairs-icon) at the [zoom location](#zoom-location-calculation)
  - It will instantly appear at 100% opacity when triggered, then linearly fade out its opacity over [this duration](#zoom-indicator-fade-out-duration)

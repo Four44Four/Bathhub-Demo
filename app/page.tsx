@@ -10,6 +10,7 @@ import {
 import { Recenter } from "./_client/viewport2d/buttons/Recenter";
 import { FindNearestBathroom } from "./_client/viewport2d/buttons/FindNearestBathroom";
 import { ExitFindBathroom } from "./_client/viewport2d/buttons/ExitFindBathroom";
+import { ShowSwipeUpMenu } from "./_client/viewport2d/buttons/ShowSwipeUpMenu";
 import {
   GlobeViewport,
   type GlobeViewportHandle,
@@ -19,6 +20,7 @@ import { ZoomIndicator } from "./_client/viewport2d/ZoomIndicator";
 import { MainMenu } from "./_client/swipeup/MainMenu";
 import { SwipeMenuBackdrop } from "./_client/swipeup/SwipeMenuBackdrop";
 import { SwipeMenuTopShadow } from "./_client/swipeup/SwipeMenuTopShadow";
+import { SwipeMenuExpansionProvider } from "./_client/swipeup/SwipeMenuExpansion";
 import {
   SwipeMenuInteractionContext,
   type SwipeMenuInteraction,
@@ -297,6 +299,7 @@ function HomeContent({
   }, [patchClientGeo, seedUserPosition]);
 
   return (
+    <SwipeMenuExpansionProvider>
     <SwipeMenuInteractionContext.Provider value={swipeMenuInteraction}>
     <BathroomLocalDbOnAppOpen />
     <main className="flex h-full min-h-0 flex-col">
@@ -348,6 +351,7 @@ function HomeContent({
           </div>
         </div>
         <SwipeMenuTopShadow />
+        {!viewportChromeHidden ? <ShowSwipeUpMenu /> : null}
         {!viewportChromeHidden && showRecenterButton ? (
           <Recenter
             globeRef={globeRef}
@@ -385,6 +389,7 @@ function HomeContent({
       </div>
     </main>
     </SwipeMenuInteractionContext.Provider>
+    </SwipeMenuExpansionProvider>
   );
 }
 

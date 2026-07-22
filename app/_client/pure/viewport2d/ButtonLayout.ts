@@ -36,3 +36,12 @@ export function viewportCircularButtonOuterSidePx(
 ): number {
   return contentSizePx + 2 * paddingPx + 2 * outlineThicknessPx;
 }
+
+/** Outer width/height of a square rectangular viewport2d button with one content dimension. */
+export function viewportRectangularButtonOuterSidePx(
+  contentSizePx: number,
+  paddingPx: number,
+  outlineThicknessPx: number,
+): number {
+  return contentSizePx + 2 * paddingPx + 2 * outlineThicknessPx;
+}

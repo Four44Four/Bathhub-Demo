@@ -8,6 +8,7 @@ import {
   swipeMenuExpandRangePx,
   swipeMenuHeightAfterHandlePointerUp,
   swipeMenuHeightAfterHandleToggle,
+  swipeMenuHeightAfterExpandRequest,
   swipeMenuHeightAfterOutsideTap,
   swipeMenuHeightAfterPointerDelta,
   swipeMenuIsExpandable,
@@ -203,6 +204,13 @@ describe("SwipeMenu", () => {
     expect(swipeMenuHeightAfterHandleToggle(120, inactive, max)).toBe(max);
     expect(swipeMenuHeightAfterHandleToggle(max, inactive, max)).toBe(inactive);
     expect(swipeMenuHeightAfterHandleToggle(120, inactive, inactive)).toBe(120);
+  });
+
+  test("swipeMenuHeightAfterExpandRequest expands when not fully open", () => {
+    expect(swipeMenuHeightAfterExpandRequest(inactive, inactive, max)).toBe(max);
+    expect(swipeMenuHeightAfterExpandRequest(120, inactive, max)).toBe(max);
+    expect(swipeMenuHeightAfterExpandRequest(max, inactive, max)).toBe(max);
+    expect(swipeMenuHeightAfterExpandRequest(120, inactive, inactive)).toBe(120);
   });
 
   test("swipeMenuIsTapGesture", () => {

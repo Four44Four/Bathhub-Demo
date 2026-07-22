@@ -25,6 +25,7 @@ import {
   swipeMenuContentHeightPx,
   swipeMenuHeightAfterHandlePointerUp,
   swipeMenuHeightAfterOutsideTap,
+  swipeMenuHeightAfterExpandRequest,
   swipeMenuHeightAfterPointerDelta,
   swipeMenuIsOpenAboveCollapsed,
   swipeMenuMaxHeightPx,
@@ -42,6 +43,7 @@ import {
   suppressViewportClicksBriefly,
   type SwipeMenuInteraction,
 } from "./SwipeMenuInteraction";
+import { useRegisterSwipeMenuExpandHandler } from "./SwipeMenuExpansion";
 import { useAddBathroomMode } from "../viewport2d/add-bathroom-mode";
 import { useBathroomNavigationMode } from "../viewport2d/bathroom-navigation-mode";
 
@@ -98,6 +100,7 @@ export function MainMenu({
   const {
     isPreviewActive: bathroomNavigationPreviewActive,
   } = useBathroomNavigationMode();
+  const registerExpandHandler = useRegisterSwipeMenuExpandHandler();
   const immersiveModeActive = viewport2dChromeHidden({
     addBathroomModeActive,
     bathroomNavigationPreviewActive,
@@ -140,6 +143,7 @@ export function MainMenu({
   );
 
   const contentHeightPx = swipeMenuContentHeightPx(menuHeightPx, inactiveHeightPx);
+  const menuContentVisible = contentHeightPx > 0;
 
   const measureViewport = useCallback(() => {
     const target = viewportRef.current;
@@ -165,6 +169,11 @@ export function MainMenu({
     ro.observe(target);
     return () => ro.disconnect();
   }, [measureViewport, viewportRef]);
+
+  useLayoutEffect(() => {
+    if (!menuContentVisible) return;
+    measureViewport();
+  }, [menuContentVisible, measureViewport]);
 
   useEffect(() => {
     return registerExitHandler(({ withNewBathroom }) => {
@@ -198,6 +207,7 @@ export function MainMenu({
   const animateHeightTo = useCallback(
     (targetHeightPx: number) => {
       cancelHeightAnimation();
+      measureViewport();
       const fromHeightPx = heightPxRef.current;
       if (fromHeightPx === targetHeightPx) return;
 
@@ -234,12 +244,34 @@ export function MainMenu({
     [
       cancelHeightAnimation,
       inactiveHeightPx,
+      measureViewport,
       resolveMaxHeightPx,
       setBackdropOpacityImmediate,
     ],
   );
 
   useEffect(() => () => cancelHeightAnimation(), [cancelHeightAnimation]);
+
+  useEffect(() => {
+    return registerExpandHandler(() => {
+      if (immersiveModeActive) return;
+      const dragMaxHeightPx = resolveMaxHeightPx();
+      const current = heightPxRef.current;
+      const targetHeightPx = swipeMenuHeightAfterExpandRequest(
+        current,
+        inactiveHeightPx,
+        dragMaxHeightPx,
+      );
+      if (targetHeightPx === current) return;
+      animateHeightTo(targetHeightPx);
+    });
+  }, [
+    animateHeightTo,
+    immersiveModeActive,
+    inactiveHeightPx,
+    registerExpandHandler,
+    resolveMaxHeightPx,
+  ]);
 
   const collapseIfOpenAboveCollapsedRef = useRef<() => void>(() => {});
   useLayoutEffect(() => {
@@ -443,19 +475,23 @@ export function MainMenu({
           <div style={pullIndicatorStyle} />
         </div>
       ) : null}
-      {children != null && contentHeightPx > 0 ? (
+      {children != null ? (
         <SwipeMenuViewportContext.Provider
           value={{ widthPx: viewportSize.width, heightPx: viewportSize.height }}
         >
         <div
+          aria-hidden={!menuContentVisible}
           style={{
             height: contentHeightPx,
             minHeight: 0,
-            overflow: "auto",
+            overflow: menuContentVisible ? "auto" : "hidden",
+            visibility: menuContentVisible ? "visible" : "hidden",
+            pointerEvents: menuContentVisible ? "auto" : "none",
             padding: "8px 0 12px",
             display: "flex",
             justifyContent: "center",
             boxSizing: "border-box",
+            flexShrink: 0,
           }}
         >
           <div

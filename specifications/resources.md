@@ -53,6 +53,10 @@
  - "public/arrow.svg"
  - Is mono-colored
 
+# Hamburger icon
+ - "public/hamburger_icon.svg"
+ - Is mono-colored
+
 # Regular font
  - "fonts/NotoSans-Regular.ttf"
 

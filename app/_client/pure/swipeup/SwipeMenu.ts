@@ -336,6 +336,24 @@ export function swipeMenuAnimatedHeightPx(
   return { heightPx, complete: linearProgress01 >= 1 };
 }
 
+/**
+ * Height after an expand request (e.g. viewport2d hamburger button).
+ * No-op when already fully expanded or not expandable.
+ */
+export function swipeMenuHeightAfterExpandRequest(
+  currentHeightPx: number,
+  inactiveHeightPx: number,
+  maxHeightPx: number,
+): number {
+  if (!swipeMenuIsExpandable(inactiveHeightPx, maxHeightPx)) {
+    return currentHeightPx;
+  }
+  if (swipeMenuIsFullyExpanded(currentHeightPx, inactiveHeightPx, maxHeightPx)) {
+    return currentHeightPx;
+  }
+  return swipeMenuSnapHeightPx("expanded", inactiveHeightPx, maxHeightPx);
+}
+
 /** Collapse to the handle strip when the menu is open above collapsed height. */
 export function swipeMenuHeightAfterOutsideTap(
   currentHeightPx: number,

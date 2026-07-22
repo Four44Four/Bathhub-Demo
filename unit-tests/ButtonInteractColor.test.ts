@@ -1,9 +1,13 @@
 import {
-  invertHexHslValue,
-  invertSvgMarkupHexColors,
+  hexHslBrightness,
+  hexWithHslBrightness,
+  invertHexBrightness,
+  invertSvgMarkupHexBrightness,
+  lerpHexBrightnessInvert,
   multiplyHexColorBrightness,
   viewportButtonBrightnessInteractColors,
   viewportButtonInteractColors,
+  viewportButtonInteractColorsAtProgress,
 } from "../app/_client/pure/viewport2d/ButtonInteractColor";
 
 describe("multiplyHexColorBrightness", () => {
@@ -51,24 +55,84 @@ describe("viewportButtonBrightnessInteractColors", () => {
   });
 });
 
-describe("invertHexHslValue", () => {
+describe("hexHslBrightness", () => {
+  test("returns HSL lightness for a color", () => {
+    expect(hexHslBrightness("#000000")).toBe(0);
+    expect(hexHslBrightness("#FFFFFF")).toBe(1);
+    expect(hexHslBrightness("#808080")).toBeCloseTo(0.5, 1);
+  });
+});
+
+describe("hexWithHslBrightness", () => {
+  test("preserves hue and saturation while changing brightness", () => {
+    expect(hexWithHslBrightness("#800000", 0.5)).toBe("#ff0000");
+  });
+});
+
+describe("invertHexBrightness", () => {
   test("inverts black to white", () => {
-    expect(invertHexHslValue("#000000")).toBe("#ffffff");
+    expect(invertHexBrightness("#000000")).toBe("#ffffff");
   });
 
   test("inverts white to black", () => {
-    expect(invertHexHslValue("#FFFFFF")).toBe("#000000");
+    expect(invertHexBrightness("#FFFFFF")).toBe("#000000");
   });
 
   test("double inversion returns the original color", () => {
     const original = "#0E0F11";
-    expect(invertHexHslValue(invertHexHslValue(original))).toBe(
+    expect(invertHexBrightness(invertHexBrightness(original))).toBe(
       original.toLowerCase(),
     );
   });
 
-  test("inverts lightness while preserving hue for a saturated color", () => {
-    expect(invertHexHslValue("#800000")).toBe("#ff7f7f");
+  test("inverts brightness while preserving hue for a saturated color", () => {
+    expect(invertHexBrightness("#800000")).toBe("#ff7f7f");
+  });
+});
+
+describe("lerpHexBrightnessInvert", () => {
+  test("returns the original color at t=0", () => {
+    expect(lerpHexBrightnessInvert("#0E0F11", 0)).toBe("#0e0f11");
+  });
+
+  test("returns the brightness-inverted color at t=1", () => {
+    expect(lerpHexBrightnessInvert("#0E0F11", 1)).toBe(
+      invertHexBrightness("#0E0F11"),
+    );
+  });
+
+  test("midpoint only shifts brightness for a saturated hue", () => {
+    expect(lerpHexBrightnessInvert("#800000", 0.5)).toBe("#ff0000");
+  });
+});
+
+describe("viewportButtonInteractColorsAtProgress", () => {
+  test("returns base colors at progress 0", () => {
+    expect(
+      viewportButtonInteractColorsAtProgress(
+        "#111111",
+        "#222222",
+        "#333333",
+        0,
+      ),
+    ).toEqual({
+      fillColor: "#111111",
+      outlineColor: "#222222",
+      textColor: "#333333",
+    });
+  });
+
+  test("returns fully brightness-inverted colors at progress 1", () => {
+    expect(
+      viewportButtonInteractColorsAtProgress(
+        "#000000",
+        "#FFFFFF",
+        "#808080",
+        1,
+      ),
+    ).toEqual(
+      viewportButtonInteractColors("#000000", "#FFFFFF", "#808080", true),
+    );
   });
 });
 
@@ -83,7 +147,7 @@ describe("viewportButtonInteractColors", () => {
     });
   });
 
-  test("returns inverted colors when highlighted", () => {
+  test("returns brightness-inverted colors when highlighted", () => {
     const result = viewportButtonInteractColors(
       "#000000",
       "#FFFFFF",
@@ -98,10 +162,10 @@ describe("viewportButtonInteractColors", () => {
   });
 });
 
-describe("invertSvgMarkupHexColors", () => {
-  test("inverts hex fill and stroke attributes", () => {
+describe("invertSvgMarkupHexBrightness", () => {
+  test("brightness-inverts hex fill and stroke attributes", () => {
     const svg = '<path fill="#E4E4FF" stroke="#000000" />';
-    expect(invertSvgMarkupHexColors(svg)).toBe(
+    expect(invertSvgMarkupHexBrightness(svg)).toBe(
       '<path fill="#00001b" stroke="#ffffff" />',
     );
   });

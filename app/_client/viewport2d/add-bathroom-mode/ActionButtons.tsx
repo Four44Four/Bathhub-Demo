@@ -5,7 +5,7 @@ import { useState, type CSSProperties, type MouseEventHandler } from "react";
 import {
   AddBathroom as AddBathroomConsts,
   BtnInteractAnim,
-  Button as ButtonConsts,
+  Viewport2dButton as Viewport2dButtonConsts,
   Shared as SharedConsts,
 } from "../../ComponentConstants";
 import { multiplyHexColorBrightness } from "../../pure/viewport2d/ButtonInteractColor";
@@ -72,8 +72,8 @@ function TintedActionButton({
     height: AddBathroomConsts.ACTION_BUTTON_HEIGHT_PX,
     margin: 0,
     padding: 0,
-    border: `${ButtonConsts.LINE_THICKNESS}px solid ${resolvedFillColor}`,
-    borderRadius: ButtonConsts.CORNER_RADIUS,
+    border: `${Viewport2dButtonConsts.OUTLINE_THICKNESS}px solid ${resolvedFillColor}`,
+    borderRadius: Viewport2dButtonConsts.CORNER_RADIUS,
     backgroundColor: resolvedFillColor,
     cursor: disabled ? "default" : "pointer",
     opacity: disabled ? 0.55 : 1,

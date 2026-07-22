@@ -14,18 +14,38 @@ export const Shared = {
     ICON_ON_TINTED_BUTTON_COLOR: "#ffffff",
 } as const;
 
-export const Button = {
+/**
+ * Constants and property defaults for viewport2d buttons
+ * (see specifications/components/viewport2d_button.md).
+ */
+export const Viewport2dButton = {
+    /** Hover / press color invert duration (milliseconds). */
+    ANIMATION_DURATION_MS: 250,
     CORNER_RADIUS: 8,
-    DEFAULT_FILL_COLOR: "#0E0F11",
-    DEFAULT_LINE_COLOR: "#20232D",
-    LINE_THICKNESS: 1,
+    FILL_COLOR: "#0E0F11",
+    OUTLINE_COLOR: "#20232D",
+    OUTLINE_THICKNESS: 1,
     TEXT_COLOR: "#AFB4C6",
-    /** Mono-color icon tint for viewport2d circular buttons (find bathroom, etc.). */
+    /** Default text weight font class ({@link Shared.FONT_REGULAR_CLASS} / TextWeight.REGULAR). */
+    TEXT_WEIGHT: Shared.FONT_REGULAR_CLASS,
+    PADDING: 0,
+    TEXT: null,
+    IMAGE: null,
+    IMAGE_LEFT_OF_TEXT: true,
+    IMAGE_TEXT_GAP: 0,
+    IMAGE_SIZE: 24,
+    CIRCULAR: false,
+    Z_INDEX: 0,
+    /**
+     * Mono-color icon tint for circular viewport2d controls (recenter, find bathroom).
+     * From viewport2d.md find-bathroom icon color — not a viewport2d_button.md default.
+     */
     ICON_COLOR: "#E4E4FF",
 } as const;
 
 export const BtnInteractAnim = {
-    BTN_INTERACT_DURA_MS: 500,
+    /** Shared interact transition duration; mirrors viewport2d button animation duration. */
+    BTN_INTERACT_DURA_MS: Viewport2dButton.ANIMATION_DURATION_MS,
     /** Multiplier applied to button colors' brightness while hovered or pressed. */
     BTN_COLOR_VALUE_FACTOR_MULT: 0.7,
 } as const;

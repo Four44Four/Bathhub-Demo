@@ -11,13 +11,14 @@
  - #E4E4FF
 
 # Description
- - 2D UI at static positions overlayed on the [Globe viewport](./GlobeViewport.md)
+ - 2D UI at static positions overlayed on the [Globe viewport](./GlobeViewport.md) but under the [swipe-up menu](./swipe_up_menu/swipe_up_menu.md)
 
 # Components
 ## Recenter button
- - Circular button
- - Has [recenter icon](./resources.md#recenter-icon) image
- - Located at the bottom left corner
+ - Is a [viewport2d button](./components/viewport2d_button.md) with the following properties:
+    - Located at the bottom left corner (see [x position](./components/viewport2d_button.md#x-position) and [y position](./components/viewport2d_button.md#y-position))
+    - Is [circular](./components/viewport2d_button.md#circular-flag)
+    - Has [recenter icon](./resources.md#recenter-icon) as the [image](./components/viewport2d_button.md#image)
  - Only appears when the geolocation of the client is detected (and permissions are granted)
  - When interacted with:
     - If [globe movement user setting](./user_settings.md#toggle-globe-movement-animations) is set to true:
@@ -26,9 +27,10 @@
         - Instantly snap Globe rotation so that the center of the client's viewport is over the client's location and zoom level is of the [initial camera height user setting](./GlobeViewport.md#initial-camera-height)
 
 ## Find nearest bathroom button
- - Circular button
- - Has [find bathroom icon](./resources.md#find-bathroom-icon) with [this color](#find-bathroom-icon-color) image
- - Located at the bottom right corner
+ - Is a [viewport2d button](./components/viewport2d_button.md) with the following properties:
+    - Located at the bottom right corner (see [x position](./components/viewport2d_button.md#x-position) and [y position](./components/viewport2d_button.md#y-position))
+    - Is [circular](./components/viewport2d_button.md#circular-flag)
+    - Has [find bathroom icon](./resources.md#find-bathroom-icon) as the [image](./components/viewport2d_button.md#image)
  - Only appears when the geolocation of the client is detected (and permissions are granted)
  - When interacted with:
     - Trigger [this](./find_nearest_bathroom_logic.md)

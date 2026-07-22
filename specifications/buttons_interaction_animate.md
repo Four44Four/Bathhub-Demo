@@ -1,6 +1,0 @@
- - There exists a global interaction animate duration
- - Whenever a button on the swipe-up menu or on the viewport2d is interacted with (tapped or clicked or pressed) or hovered:
-    - Animate it to look different while interpolated over the globel interaction animate duration
-    - And then animate it to look normal again after the interaction/hovering has stopped over the same duration
- - Swipe-up menu primary buttons will have a specific background color that they animate to and they will have a foreground color value darkening factor that they animate to
- - Viewport2d buttons will invert their foreground (text and image), background, and line **values** while retaining the same hue and saturation as their animate to destination color

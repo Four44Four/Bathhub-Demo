@@ -8,18 +8,29 @@ import {
   type ReactNode,
 } from "react";
 
-import { BtnInteractAnim, Button as ButtonConsts } from "../ComponentConstants";
+import { Viewport2dButton as Viewport2dButtonConsts } from "../ComponentConstants";
+import {
+  type ImageDescriptor,
+  resolveImageMonoColor,
+} from "../pure/Image";
 import {
   viewportButtonBrightnessInteractColors,
-  viewportButtonInteractColors,
-  invertHexHslValue,
+  viewportButtonInteractColorsAtProgress,
+  invertHexBrightness,
 } from "../pure/viewport2d/ButtonInteractColor";
+import {
+  VIEWPORT2D_BUTTON_TEXT_FONT_SIZE_PX,
+  VIEWPORT2D_BUTTON_TEXT_LINE_HEIGHT,
+  viewport2dButtonCircularContentSizePx,
+  viewportCircularButtonOuterSidePx,
+} from "../pure/viewport2d/ButtonLayout";
 import { blackMonoIconCssFilter } from "../pure/svg/BlackMonoIconCssFilter";
 import {
   areViewportClicksSuppressed,
   useSwipeMenuBlocksViewport,
 } from "../swipeup/SwipeMenuInteraction";
 import { TextWeight } from "../Utils";
+import { useAnimatedLinear01 } from "../useAnimatedLinear01";
 import { useButtonSvgInteractSrc } from "./useButtonSvgInteractSrc";
 
 export type ButtonProps = {
@@ -28,58 +39,61 @@ export type ButtonProps = {
   outlineColor?: string;
   outlineThickness?: number;
   textColor?: string;
-  text?: string;
+  text?: string | null;
   textWeight?: TextWeight;
   x: number;
   y: number;
-  /** When set, applied as the button's CSS `width` (e.g. `"100%"` or a pixel value). */
+  /**
+   * When set, applied as the button's CSS `width` (e.g. `"100%"` or a pixel value).
+   * Not in viewport2d_button.md — kept for ImportantAlert layout.
+   */
   width?: number | string;
   zIndex?: number;
-  imageSrc?: string;
-  /** When both text and `imageSrc` are set, places the image on the left (`true`) or right (`false`) of the text. Defaults to left. */
+  /** Image resource descriptor, or `null` for no image. */
+  image?: ImageDescriptor | null;
+  /** When both text and image are set, places the image on the left (`true`) or right (`false`). */
   imageLeftOfText?: boolean;
-  /** Space between image and text when both are present. Defaults to 0. */
-  imageTextOffset?: number;
-  /** Icon square size when `imageSrc` is set (CSS px). Defaults to 24. */
-  imageSizePx?: number;
+  /** Space between image and text when both are present (CSS px). */
+  imageTextGap?: number;
+  /** Icon square size when `image` is set (CSS px). */
+  imageSize?: number;
   /**
-   * Renders as a circular control sized to fit the icon (image-only; ignored when `text` is set).
-   * Uses symmetric `circularPaddingPx` and `borderRadius: "50%"` on a square `border-box`.
+   * Renders as a circular control. Radius/extent is sized from the max of image and text
+   * height plus padding; overflowing content is masked.
    */
   circular?: boolean;
-  /** Padding on every side when `circular` is true. Defaults to 0. */
-  circularPaddingPx?: number;
-  /** When set, dims fill/outline/text via brightness multiply on hover/press instead of HSL invert. */
+  /** Internal padding from the border on every side (CSS px). */
+  padding?: number;
+  /**
+   * When set, dims fill/outline/text via brightness multiply on hover/press instead of brightness invert.
+   * Not in viewport2d_button.md — kept for ImportantAlert accent buttons.
+   */
   interactBrightnessMult?: number;
-  /** CSS hex tint for mono-color SVG icons (see resources.md mono-color icon policy). */
-  imageColor?: string;
   onClick?: MouseEventHandler<HTMLButtonElement>;
 };
 
 function ButtonImage({
-  imageSizePx,
-  isHighlighted,
-  interactTransition,
+  imageSize,
+  invertProgress,
   normalSrc,
   invertedSrc,
   isSvg,
-  imageColor,
+  monoColor,
 }: {
-  imageSizePx: number;
-  isHighlighted: boolean;
-  interactTransition: string;
+  imageSize: number;
+  invertProgress: number;
   normalSrc: string | undefined;
   invertedSrc: string | undefined;
   isSvg: boolean;
-  imageColor?: string;
+  monoColor: string | null;
 }) {
   const invertedImageColor = useMemo(
-    () => (imageColor != null ? invertHexHslValue(imageColor) : undefined),
-    [imageColor],
+    () => (monoColor != null ? invertHexBrightness(monoColor) : undefined),
+    [monoColor],
   );
   const normalIconFilter = useMemo(
-    () => (imageColor != null ? blackMonoIconCssFilter(imageColor) : undefined),
-    [imageColor],
+    () => (monoColor != null ? blackMonoIconCssFilter(monoColor) : undefined),
+    [monoColor],
   );
   const invertedIconFilter = useMemo(
     () =>
@@ -90,16 +104,19 @@ function ButtonImage({
   );
 
   const imageStyle: CSSProperties = {
-    height: imageSizePx,
-    width: imageSizePx,
+    height: imageSize,
+    width: imageSize,
     display: "block",
     flexShrink: 0,
     objectFit: "contain",
   };
 
+  const normalOpacity = 1 - invertProgress;
+  const invertedOpacity = invertProgress;
+
   if (
     isSvg &&
-    imageColor != null &&
+    monoColor != null &&
     normalSrc != null &&
     normalIconFilter != null &&
     invertedIconFilter != null
@@ -108,8 +125,8 @@ function ButtonImage({
       <div
         style={{
           position: "relative",
-          width: imageSizePx,
-          height: imageSizePx,
+          width: imageSize,
+          height: imageSize,
           flexShrink: 0,
         }}
       >
@@ -122,8 +139,7 @@ function ButtonImage({
             position: "absolute",
             inset: 0,
             filter: normalIconFilter,
-            opacity: isHighlighted ? 0 : 1,
-            transition: `opacity ${interactTransition}`,
+            opacity: normalOpacity,
           }}
         />
         <img
@@ -135,8 +151,7 @@ function ButtonImage({
             position: "absolute",
             inset: 0,
             filter: invertedIconFilter,
-            opacity: isHighlighted ? 1 : 0,
-            transition: `opacity ${interactTransition}`,
+            opacity: invertedOpacity,
           }}
         />
       </div>
@@ -148,8 +163,8 @@ function ButtonImage({
       <div
         style={{
           position: "relative",
-          width: imageSizePx,
-          height: imageSizePx,
+          width: imageSize,
+          height: imageSize,
           flexShrink: 0,
         }}
       >
@@ -161,8 +176,7 @@ function ButtonImage({
             ...imageStyle,
             position: "absolute",
             inset: 0,
-            opacity: isHighlighted ? 0 : 1,
-            transition: `opacity ${interactTransition}`,
+            opacity: normalOpacity,
           }}
         />
         <img
@@ -173,8 +187,7 @@ function ButtonImage({
             ...imageStyle,
             position: "absolute",
             inset: 0,
-            opacity: isHighlighted ? 1 : 0,
-            transition: `opacity ${interactTransition}`,
+            opacity: invertedOpacity,
           }}
         />
       </div>
@@ -192,79 +205,86 @@ function ButtonImage({
 }
 
 export function Button({
-  cornerRadius = ButtonConsts.CORNER_RADIUS,
-  fillColor = ButtonConsts.DEFAULT_FILL_COLOR,
-  outlineColor = ButtonConsts.DEFAULT_LINE_COLOR,
-  outlineThickness = ButtonConsts.LINE_THICKNESS,
-  textColor = ButtonConsts.TEXT_COLOR,
-  textWeight = TextWeight.REGULAR,
-  text,
+  cornerRadius = Viewport2dButtonConsts.CORNER_RADIUS,
+  fillColor = Viewport2dButtonConsts.FILL_COLOR,
+  outlineColor = Viewport2dButtonConsts.OUTLINE_COLOR,
+  outlineThickness = Viewport2dButtonConsts.OUTLINE_THICKNESS,
+  textColor = Viewport2dButtonConsts.TEXT_COLOR,
+  textWeight = Viewport2dButtonConsts.TEXT_WEIGHT,
+  text = Viewport2dButtonConsts.TEXT,
   x,
   y,
   width,
-  zIndex = 0,
-  imageSrc,
-  imageLeftOfText = true,
-  imageTextOffset = 0,
-  imageSizePx = 24,
-  circular = false,
-  circularPaddingPx = 0,
+  zIndex = Viewport2dButtonConsts.Z_INDEX,
+  image = Viewport2dButtonConsts.IMAGE,
+  imageLeftOfText = Viewport2dButtonConsts.IMAGE_LEFT_OF_TEXT,
+  imageTextGap = Viewport2dButtonConsts.IMAGE_TEXT_GAP,
+  imageSize = Viewport2dButtonConsts.IMAGE_SIZE,
+  circular = Viewport2dButtonConsts.CIRCULAR,
+  padding = Viewport2dButtonConsts.PADDING,
   interactBrightnessMult,
-  imageColor,
   onClick,
 }: ButtonProps) {
   const viewportPointerBlocked = useSwipeMenuBlocksViewport();
   const [isHovered, setIsHovered] = useState(false);
   const [isPressed, setIsPressed] = useState(false);
   const isHighlighted = isHovered || isPressed;
-  const interactTransition = `${BtnInteractAnim.BTN_INTERACT_DURA_MS}ms ease`;
+  const usesBrightnessInteract = interactBrightnessMult != null;
+  const invertProgress = useAnimatedLinear01(
+    usesBrightnessInteract ? 0 : isHighlighted ? 1 : 0,
+    Viewport2dButtonConsts.ANIMATION_DURATION_MS,
+  );
+  const interactTransition = `${Viewport2dButtonConsts.ANIMATION_DURATION_MS}ms linear`;
 
   const {
     fillColor: resolvedFillColor,
     outlineColor: resolvedOutlineColor,
     textColor: resolvedTextColor,
-  } =
-    interactBrightnessMult != null
-      ? viewportButtonBrightnessInteractColors(
-          fillColor,
-          outlineColor,
-          textColor,
-          isHighlighted,
-          interactBrightnessMult,
-        )
-      : viewportButtonInteractColors(
-          fillColor,
-          outlineColor,
-          textColor,
-          isHighlighted,
-        );
+  } = usesBrightnessInteract
+    ? viewportButtonBrightnessInteractColors(
+        fillColor,
+        outlineColor,
+        textColor,
+        isHighlighted,
+        interactBrightnessMult,
+      )
+    : viewportButtonInteractColorsAtProgress(
+        fillColor,
+        outlineColor,
+        textColor,
+        invertProgress,
+      );
+
+  const imagePath = image?.path;
+  const monoColor = resolveImageMonoColor(image);
+  const isMonoColor = monoColor != null;
 
   const { isSvg, normalSrc, invertedSrc } = useButtonSvgInteractSrc(
-    imageSrc,
-    imageColor == null,
+    imagePath,
+    !isMonoColor,
+    isMonoColor,
   );
 
   const hasText = text != null && text.length > 0;
-  const hasImage = imageSrc != null && imageSrc.length > 0;
-  const useCircularLayout = circular && hasImage && !hasText;
+  const hasImage = imagePath != null && imagePath.length > 0;
+  const useCircularLayout = circular && (hasImage || hasText);
 
   const rowStyle: CSSProperties = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    gap: hasText && hasImage ? imageTextOffset : 0,
+    gap: hasText && hasImage ? imageTextGap : 0,
     flexDirection: "row",
   };
 
   const imageEl = hasImage ? (
     <ButtonImage
-      imageSizePx={imageSizePx}
-      isHighlighted={isHighlighted}
-      interactTransition={interactTransition}
+      imageSize={imageSize}
+      invertProgress={invertProgress}
       normalSrc={normalSrc}
       invertedSrc={invertedSrc}
       isSvg={isSvg}
-      imageColor={imageColor}
+      monoColor={monoColor}
     />
   ) : null;
 
@@ -273,10 +293,12 @@ export function Button({
       className={textWeight}
       style={{
         color: resolvedTextColor,
-        fontSize: 14,
-        lineHeight: 1.2,
+        fontSize: VIEWPORT2D_BUTTON_TEXT_FONT_SIZE_PX,
+        lineHeight: VIEWPORT2D_BUTTON_TEXT_LINE_HEIGHT,
         whiteSpace: "nowrap",
-        transition: `color ${interactTransition}`,
+        ...(usesBrightnessInteract
+          ? { transition: `color ${interactTransition}` }
+          : {}),
       }}
     >
       {text}
@@ -308,8 +330,17 @@ export function Button({
     inner = null;
   }
 
+  const circularContentSizePx = viewport2dButtonCircularContentSizePx(
+    hasImage,
+    imageSize,
+    hasText,
+  );
   const outerSidePx = useCircularLayout
-    ? imageSizePx + 2 * circularPaddingPx + 2 * outlineThickness
+    ? viewportCircularButtonOuterSidePx(
+        circularContentSizePx,
+        padding,
+        outlineThickness,
+      )
     : undefined;
 
   const baseStyle: CSSProperties = {
@@ -324,7 +355,11 @@ export function Button({
     borderColor: resolvedOutlineColor,
     cursor: "pointer",
     boxSizing: "border-box",
-    transition: `background-color ${interactTransition}, border-color ${interactTransition}, color ${interactTransition}`,
+    ...(usesBrightnessInteract
+      ? {
+          transition: `background-color ${interactTransition}, border-color ${interactTransition}, color ${interactTransition}`,
+        }
+      : {}),
   };
 
   const layoutStyle: CSSProperties = useCircularLayout
@@ -332,7 +367,7 @@ export function Button({
         ...baseStyle,
         width: outerSidePx,
         height: outerSidePx,
-        padding: circularPaddingPx,
+        padding,
         borderRadius: "50%",
         overflow: "hidden",
         display: "flex",
@@ -341,8 +376,9 @@ export function Button({
       }
     : {
         ...baseStyle,
-        padding: "10px 16px",
+        padding,
         borderRadius: cornerRadius,
+        overflow: "hidden",
         ...(width != null ? { width } : {}),
       };
 

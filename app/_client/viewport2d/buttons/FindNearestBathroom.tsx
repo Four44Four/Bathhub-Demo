@@ -1,12 +1,17 @@
 "use client";
 
-import { Button as ButtonConsts, SwipeMenu as SwipeMenuConsts } from "../../ComponentConstants";
+import { Viewport2dButton as Viewport2dButtonConsts, SwipeMenu as SwipeMenuConsts } from "../../ComponentConstants";
+import { createMonoColorImage } from "../../pure/Image";
 import { VIEWPORT2D_TOP_LAYER_Z_INDEX } from "../../pure/viewport2d/PositionalAlertAnchor";
 import { viewportCircularButtonOuterSidePx } from "../../Utils";
 import { Button } from "../Button";
 import { useBathroomNavigationMode } from "../bathroom-navigation-mode";
 
 export const BTN_IMG_SRC = "/find_bathroom_icon.svg";
+export const BTN_IMAGE = createMonoColorImage(
+  BTN_IMG_SRC,
+  Viewport2dButtonConsts.ICON_COLOR,
+);
 export const BTN_OFFSET_PX = 15;
 export const BTN_IMG_SIZE_PX = 35;
 /** Padding inside the circular control on every side (`Button` circular mode). */
@@ -31,12 +36,12 @@ export function findNearestBathroomButtonBottomPx(
 
 export function findNearestBathroomButtonOuterSidePx(
   btnImgSizePx: number = BTN_IMG_SIZE_PX,
-  circularPaddingPx: number = BTN_CIRCULAR_PADDING_PX,
-  outlineThicknessPx: number = ButtonConsts.LINE_THICKNESS,
+  paddingPx: number = BTN_CIRCULAR_PADDING_PX,
+  outlineThicknessPx: number = Viewport2dButtonConsts.OUTLINE_THICKNESS,
 ): number {
   return viewportCircularButtonOuterSidePx(
     btnImgSizePx,
-    circularPaddingPx,
+    paddingPx,
     outlineThicknessPx,
   );
 }
@@ -61,7 +66,7 @@ export function FindNearestBathroom({
     collapsedMenuHeightPx,
     btnOffsetPx,
   );
-  const outlineThicknessPx = ButtonConsts.LINE_THICKNESS;
+  const outlineThicknessPx = Viewport2dButtonConsts.OUTLINE_THICKNESS;
   const outerSidePx = findNearestBathroomButtonOuterSidePx(
     btnImgSizePx,
     BTN_CIRCULAR_PADDING_PX,
@@ -83,10 +88,9 @@ export function FindNearestBathroom({
         x={0}
         y={0}
         circular
-        circularPaddingPx={BTN_CIRCULAR_PADDING_PX}
-        imageSrc={BTN_IMG_SRC}
-        imageColor={ButtonConsts.ICON_COLOR}
-        imageSizePx={btnImgSizePx}
+        padding={BTN_CIRCULAR_PADDING_PX}
+        image={BTN_IMAGE}
+        imageSize={btnImgSizePx}
         onClick={onClick ?? beginFindNearestBathroom}
       />
     </div>

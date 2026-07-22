@@ -106,6 +106,8 @@ export function ImportantAlert({
                   x={0}
                   y={0}
                   width="100%"
+                  // Spec padding is a single integer; prior layout used asymmetric 10px 16px.
+                  padding={10}
                   text={button.label}
                   textWeight={TextWeight.BOLD}
                   fillColor={

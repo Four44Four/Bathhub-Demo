@@ -2,17 +2,22 @@
 
 import { RefObject, useCallback, useLayoutEffect, useState } from "react";
 
-import { Button as ButtonConsts, SwipeMenu as SwipeMenuConsts, Globe as GlobeConsts } from "../../ComponentConstants";
+import { Viewport2dButton as Viewport2dButtonConsts, SwipeMenu as SwipeMenuConsts, Globe as GlobeConsts } from "../../ComponentConstants";
 import { navigateGlobeToLatLon } from "../../pure/globe/GlobeMovementNavigation";
+import { createMonoColorImage } from "../../pure/Image";
 import { useGlobeMovementSmoothRef } from "../../user-settings/useGlobeMovementSmooth";
 import { type GlobeViewportHandle, getStartPos } from "../../globe/GlobeViewport";
 import { viewportCircularButtonOuterSidePx } from "../../Utils";
 import { Button } from "../Button";
 
 export const BTN_IMG_SRC = "/crosshairs_center.svg";
+export const BTN_IMAGE = createMonoColorImage(
+  BTN_IMG_SRC,
+  Viewport2dButtonConsts.ICON_COLOR,
+);
 export const BTN_OFFSET_PX = 15;
 export const BTN_IMG_SIZE_PX = 40;
-/** Padding inside the circular control on every side (`Button` circular mode). Uses 0 so the circle matches the image plus border. */
+/** Padding inside the circular control on every side (`Button` circular mode). */
 export const BTN_CIRCULAR_PADDING_PX = 5;
 /** Distance from the left edge of the phone frame. */
 export const BTN_X = 16;
@@ -75,7 +80,7 @@ export function Recenter({
     return () => ro.disconnect();
   }, [measureViewport, viewportRef]);
 
-  const outlineThicknessPx = ButtonConsts.LINE_THICKNESS;
+  const outlineThicknessPx = Viewport2dButtonConsts.OUTLINE_THICKNESS;
   const outerSide = viewportCircularButtonOuterSidePx(
     btnImgSizePx,
     BTN_CIRCULAR_PADDING_PX,
@@ -114,10 +119,9 @@ export function Recenter({
           x={x}
           y={y}
           circular
-          circularPaddingPx={BTN_CIRCULAR_PADDING_PX}
-          imageSrc={BTN_IMG_SRC}
-          imageColor={ButtonConsts.ICON_COLOR}
-          imageSizePx={btnImgSizePx}
+          padding={BTN_CIRCULAR_PADDING_PX}
+          image={BTN_IMAGE}
+          imageSize={btnImgSizePx}
           onClick={onRecenterClick}
         />
       ) : null}

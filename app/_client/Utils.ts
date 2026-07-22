@@ -136,11 +136,6 @@ export function linearCrossfade01(
   return clamp01(t);
 }
 
-/** Outer width/height of a circular viewport `Button` (`border-box`, symmetric padding). */
-export function viewportCircularButtonOuterSidePx(
-  imageSizePx: number,
-  circularPaddingPx: number,
-  outlineThicknessPx: number,
-): number {
-  return imageSizePx + 2 * circularPaddingPx + 2 * outlineThicknessPx;
-}
+export {
+  viewportCircularButtonOuterSidePx,
+} from "./pure/viewport2d/ButtonLayout";

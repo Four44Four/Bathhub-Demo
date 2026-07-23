@@ -9,16 +9,21 @@
  - 1500 milliseconds
 ## User location marker color
  - #E4E4FF
+## Globe 2 tone water color
+ - #41457E
+## Globe 2 tone land color
+ - #323255
 
 # Description
- - Globe can be rotated/panned by dragging left click, dragging 1 finger across screen, or dragging 2 fingers across screen
+ - Has a [Globe](#globe) rendered in the viewport
+ - [Globe](#globe) can be rotated/panned by dragging left click, dragging 1 finger across screen, or dragging 2 fingers across screen
  - User is determined to be idle when there have been no mouse or pointer inputs for a [this duration of time](#time-since-last-action-for-idle)
     - Globe animations (such as when [Recentering](./viewport2d.md#recenter-button)) will not invalidate the idle state, only user input
  - Camera facing Globe can be brought closer to Globe's surface by scrolling mouse wheel forward, dragging right click up, or pinching in with 2 fingers
     - Doing those interactions in the opposite direction will bring the Camera farther from the Globe's surface
  - Mouse wheel scrolling will result in an exponentially smoothed zoom in or 
     - The interpolated zoom time should be the [same duration](#mouse-zoom-interpolated-animate-duration) regardless of camera altitude
- - When using 2 fingers on the Globe, panning and zooming can happen simultaneously
+ - When using 2 fingers on the [Globe](#globe), panning and zooming can happen simultaneously
  - When any action that triggers a zoom occurs:
     - Render the [zoom indicator](./viewport2d.md#zoom-indicator)
  - <TODO:have-not-impled-this-yet>If the user clicks or taps on the Globe AND [the zoom level is low enough to render bathroom markers](./bathroom_db_reading.md#maximum-display-bathroom-map-markers-height) AND the user clicks or taps on the image of the Bathroom map markers:
@@ -34,7 +39,7 @@
  - If the user already allowed geolocation data permission upon loading the app:
     - Load the GlobeViewport, Globe, and camera to have the user's geolocation position already centered on the GlobeViewport with the zoom level already set to the user settings value for "Init camera height (meters):
     - There should not be a moment where the Globe is at the default rotation and the camera is at the default distance from the surface of the Globe
- - With a [this delay](#update-viewport-center-location-delay), whenever the user is detected to be rotating the Globe or zooming:
+ - With a [this delay](#update-viewport-center-location-delay), whenever the user is detected to be rotating the [Globe](#globe) or zooming:
     - Repeatedly calculate the 3D point on the Globe that is directly on the GlobeViewport's center
     - Cache this calculated 3D point
     - This calculation should be completely independent from the idle calculation
@@ -44,6 +49,22 @@
        - Keep calculating the point
     - When the user is idle AND there is no more drag or zooming smoothing animation active:
        - Stop calculating the point
+
+# Globe
+ - A 3d cesium sphere approximation of the Earth
+ - Has a radius equivalent of the WGS84 semi-major axis on all axes
+ - At distant levels of zoom:
+    - Texture tiles on surface are rendered using OpenStreetMap's API
+    - Use the OSM base textures
+ - At medium levels of zoom:
+    - Texture tiles on surface use a combination of both Carto and OSM base textures 
+ - At close levels of zoom:
+    - Texture tiles on surface use OSM's street textures
+ - Between each level of surface texture LOD based on zoom distance from surface:
+    - Linearly interpolate the opacities of each successive layer so that the surface texture seamelessly transitions from OSM base textures, to both Carto and OSM base textures, to only OSM street textures
+ - Use a 2 tone post-process filter on the received textures to map land and water (water is defined as parts of the texture that are blue dominant) into these respective colors with the below formulas:
+    - Water -> HSL(hue=[globe 2 tone water color's hue](#globe-2-tone-water-color), sat=[globe 2 tone water color's saturation](#globe-2-tone-water-color) * 0.9, light=0.25 + original_lightness * 0.25)
+    - Land -> HSL(hue=[globe 2 tone land color's hue](#globe-2-tone-water-color), sat=max([globe 2 tone land color's saturation](#globe-2-tone-water-color), original_saturation * 0.35), light=0.18 + original_lightness * 0.7)
 
 # User current location marker
 ## Properties (user current location marker)

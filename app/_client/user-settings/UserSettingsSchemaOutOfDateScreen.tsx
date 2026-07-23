@@ -1,41 +1,15 @@
 "use client";
 
-import { useEffect, useState, type CSSProperties } from "react";
+import { useEffect, useState } from "react";
 
 import { SchemaLoadingScreen, UserSettings as UserSettingsConsts } from "../ComponentConstants";
 import { TextWeight } from "../Utils";
-
-const SPINNER_SIZE_PX = 40;
-const SPINNER_BORDER_COLOR = "rgba(14, 15, 17, 0.22)";
-const SPINNER_ACCENT_COLOR = "#0E0F11";
+import { LoadingSpinner } from "../viewport2d/LoadingSpinner";
 
 export type UserSettingsSchemaOutOfDateScreenProps = {
   exiting: boolean;
   onExitComplete: () => void;
 };
-
-function SchemaLoadingSpinner() {
-  const style: CSSProperties = {
-    width: SPINNER_SIZE_PX,
-    height: SPINNER_SIZE_PX,
-    borderRadius: "50%",
-    border: `3px solid ${SPINNER_BORDER_COLOR}`,
-    borderTopColor: SPINNER_ACCENT_COLOR,
-    animation: "schema-loading-screen-spin 0.8s linear infinite",
-    boxSizing: "border-box",
-  };
-
-  return (
-    <>
-      <style>{`
-        @keyframes schema-loading-screen-spin {
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
-      <div aria-hidden="true" style={style} />
-    </>
-  );
-}
 
 export function UserSettingsSchemaOutOfDateScreen({
   exiting,
@@ -102,7 +76,11 @@ export function UserSettingsSchemaOutOfDateScreen({
         >
           Loading updated settings
         </p>
-        <SchemaLoadingSpinner />
+        <LoadingSpinner
+          accentColor={UserSettingsConsts.SCHEMA_LOADING_SPINNER_ACCENT_COLOR}
+          baseColor={UserSettingsConsts.SCHEMA_LOADING_SPINNER_BASE_COLOR}
+          radiusPx={UserSettingsConsts.SCHEMA_LOADING_SPINNER_RADIUS_PX}
+        />
       </div>
     </div>
   );

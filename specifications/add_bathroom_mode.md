@@ -1,6 +1,12 @@
 # Constants
 ## Request timeout limit
  - 15 seconds
+## Loading spinner accent color
+ - #ffffff
+## Loading spinner base color
+ - "rgba(255, 255, 255, 0.22)"
+## Loading spinner radius
+ - 20px
 
 # Variables
 ## New bathroom flag
@@ -29,7 +35,11 @@
        - Exit this Add bathroom mode with [<new-bathroom-flag> variable](#new-bathroom-flag) set as `true`
     - [Confirm button click callback](./components/confirm_reject_buttons.md#on-reject-click-callback) is the following:
        - Send off a request to server to save a new Bathroom entry with a verify status of 'pending'
-       - Present a [darkened overlay](./background_darken.md) with a loading spinner at the center
+       - Present a [darkened overlay](./background_darken.md) with a [loading spinner](./components/loading_spinner.md) at the center of the screen
+          - [X position](./components/loading_spinner.md#x-position) and [y position](./components/loading_spinner.md#y-position) are set so that it will be in the center of the screen
+          - [Accent color](./components/loading_spinner.md#accent-color) is [this color](#loading-spinner-accent-color)
+          - [Base color](./components/loading_spinner.md#base-color) is [this color](#loading-spinner-base-color)
+          - [Radius](./components/loading_spinner.md#radius) is [this size](#loading-spinner-radius)
        - When the server responds with a success payload within [timeout duration](#request-timeout-limit):
           - Remove the loading spinner but keep the bg
           - Present an [important notification alert](./AlertSystem.md#major-alerts) with the message text "Bathroom added !!" and a button at the bottom with greenish bg with the text "Ok"
@@ -38,12 +48,12 @@
              - Requery the server for all Bathrooms in the viewport
              - Render them as they are received
        - When the server responds with a failure payload within [timeout duration](#request-timeout-limit):
-          - Remove the loading spinner but keep the bg
+          - Remove the [loading spinner](./components/loading_spinner.md) but keep the bg
           - Present an [important notification alert](./AlertSystem.md#major-alerts) with the message text "Something when wrong while adding Bathroom" and a button at the bottom with a reddish bg with the text "Ok"
           - When the user presses the "Ok" button:
              - Remove the bg and exit this Add bathroom mode with [<new-bathroom-flag> variable](#new-bathroom-flag) set as `false`
        - When the server does not respond within [timeout duration](#request-timeout-limit):
-          - Remove the loading spinner but keep the bg
+          - Remove the [loading spinner](./components/loading_spinner.md) but keep the bg
           - Present an important (popup) notification alert with the message text "Timed out while adding Bathroom" and a button at the bottom with a reddish bg with the text "Ok"
           - When the user presses the "Ok" button:
              - Remove the bg and exit this Add bathroom mode with [<new-bathroom-flag> variable](#new-bathroom-flag) set as `false`

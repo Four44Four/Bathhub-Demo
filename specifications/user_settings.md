@@ -31,6 +31,18 @@
  - 10px
 ## Bottom buttons corner radius
  - 15
+## Save changes loading spinner accent color
+ - #B5B5C4 
+## Save changes loading spinner base color
+ - "rgba(181, 181, 196, 0.35)"
+## Save changes loading spinner radius
+ - 9px
+## Schema loading spinner accent color
+ - #0E0F11
+## Schema loading spinner base color
+ - "rgba(14, 15, 17, 0.22)"
+## Schema loading spinner radius
+ - 20px
 
 # Description
  - Will have header text "Settings" at the top left in large bold text in [this color](#header-text-color)
@@ -104,7 +116,12 @@
           - Display a [negative important alert](./AlertSystem.md#major-alerts) with the text "Due to a settings data migration failure, saving is currently disabled" with a single button with text "Ok"
        - Else:
           - Clear the [button's](#save-user-settings-button) [text](./components/viewport2d_button.md#text)
-          - Display a loading spinner in the center of the [button](#save-user-settings-button) until the saving to **both** the in-memory datastructures representation of the user settings and their backing persistent SQLite DB are done
+          - Display a [loading spinner](./components/loading_spinner.md) in the center of the [button](#save-user-settings-button) until the saving to **both** the in-memory datastructures representation of the user settings and their backing persistent SQLite DB are done
+             - [Loading spinner](./components/loading_spinner.md) has the following properties:
+                - [X position](./components/loading_spinner.md#x-position) and [y position](./components/loading_spinner.md#y-position) are set so that it will be in the center of the [button](#save-user-settings-button)
+                - [Accent color](./components/loading_spinner.md#accent-color) is [this color](#save-changes-loading-spinner-accent-color)
+                - [Base color](./components/loading_spinner.md#base-color) is [this color](#save-changes-loading-spinner-base-color)
+                - [Radius](./components/loading_spinner.md#radius) is [this size](#save-changes-loading-spinner-radius)
           - Once they are done saving:
              - Hide [this again](#save-user-settings-button) until another setting changes
  - Hidden initially
@@ -174,7 +191,11 @@
     - Display a "schema out of date" screen that prevents the client from doing anything
     - (on the webapp demo) The "schema out of date" screen will only take up the phone interface screen
     - There is header text that reads "Loading updated settings"
-    - There is a loading spinner under the text
+    - There is a [loading spinner](./components/loading_spinner.md) under the text
+       - [X position](./components/loading_spinner.md#x-position) and [y position](./components/loading_spinner.md#y-position) are set so that it will be right under the text
+       - [Accent color](./components/loading_spinner.md#accent-color) is [this color](#schema-loading-spinner-accent-color)
+       - [Base color](./components/loading_spinner.md#base-color) is [this color](#schema-loading-spinner-base-color)
+       - [Radius](./components/loading_spinner.md#radius) is [this size](#schema-loading-spinner-radius)
     - When the screen is to be hidden:
        - Animate it disappearing by sliding down and off the screen over a [this amount of time](#schema-out-of-date-screen-animate-duration)
     - Try every [this amount of time](#schema-pull-retry-duration) to request a schema update from the server

@@ -2,9 +2,9 @@
 
 import type { CSSProperties } from "react";
 
-import { Menus as MenuConsts } from "../../ComponentConstants";
+import { Menus as MenuConsts, AddBathroom as AddBathroomConsts } from "../../ComponentConstants";
 import { SWIPE_MENU_BACKDROP_Z_INDEX } from "../../pure/viewport2d/PositionalAlertAnchor";
-import { LoadingSpinner } from "./LoadingSpinner";
+import { LoadingSpinner } from "../LoadingSpinner";
 
 export type BackdropProps = {
   opacity: number;
@@ -43,7 +43,11 @@ export function Backdrop({
     <div aria-hidden={spinnerOpacity <= 0} style={style}>
       {spinnerOpacity > 0 ? (
         <div style={spinnerWrapStyle}>
-          <LoadingSpinner />
+          <LoadingSpinner
+            accentColor={AddBathroomConsts.LOADING_SPINNER_ACCENT_COLOR}
+            baseColor={AddBathroomConsts.LOADING_SPINNER_BASE_COLOR}
+            radiusPx={AddBathroomConsts.LOADING_SPINNER_RADIUS_PX}
+          />
         </div>
       ) : null}
     </div>

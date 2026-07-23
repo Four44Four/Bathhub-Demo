@@ -60,6 +60,12 @@ const CIRCULAR_CLOSE_IMAGE_SIZE_PX = 18;
 const CIRCULAR_CLOSE_PADDING_PX = 15;
 const CIRCULAR_CLOSE_OUTLINE_THICKNESS_PX = 0;
 
+/** Loading spinner ring (see specifications/components/loading_spinner.md). */
+export const LoadingSpinner = {
+    CYCLE_DURATION_MS: 800,
+    THICKNESS_PX: 3,
+} as const;
+
 export const CircularCloseButton = {
     IMAGE_SIZE_PX: CIRCULAR_CLOSE_IMAGE_SIZE_PX,
     PADDING_PX: CIRCULAR_CLOSE_PADDING_PX,
@@ -105,8 +111,9 @@ export const AddBathroom = {
     MARKER_SIZE_PX: MapMarker.SIZE,
     MARKER_IMAGE: "/bathhub_add_new_map_marker.svg",
     MARKER_OPACITY: MapMarker.OPACITY,
-    /** Spinner diameter in CSS pixels while a create request is in flight. */
-    LOADING_SPINNER_SIZE_PX: 40,
+    LOADING_SPINNER_RADIUS_PX: 20,
+    LOADING_SPINNER_ACCENT_COLOR: "#ffffff",
+    LOADING_SPINNER_BASE_COLOR: "rgba(255, 255, 255, 0.22)",
     /** Server create request timeout per add-bathroom spec (milliseconds). */
     REQUEST_TIMEOUT_MS: 15_000,
 } as const;
@@ -284,7 +291,12 @@ const UserSettings0 = {
     /** Copied by value from Alerts.NEGATIVE_ACCENT_COLOR (user_settings.md). */
     DANGER_BAND_BACKGROUND_COLOR: "#EC3968",
     BOOLEAN_TOGGLE_ANIMATE_DURATION_MS: 150,
-    SAVE_BTN_SPINNER_SIZE_PX: 18,
+    SAVE_CHANGES_LOADING_SPINNER_RADIUS_PX: 9,
+    SAVE_CHANGES_LOADING_SPINNER_ACCENT_COLOR: "#B5B5C4",
+    SAVE_CHANGES_LOADING_SPINNER_BASE_COLOR: "rgba(181, 181, 196, 0.35)",
+    SCHEMA_LOADING_SPINNER_RADIUS_PX: 20,
+    SCHEMA_LOADING_SPINNER_ACCENT_COLOR: "#0E0F11",
+    SCHEMA_LOADING_SPINNER_BASE_COLOR: "rgba(14, 15, 17, 0.22)",
     /** Off boolean switch background; number-slider bar right of the knob (CSS hex). */
     COMPONENT_BG_COLOR: "#DCDCE4",
     /** On boolean switch background; number-slider accent bar left of the knob (CSS hex). */

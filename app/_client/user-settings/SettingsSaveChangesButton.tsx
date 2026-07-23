@@ -1,7 +1,5 @@
 "use client";
 
-import { type CSSProperties } from "react";
-
 import { UserSettings as UserSettingsConsts } from "../ComponentConstants";
 import {
   userSettingsActionButtonOuterHeightPx,
@@ -9,9 +7,7 @@ import {
 } from "../pure/user-settings/UserSettingsBottomButtonLayout";
 import { TextWeight } from "../Utils";
 import { Button } from "../viewport2d/Button";
-
-const SAVE_SPINNER_BORDER_COLOR = "rgba(181, 181, 196, 0.35)";
-const SAVE_SPINNER_ACCENT_COLOR = "#B5B5C4";
+import { LoadingSpinner } from "../viewport2d/LoadingSpinner";
 
 const SAVE_CHANGES_BUTTON_MIN_WIDTH_PX = userSettingsActionButtonOuterWidthPx(
   "Save changes",
@@ -22,31 +18,6 @@ const SAVE_CHANGES_BUTTON_MIN_HEIGHT_PX = userSettingsActionButtonOuterHeightPx(
   UserSettingsConsts.ACTION_BUTTON_PADDING_VERTICAL_PX,
   UserSettingsConsts.ACTION_BUTTON_OUTLINE_THICKNESS_PX,
 );
-
-function SaveChangesSpinner() {
-  const sizePx = UserSettingsConsts.SAVE_BTN_SPINNER_SIZE_PX;
-  const style: CSSProperties = {
-    width: sizePx,
-    height: sizePx,
-    borderRadius: "50%",
-    border: `2px solid ${SAVE_SPINNER_BORDER_COLOR}`,
-    borderTopColor: SAVE_SPINNER_ACCENT_COLOR,
-    animation: "settings-save-spinner-spin 0.8s linear infinite",
-    boxSizing: "border-box",
-    flexShrink: 0,
-  };
-
-  return (
-    <>
-      <style>{`
-        @keyframes settings-save-spinner-spin {
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
-      <div aria-hidden="true" style={style} />
-    </>
-  );
-}
 
 export type SettingsSaveChangesButtonProps = {
   x: number;
@@ -84,7 +55,13 @@ export function SettingsSaveChangesButton({
       ariaLabel="Save changes"
       onClick={onClick}
     >
-      {isSaving ? <SaveChangesSpinner /> : null}
+      {isSaving ? (
+        <LoadingSpinner
+          accentColor={UserSettingsConsts.SAVE_CHANGES_LOADING_SPINNER_ACCENT_COLOR}
+          baseColor={UserSettingsConsts.SAVE_CHANGES_LOADING_SPINNER_BASE_COLOR}
+          radiusPx={UserSettingsConsts.SAVE_CHANGES_LOADING_SPINNER_RADIUS_PX}
+        />
+      ) : null}
     </Button>
   );
 }

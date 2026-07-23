@@ -48,6 +48,10 @@ export type ButtonProps = {
    * When not `null`, passed directly to CSS `width`, overriding the computed rectangular width.
    */
   widthOverride?: string | null;
+  /** Minimum rectangular button width in CSS pixels. */
+  minWidthPx?: number;
+  /** Minimum rectangular button height in CSS pixels. */
+  minHeightPx?: number;
   zIndex?: number;
   /** Image resource descriptor, or `null` for no image. */
   image?: ImageDescriptor | null;
@@ -66,6 +70,18 @@ export type ButtonProps = {
   padding?: number;
   /** Hover / press visual feedback mode (see viewport2d_button.md). */
   hoverInteractBehavior?: Viewport2dButtonHoverInteractBehavior;
+  /** Optional CSS box-shadow (e.g. user-settings bottom buttons). */
+  boxShadow?: string;
+  /**
+   * When true, swipe-menu viewport blocking and brief click suppression do not
+   * disable this control (e.g. user-settings overlay buttons above the menu).
+   */
+  ignoreViewportInteractionGuards?: boolean;
+  disabled?: boolean;
+  /** Blocks interaction without the disabled opacity treatment (e.g. in-flight save). */
+  busy?: boolean;
+  ariaBusy?: boolean;
+  children?: ReactNode;
   ariaLabel?: string;
   onClick?: MouseEventHandler<HTMLButtonElement>;
 };
@@ -291,6 +307,8 @@ export function Button({
   textWeight = Viewport2dButtonConsts.TEXT_WEIGHT,
   text = Viewport2dButtonConsts.TEXT,
   widthOverride = Viewport2dButtonConsts.WIDTH_OVERRIDE,
+  minWidthPx,
+  minHeightPx,
   x,
   y,
   zIndex = Viewport2dButtonConsts.Z_INDEX,
@@ -301,10 +319,20 @@ export function Button({
   circular = Viewport2dButtonConsts.CIRCULAR,
   padding = Viewport2dButtonConsts.PADDING,
   hoverInteractBehavior = Viewport2dButtonConsts.HOVER_INTERACT_BEHAVIOR,
+  boxShadow,
+  ignoreViewportInteractionGuards = false,
+  disabled = false,
+  busy = false,
+  ariaBusy,
+  children,
   ariaLabel,
   onClick,
 }: ButtonProps) {
-  const viewportPointerBlocked = useSwipeMenuBlocksViewport();
+  const swipeMenuBlocksViewport = useSwipeMenuBlocksViewport();
+  const viewportPointerBlocked =
+    !ignoreViewportInteractionGuards && swipeMenuBlocksViewport;
+  const blocksInteraction = disabled || busy || viewportPointerBlocked;
+  const nativeDisabled = disabled || viewportPointerBlocked;
   const [isHovered, setIsHovered] = useState(false);
   const [isPressed, setIsPressed] = useState(false);
   const isHighlighted = isHovered || isPressed;
@@ -400,6 +428,10 @@ export function Button({
     inner = null;
   }
 
+  if (children != null) {
+    inner = children;
+  }
+
   const circularContentSizePx = viewport2dButtonCircularContentSizePx(
     hasImage,
     imageSize,
@@ -423,8 +455,10 @@ export function Button({
     borderWidth: `${outlineThickness}px`,
     borderStyle: "solid",
     borderColor: resolvedOutlineColor,
-    cursor: "pointer",
+    cursor: blocksInteraction ? "default" : "pointer",
     boxSizing: "border-box",
+    ...(boxShadow != null ? { boxShadow } : {}),
+    ...(disabled ? { opacity: 0.6 } : {}),
   };
 
   const layoutStyle: CSSProperties = useCircularLayout
@@ -444,11 +478,19 @@ export function Button({
         padding: `${padding}px`,
         borderRadius: `${cornerRadius}px`,
         overflow: "hidden",
+        display: children != null ? "flex" : undefined,
+        alignItems: children != null ? "center" : undefined,
+        justifyContent: children != null ? "center" : undefined,
         ...(widthOverride != null ? { width: widthOverride } : {}),
+        ...(minWidthPx != null ? { minWidth: `${minWidthPx}px` } : {}),
+        ...(minHeightPx != null ? { minHeight: `${minHeightPx}px` } : {}),
       };
 
   const handleClick: MouseEventHandler<HTMLButtonElement> = (event) => {
-    if (viewportPointerBlocked || areViewportClicksSuppressed()) {
+    if (
+      blocksInteraction ||
+      (!ignoreViewportInteractionGuards && areViewportClicksSuppressed())
+    ) {
       event.preventDefault();
       event.stopPropagation();
       return;
@@ -460,8 +502,9 @@ export function Button({
     <button
       type="button"
       aria-label={ariaLabel}
-      className={viewportPointerBlocked ? "pointer-events-none" : "pointer-events-auto"}
-      disabled={viewportPointerBlocked}
+      className={blocksInteraction ? "pointer-events-none" : "pointer-events-auto"}
+      disabled={nativeDisabled}
+      aria-busy={ariaBusy ?? busy}
       onClick={handleClick}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => {

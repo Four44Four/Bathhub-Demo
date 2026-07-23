@@ -1,69 +1,32 @@
 "use client";
 
-import { useState, type CSSProperties } from "react";
-
-import { BtnInteractAnim, UserSettings as UserSettingsConsts } from "../ComponentConstants";
-import { multiplyHexColorBrightness } from "../pure/viewport2d/ButtonInteractColor";
+import { UserSettings as UserSettingsConsts } from "../ComponentConstants";
 import { TextWeight } from "../Utils";
-
-const SETTINGS_BACK_BTN_FONT_SIZE = 13;
-const SETTINGS_BACK_BTN_SHADOW_ALPHA = 0.25;
+import { Button } from "../viewport2d/Button";
 
 export type SettingsBackButtonProps = {
+  x: number;
+  y: number;
   onClick: () => void;
 };
 
-export function SettingsBackButton({ onClick }: SettingsBackButtonProps) {
-  const [isHovered, setIsHovered] = useState(false);
-  const [isPressed, setIsPressed] = useState(false);
-  const isHighlighted = isHovered || isPressed;
-  const interactTransition = `${BtnInteractAnim.BTN_INTERACT_DURA_MS}ms ease`;
-  const brightnessMult = isHighlighted
-    ? BtnInteractAnim.BTN_COLOR_VALUE_FACTOR_MULT
-    : 1;
-
-  const buttonStyle: CSSProperties = {
-    border: "none",
-    borderRadius: 15,
-    backgroundColor: multiplyHexColorBrightness(
-      UserSettingsConsts.PAGE_BG,
-      brightnessMult,
-    ),
-    color: multiplyHexColorBrightness(
-      UserSettingsConsts.SETTINGS_BACK_BTN_FONT_COLOR,
-      brightnessMult,
-    ),
-    fontSize: SETTINGS_BACK_BTN_FONT_SIZE,
-    lineHeight: 1.2,
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    height: UserSettingsConsts.CLOSE_BTN_SIZE_PX,
-    minWidth: 72,
-    padding: "8px 16px",
-    boxSizing: "border-box",
-    boxShadow: `0 2px 8px rgba(18, 18, 47, ${SETTINGS_BACK_BTN_SHADOW_ALPHA})`,
-    transition: `background-color ${interactTransition}, color ${interactTransition}`,
-  };
-
+export function SettingsBackButton({ x, y, onClick }: SettingsBackButtonProps) {
   return (
-    <button
-      type="button"
-      aria-label="Back"
+    <Button
+      x={x}
+      y={y}
+      text="Back"
+      textWeight={TextWeight.BOLD}
+      hoverInteractBehavior="darken"
+      fillColor={UserSettingsConsts.PAGE_BG}
+      textColor={UserSettingsConsts.SETTINGS_BACK_BTN_FONT_COLOR}
+      outlineThickness={UserSettingsConsts.ACTION_BUTTON_OUTLINE_THICKNESS_PX}
+      cornerRadius={UserSettingsConsts.BOTTOM_BUTTON_CORNER_RADIUS_PX}
+      padding={UserSettingsConsts.ACTION_BUTTON_PADDING_VERTICAL_PX}
+      boxShadow={UserSettingsConsts.BOTTOM_BUTTON_BOX_SHADOW}
+      ignoreViewportInteractionGuards
+      ariaLabel="Back"
       onClick={onClick}
-      className={TextWeight.BOLD}
-      style={buttonStyle}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => {
-        setIsHovered(false);
-        setIsPressed(false);
-      }}
-      onPointerDown={() => setIsPressed(true)}
-      onPointerUp={() => setIsPressed(false)}
-      onPointerCancel={() => setIsPressed(false)}
-    >
-      Back
-    </button>
+    />
   );
 }

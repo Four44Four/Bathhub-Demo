@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { userSettingsBreadcrumbSegments } from "@/app/_shared/user-settings/UserSettingsBreadcrumb";
 import {
@@ -11,6 +11,7 @@ import {
   type UserSettingsNumericColumnName,
 } from "@/app/_shared/user-settings/UserSettingsPageDefinition";
 import type { UserSettingsRow } from "@/app/_shared/user-settings/UserSettingsSchema";
+import { userSettingsBottomButtonPositionsPx } from "@/app/_client/pure/user-settings/UserSettingsBottomButtonLayout";
 import { useAlertSystem } from "../viewport2d/AlertSystem";
 import { BooleanSettingRow } from "./BooleanSettingRow";
 import { NumberSliderSettingRow } from "./NumberSliderSettingRow";
@@ -146,6 +147,33 @@ export function UserSettingsOverlay() {
   } = useUserSettings();
   const { showImportantAlert } = useAlertSystem();
   const scrollRef = useRef<HTMLDivElement | null>(null);
+  const overlayRef = useRef<HTMLDivElement | null>(null);
+  const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
+
+  useLayoutEffect(() => {
+    const target = overlayRef.current;
+    if (!target) {
+      return;
+    }
+
+    const measure = () => {
+      const rect = target.getBoundingClientRect();
+      setViewportSize({
+        width: rect.width,
+        height: rect.height,
+      });
+    };
+
+    measure();
+
+    if (typeof ResizeObserver === "undefined") {
+      return;
+    }
+
+    const observer = new ResizeObserver(() => measure());
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [isOpen]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -161,6 +189,24 @@ export function UserSettingsOverlay() {
   const headerSegments = userSettingsBreadcrumbSegments(pageStack);
   const showBackButton = pageStack.length > 1;
   const showSaveButton = shouldShowSaveChangesButton(hasEditedSettings);
+  const bottomButtonPositions =
+    viewportSize.width > 0 && viewportSize.height > 0
+      ? userSettingsBottomButtonPositionsPx({
+          viewportWidthPx: viewportSize.width,
+          viewportHeightPx: viewportSize.height,
+          closeButtonSizePx: UserSettingsConsts.CLOSE_BTN_SIZE_PX,
+          insetPx: UserSettingsConsts.CLOSE_BTN_INSET_PX,
+          actionButtonPaddingHorizontalPx:
+            UserSettingsConsts.ACTION_BUTTON_PADDING_HORIZONTAL_PX,
+          actionButtonPaddingVerticalPx:
+            UserSettingsConsts.ACTION_BUTTON_PADDING_VERTICAL_PX,
+          actionButtonOutlineThicknessPx:
+            UserSettingsConsts.ACTION_BUTTON_OUTLINE_THICKNESS_PX,
+          bottomButtonGapPx: UserSettingsConsts.BOTTOM_BUTTON_GAP_PX,
+          showBackButton,
+          showSaveButton,
+        })
+      : null;
 
   const showMigrationFailureAlert = () => {
     showImportantAlert({
@@ -196,6 +242,7 @@ export function UserSettingsOverlay() {
 
   return (
     <div
+      ref={overlayRef}
       style={{
         position: "absolute",
         inset: 0,
@@ -232,34 +279,46 @@ export function UserSettingsOverlay() {
       <div
         style={{
           position: "absolute",
-          right: UserSettingsConsts.CLOSE_BTN_INSET_PX,
-          bottom: UserSettingsConsts.CLOSE_BTN_INSET_PX,
+          inset: 0,
           zIndex: 1,
-          display: "flex",
-          flexDirection: "row-reverse",
-          alignItems: "flex-end",
-          gap: 12,
           pointerEvents: "none",
         }}
       >
-        <div style={{ pointerEvents: "auto" }}>
-          <CircularCloseButton
-            ariaLabel="Close settings"
-            onClick={handleClose}
-          />
-        </div>
-        {showBackButton ? (
-          <div style={{ pointerEvents: "auto" }}>
-            <SettingsBackButton onClick={popPage} />
-          </div>
-        ) : null}
-        {showSaveButton ? (
-          <div style={{ pointerEvents: "auto" }}>
-            <SettingsSaveChangesButton
-              isSaving={isSaving}
-              onClick={handleSave}
-            />
-          </div>
+        {bottomButtonPositions != null ? (
+          <>
+            <div
+              style={{
+                position: "absolute",
+                left: bottomButtonPositions.close.x,
+                top: bottomButtonPositions.close.y,
+                pointerEvents: "auto",
+              }}
+            >
+              <CircularCloseButton
+                ariaLabel="Close settings"
+                onClick={handleClose}
+              />
+            </div>
+            {showBackButton && bottomButtonPositions.back != null ? (
+              <div style={{ pointerEvents: "auto" }}>
+                <SettingsBackButton
+                  x={bottomButtonPositions.back.x}
+                  y={bottomButtonPositions.back.y}
+                  onClick={popPage}
+                />
+              </div>
+            ) : null}
+            {showSaveButton && bottomButtonPositions.save != null ? (
+              <div style={{ pointerEvents: "auto" }}>
+                <SettingsSaveChangesButton
+                  x={bottomButtonPositions.save.x}
+                  y={bottomButtonPositions.save.y}
+                  isSaving={isSaving}
+                  onClick={handleSave}
+                />
+              </div>
+            ) : null}
+          </>
         ) : null}
       </div>
     </div>

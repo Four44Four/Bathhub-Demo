@@ -27,6 +27,10 @@
  - #45454D
 ## Number setting knob color
  - #45454D
+## Bottom buttons gap pixel size
+ - 10px
+## Bottom buttons corner radius
+ - 15
 
 # Description
  - Will have header text "Settings" at the top left in large bold text in [this color](#header-text-color)
@@ -46,6 +50,10 @@
        - Each bullet point in the Settings section will specify the DB column name and typing as well as any restrictions on the value
 
 # Components
+ - Each one of these buttons:
+   - Has a soft dropshadow
+   - Is anchored to the same screen coordinates so that it remains on the same screen position as the user scrolls
+   - Has a gap of [this size](#bottom-buttons-gap-pixel-size) between each one
 ## Close user settings page button
  - Is a [circular close button](./components/circular_close_button.md)
     - Located at the bottom of the screen (see [x position](./components/circular_close_button.md#x-position) and [y position](./components/circular_close_button.md#y-position))
@@ -65,33 +73,44 @@
                      - The alert closes and user remains on user settings page
       - Else:
          - Close the user settings page
-   - Has a soft dropshadow
-   - Anchored to the same screen coordinates so that it remains on the same screen position as the user scrolls
  ## Back subpage button
- - Borderless button with [this text color](#back-button-foreground-color) and [this background fill color](#background-color)
- - Has text "Back"
- - Has a soft dropshadow
+  - Is a [viewport2d button](./components/viewport2d_button.md) with the following properties:
+    - Located to the left of the [close user settings button](#close-user-settings-page-button) (see [x position](./components/viewport2d_button.md#x-position) and [y position](./components/viewport2d_button.md#y-position))
+    - Is [rectangular](./components/viewport2d_button.md#circular-flag)
+    - [Text](./components/viewport2d_button.md#text) is "Back"
+    - [Text color](./components/viewport2d_button.md#text-color) is [this color](#back-button-foreground-color)
+    - [Text weight](./components/viewport2d_button.md#text-weight) is [TextWeight.BOLD](./text_weight.md)
+    - [Hover interact behavior](./components/viewport2d_button.md#hover-interact-behavior) is "darken"
+    - [Fill color](./components/viewport2d_button.md#fill-color) is [this color](#background-color)
+    - [Corner radius](./components/viewport2d_button.md#corner-radius) is [this radius](#bottom-buttons-corner-radius)
+    - Has a [outline thickness](./components//viewport2d_button.md#outline-thickness) of 0 (no outline)
+    - [Click callback](./components/viewport2d_button.md#on-click-callback) is the following:
+       - Change the user's active settings page to be at the top of the previous setting/subsettings page - Has a soft dropshadow
  - Hidden initially
     - Appears when the user is in at least 1 subsetting pages
- - Located to the left of the [close user settings button](#close-user-settings-page-button)
- - When interacted with:
-    - Change the user's active settings page to be at the top of the previous setting/subsettings page
 ## Save user settings button
- - Borderless button with [this text color](#back-button-foreground-color) and [this background fill color](#background-color)
- - Has text "Back"
- - Has a soft dropshadow
+  - Is a [viewport2d button](./components/viewport2d_button.md) with the following properties:
+    - Located as the leftmost element in the row with [close button](#close-user-settings-page-button) and [back subpage button](#back-subpage-button) (see [x position](./components/viewport2d_button.md#x-position) and [y position](./components/viewport2d_button.md#y-position))
+    - Is [rectangular](./components/viewport2d_button.md#circular-flag)
+    - [Text](./components/viewport2d_button.md#text) is "Save changes"
+    - [Text color](./components/viewport2d_button.md#text-color) is [this color](#back-button-foreground-color)
+    - [Text weight](./components/viewport2d_button.md#text-weight) is [TextWeight.BOLD](./text_weight.md)
+    - [Hover interact behavior](./components/viewport2d_button.md#hover-interact-behavior) is "darken"
+    - [Fill color](./components/viewport2d_button.md#fill-color) is [this color](#background-color)
+    - [Corner radius](./components/viewport2d_button.md#corner-radius) is [this radius](#bottom-buttons-corner-radius)
+    - Has a [outline thickness](./components//viewport2d_button.md#outline-thickness) of 0 (no outline)
+    - [Click callback](./components/viewport2d_button.md#on-click-callback) is the following:
+       - If USER_SETTING_SCHEMA_UPDATE_HAS_ERRORED is `true`:
+          - Display a [negative important alert](./AlertSystem.md#major-alerts) with the text "Due to a settings data migration failure, saving is currently disabled" with a single button with text "Ok"
+       - Else:
+          - Clear the [button's](#save-user-settings-button) [text](./components/viewport2d_button.md#text)
+          - Display a loading spinner in the center of the [button](#save-user-settings-button) until the saving to **both** the in-memory datastructures representation of the user settings and their backing persistent SQLite DB are done
+          - Once they are done saving:
+             - Hide [this again](#save-user-settings-button) until another setting changes
  - Hidden initially
     - Appears when user has changed at least 1 setting's value
     - Remains even when the setting is changed back manually to the original value
- - Located as the leftmost element in the row with [close button](#close-user-settings-page-button) and [back subpage button](#back-subpage-button)
  - User settings can **only** be saved if the user interacts with this button
- - When interacted with:
-    - If USER_SETTING_SCHEMA_UPDATE_HAS_ERRORED is `true`:
-       - Display a [negative important alert](./AlertSystem.md#major-alerts) with the text "Due to a settings data migration failure, saving is currently disabled" with a single button with text "Ok"
-    - Else:
-       - Display a loading spinner in place of the button text until the saving to **both** the in-memory datastructures representation of the user settings and their backing persistent SQLite DB are done
-       - Once they are done saving:
-          - Hide [this again](#save-user-settings-button) until another setting changes
 
 ## Setting types
  - When any setting is hovered:

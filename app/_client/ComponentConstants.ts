@@ -299,6 +299,13 @@ const UserSettings0 = {
     NUMBER_SLIDER_TRACK_HEIGHT_PX: 6,
     NUMBER_SLIDER_KNOB_SIZE_PX: 20,
     SETTINGS_BACK_BTN_FONT_COLOR: "#B5B5C4",
+    /** Soft drop shadow shared by user-settings bottom buttons (see user_settings.md). */
+    BOTTOM_BUTTON_BOX_SHADOW: CircularCloseButton.BOX_SHADOW,
+    BOTTOM_BUTTON_GAP_PX: 10,
+    BOTTOM_BUTTON_CORNER_RADIUS_PX: 15,
+    ACTION_BUTTON_PADDING_HORIZONTAL_PX: 15,
+    ACTION_BUTTON_PADDING_VERTICAL_PX: 15,
+    ACTION_BUTTON_OUTLINE_THICKNESS_PX: 0,
     /** Interval between schema update requests while schema is out of date (milliseconds). */
     SCHEMA_RETRY_INTERVAL_MS: 5000,
 } as const;

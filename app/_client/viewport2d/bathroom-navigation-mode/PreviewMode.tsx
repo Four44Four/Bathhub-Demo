@@ -74,7 +74,7 @@ export function BathroomNavigationPreviewMode({
         pointerEvents: "none",
       }}
     >
-      <ActionButtons onCancel={handleReject} onConfirm={handleAccept} />
+      <ActionButtons onReject={handleReject} onConfirm={handleAccept} />
     </div>
   );
 }

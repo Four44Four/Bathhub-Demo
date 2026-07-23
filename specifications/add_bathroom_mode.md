@@ -24,32 +24,26 @@
     - Restore the swipe menu in a collapsed state
 
 # Reject or confirm buttons
- - 2 buttons at the base of the Globe viewport with some margin from the edges of the screen
-    - Rounded rectangles of default viewport2d Button corner radii
-    - Fill up the entire width of the screen, with each button taking up roughly half, with some margin in between
-## Reject button
- - The left button will have a background color of [negative color](./positive_negative_buttons.md#negative-color) [X symbol icon](./resources.md#x-symbol-icon) with color white (#000000) at its center
-    - When pressed:
+ - Is an instance of the [confirm and reject buttons](./components/confirm_reject_buttons.md)
+    - [Reject button click callback](./components/confirm_reject_buttons.md#on-reject-click-callback) is the following:
        - Exit this Add bathroom mode with [<new-bathroom-flag> variable](#new-bathroom-flag) set as `true`
-## Confirm button
- - The right button will have a background color of [positive color](./positive_negative_buttons.md#positive-color) [checkmark symbol](./resources.md#checkmark-icon) with color white (#000000) at its center
- - When pressed:
-    - Send off a request to server to save a new Bathroom entry with a verify status of 'pending'
-    - Present a darkened overlay with a loading spinner at the center
-    - When the server responds with a success payload within [timeout duration](#request-timeout-limit):
-       - Remove the loading spinner but keep the bg
-       - Present an [important notification alert](./AlertSystem.md#major-alerts) with the message text "Bathroom added !!" and a button at the bottom with greenish bg with the text "Ok"
-       - When the user presses the "Ok" button:
-          - Remove the bg and exit this Add bathroom mode with [<new-bathroom-flag> variable](#new-bathroom-flag) set as `true`
-          - Requery the server for all Bathrooms in the viewport
-          - Render them as they are received
-    - When the server responds with a failure payload within [timeout duration](#request-timeout-limit):
-       - Remove the loading spinner but keep the bg
-       - Present an [important notification alert](./AlertSystem.md#major-alerts) with the message text "Something when wrong while adding Bathroom" and a button at the bottom with a reddish bg with the text "Ok"
-       - When the user presses the "Ok" button:
-          - Remove the bg and exit this Add bathroom mode with [<new-bathroom-flag> variable](#new-bathroom-flag) set as `false`
-    - When the server does not respond within [timeout duration](#request-timeout-limit):
-       - Remove the loading spinner but keep the bg
-       - Present an important (popup) notification alert with the message text "Timed out while adding Bathroom" and a button at the bottom with a reddish bg with the text "Ok"
-       - When the user presses the "Ok" button:
-          - Remove the bg and exit this Add bathroom mode with [<new-bathroom-flag> variable](#new-bathroom-flag) set as `false`
+    - [Confirm button click callback](./components/confirm_reject_buttons.md#on-reject-click-callback) is the following:
+       - Send off a request to server to save a new Bathroom entry with a verify status of 'pending'
+       - Present a [darkened overlay](./background_darken.md) with a loading spinner at the center
+       - When the server responds with a success payload within [timeout duration](#request-timeout-limit):
+          - Remove the loading spinner but keep the bg
+          - Present an [important notification alert](./AlertSystem.md#major-alerts) with the message text "Bathroom added !!" and a button at the bottom with greenish bg with the text "Ok"
+          - When the user presses the "Ok" button:
+             - Remove the bg and exit this Add bathroom mode with [<new-bathroom-flag> variable](#new-bathroom-flag) set as `true`
+             - Requery the server for all Bathrooms in the viewport
+             - Render them as they are received
+       - When the server responds with a failure payload within [timeout duration](#request-timeout-limit):
+          - Remove the loading spinner but keep the bg
+          - Present an [important notification alert](./AlertSystem.md#major-alerts) with the message text "Something when wrong while adding Bathroom" and a button at the bottom with a reddish bg with the text "Ok"
+          - When the user presses the "Ok" button:
+             - Remove the bg and exit this Add bathroom mode with [<new-bathroom-flag> variable](#new-bathroom-flag) set as `false`
+       - When the server does not respond within [timeout duration](#request-timeout-limit):
+          - Remove the loading spinner but keep the bg
+          - Present an important (popup) notification alert with the message text "Timed out while adding Bathroom" and a button at the bottom with a reddish bg with the text "Ok"
+          - When the user presses the "Ok" button:
+             - Remove the bg and exit this Add bathroom mode with [<new-bathroom-flag> variable](#new-bathroom-flag) set as `false`

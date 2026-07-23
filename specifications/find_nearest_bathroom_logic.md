@@ -25,6 +25,20 @@
  - Confirm Find Bathroom mode:
     - Similar to Add bathroom mode, where most viewport2d elements + swipe-up menu are removed
     - Has [X and checkmark buttons](./add_bathroom_mode.md#reject-or-confirm-buttons) at bottom to reject navigation or start navigating
+    - Display [confirm and reject button](./components/confirm_reject_buttons.md)
+       - [Reject button click callback](./components/confirm_reject_buttons.md#on-reject-click-callback) is the following:
+          - If [toggle globe movement animations user setting](./user_settings.md#toggle-globe-movement-animations) is `true`:
+             - Animate camera back to position and zoom level when the bathroom navigation started
+          - Else:
+             - Instantly snap camera back to position and zoom level when the bathroom navigation started
+       - [Confirm button click callback](./components/confirm_reject_buttons.md#on-reject-click-callback) is the following:
+          - Set `bathroomActiveNavigation` to true
+          - Exit Confirm Find Bathroom mode
+          - Enter Find Bathroom mode
+          - If [toggle globe movement animations user setting](./user_settings.md#toggle-globe-movement-animations) is `true`:
+             - Animate camera to the client's location at height from Globe surface ["Init camera height" from user settings](./user_settings.md#initial-camera-height)
+          - Else:
+             - Instantly snap camera to the client's location at height from Globe surface ["Init camera height" from user settings](./user_settings.md#initial-camera-height)
  - Find bathroom mode
     - Restore viewport2d buttons EXCEPT for Find nearest bathroom button
     - Replace Find nearest bathroom button with a circular button reddish button of the same size with an X
@@ -63,13 +77,6 @@
           - Camera animates (depending on config option) over found bathroom at height from Globe surface "Init camera height" from user settings:
              - Upon reaching the found bathroom:
                 - Force a query for the bathrooms visible in the current Globe viewport so that the found bathroom marker will be rendered
-          - If client interacts with [X button](./add_bathroom_mode.md#reject-button) to reject the bathroom:
-             - Animate (depending on config option) camera back to position and zoom level when the bathroom navigation started
-          - If client interacts with [checkmark button](./add_bathroom_mode.md#confirm-button) to accept the bathroom:
-             - Set `bathroomActiveNavigation` to true
-             - Exit Confirm Find Bathroom mode
-             - Enter Find Bathroom mode
-             - Recenter camera on the client's location at height from Globe surface "Init camera height" from user settings
  - As long as `bathroomActiveNavigation` is on:
     - If the client does not have geolocation on or their geolocation position is not accessible for whatever reason when opening the app or visiting the web-app demo page:
        - Set non-persistent variable `bathroomActiveNavigationPaused` to true

@@ -13,7 +13,7 @@ import { useRecoloredSvgSrc } from "./useRecoloredSvgSrc";
 
 export type ActionButtonsProps = {
   disabled?: boolean;
-  onCancel: MouseEventHandler<HTMLButtonElement>;
+  onReject: MouseEventHandler<HTMLButtonElement>;
   onConfirm: MouseEventHandler<HTMLButtonElement>;
 };
 
@@ -107,7 +107,7 @@ function TintedActionButton({
 
 export function ActionButtons({
   disabled = false,
-  onCancel,
+  onReject,
   onConfirm,
 }: ActionButtonsProps) {
   const rowStyle: CSSProperties = {
@@ -125,18 +125,18 @@ export function ActionButtons({
   return (
     <div style={rowStyle}>
       <TintedActionButton
-        ariaLabel="Cancel add bathroom"
-        fillColor={SharedConsts.NEGATIVE_COLOR}
-        disabled={disabled}
-        iconPath={AddBathroomConsts.CANCEL_ICON}
-        onClick={onCancel}
-      />
-      <TintedActionButton
-        ariaLabel="Confirm add bathroom"
+        ariaLabel="Confirm"
         fillColor={SharedConsts.POSITIVE_COLOR}
         disabled={disabled}
         iconPath={AddBathroomConsts.CONFIRM_ICON}
         onClick={onConfirm}
+      />
+      <TintedActionButton
+        ariaLabel="Reject"
+        fillColor={SharedConsts.NEGATIVE_COLOR}
+        disabled={disabled}
+        iconPath={AddBathroomConsts.CANCEL_ICON}
+        onClick={onReject}
       />
     </div>
   );

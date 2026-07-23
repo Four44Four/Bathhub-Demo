@@ -58,7 +58,7 @@
      - `null`
 ## Image
  - Type:
-    - [Image descriptor](../image.md)
+    - [Image descriptor](../image.md) or `null`
  - Default value:
     - `null`
 ## Image left of text flag

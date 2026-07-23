@@ -108,8 +108,8 @@ export function AddBathroomMode({ globeRef }: AddBathroomModeProps) {
     ],
   );
 
-  const handleCancel = useCallback(() => {
-    exitAddBathroomMode({ withNewBathroom: false });
+  const handleReject = useCallback(() => {
+    exitAddBathroomMode({ withNewBathroom: true });
   }, [exitAddBathroomMode]);
 
   const handleConfirm = useCallback(async () => {
@@ -164,7 +164,7 @@ export function AddBathroomMode({ globeRef }: AddBathroomModeProps) {
           <Marker />
           <ActionButtons
             disabled={requestPending}
-            onCancel={handleCancel}
+            onReject={handleReject}
             onConfirm={() => {
               void handleConfirm();
             }}

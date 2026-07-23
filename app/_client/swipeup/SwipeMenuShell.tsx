@@ -39,12 +39,17 @@ import {
 
 import { subscribeOnTap, TAP_MAX_MOVEMENT_PX } from "../NonDragTapDetector";
 import { SwipeMenu as SwipeMenuConsts } from "../ComponentConstants";
-import { swipeUpMainMenuGridHeightPx } from "../pure/swipeup/MainMenuLayout";
+import { swipeMenuPageContentMinHeightPx, swipeMenuShouldOpenMainMenuOnHandleDragMove } from "../pure/swipeup/SwipeMenuPage";
+import {
+  swipeMenuIsFullyExpanded,
+  type SwipeMenuSnapTarget,
+} from "../pure/swipeup/SwipeMenu";
 import {
   suppressViewportClicksBriefly,
   type SwipeMenuInteraction,
 } from "./SwipeMenuInteraction";
 import { useRegisterSwipeMenuExpandHandler } from "./SwipeMenuExpansion";
+import { useSwipeMenuPage } from "./SwipeMenuPageContext";
 import { useAddBathroomMode } from "../viewport2d/add-bathroom-mode";
 import { useBathroomNavigationMode } from "../viewport2d/bathroom-navigation-mode";
 
@@ -62,7 +67,7 @@ export function useSwipeMenuViewport(): SwipeMenuViewport {
   return useContext(SwipeMenuViewportContext);
 }
 
-export type MainMenuProps = {
+export type SwipeMenuShellProps = {
   /** Virtual phone frame; used for sizing and max expand height. */
   viewportRef: RefObject<HTMLElement | null>;
   children?: ReactNode;
@@ -71,12 +76,12 @@ export type MainMenuProps = {
   onInteractionChange?: (interaction: SwipeMenuInteraction) => void;
 };
 
-export function MainMenu({
+export function SwipeMenuShell({
   viewportRef,
   children,
   className,
   onInteractionChange,
-}: MainMenuProps) {
+}: SwipeMenuShellProps) {
   const {
     isActive: addBathroomModeActive,
     registerExitHandler,
@@ -85,6 +90,7 @@ export function MainMenu({
     isPreviewActive: bathroomNavigationPreviewActive,
   } = useBathroomNavigationMode();
   const registerExpandHandler = useRegisterSwipeMenuExpandHandler();
+  const { pageId, navigateToPage } = useSwipeMenuPage();
   const immersiveModeActive = viewport2dChromeHidden({
     addBathroomModeActive,
     bathroomNavigationPreviewActive,
@@ -94,8 +100,10 @@ export function MainMenu({
     pointerId: number;
     lastClientY: number;
     startClientY: number;
+    startHeightPx: number;
     startedOnHandle: boolean;
   } | null>(null);
+  const openedMainMenuThisHandleDragRef = useRef(false);
   const heightPxRef = useRef(inactiveHeightPx);
   const heightAnimFrameRef = useRef<number | null>(null);
   const outsideDismissRef = useRef<HTMLDivElement>(null);
@@ -237,7 +245,10 @@ export function MainMenu({
   useEffect(() => () => cancelHeightAnimation(), [cancelHeightAnimation]);
 
   useEffect(() => {
-    return registerExpandHandler(() => {
+    return registerExpandHandler((request) => {
+      if (request.pageId) {
+        navigateToPage(request.pageId);
+      }
       if (immersiveModeActive) return;
       const dragMaxHeightPx = resolveMaxHeightPx();
       const current = heightPxRef.current;
@@ -253,6 +264,7 @@ export function MainMenu({
     animateHeightTo,
     immersiveModeActive,
     inactiveHeightPx,
+    navigateToPage,
     registerExpandHandler,
     resolveMaxHeightPx,
   ]);
@@ -310,10 +322,12 @@ export function MainMenu({
     if (swipeMenuPointerTargetIsInteractive(e.target)) return;
     cancelHeightAnimation();
     measureViewport();
+    openedMainMenuThisHandleDragRef.current = false;
     dragRef.current = {
       pointerId: e.pointerId,
       lastClientY: e.clientY,
       startClientY: e.clientY,
+      startHeightPx: heightPxRef.current,
       startedOnHandle: swipeMenuPointerTargetIsHandle(e.target),
     };
     e.currentTarget.setPointerCapture(e.pointerId);
@@ -326,18 +340,30 @@ export function MainMenu({
     const deltaY = e.clientY - drag.lastClientY;
     drag.lastClientY = e.clientY;
     const dragMaxHeightPx = resolveMaxHeightPx();
-    setHeightPx((current) => {
-      const next = swipeMenuHeightAfterPointerDelta(
-        current,
-        deltaY,
+    const current = heightPxRef.current;
+    const next = swipeMenuHeightAfterPointerDelta(
+      current,
+      deltaY,
+      inactiveHeightPx,
+      dragMaxHeightPx,
+    );
+    if (
+      !openedMainMenuThisHandleDragRef.current &&
+      swipeMenuShouldOpenMainMenuOnHandleDragMove(
+        drag.startedOnHandle,
+        drag.startHeightPx,
+        next,
         inactiveHeightPx,
-        dragMaxHeightPx,
-      );
-      setBackdropOpacityImmediate(
-        swipeMenuBackdropOpacity(next, inactiveHeightPx, dragMaxHeightPx),
-      );
-      return next;
-    });
+      )
+    ) {
+      openedMainMenuThisHandleDragRef.current = true;
+      navigateToPage("mainMenu");
+    }
+    heightPxRef.current = next;
+    setHeightPx(next);
+    setBackdropOpacityImmediate(
+      swipeMenuBackdropOpacity(next, inactiveHeightPx, dragMaxHeightPx),
+    );
   };
 
   const endDrag = (e: ReactPointerEvent<HTMLDivElement>) => {
@@ -358,16 +384,28 @@ export function MainMenu({
       dragMaxHeightPx,
     );
     if (afterHandleTap !== current) {
+      if (
+        swipeMenuIsFullyExpanded(
+          afterHandleTap,
+          inactiveHeightPx,
+          dragMaxHeightPx,
+        )
+      ) {
+        navigateToPage("mainMenu");
+      }
       animateHeightTo(afterHandleTap);
       return;
     }
 
-    const target = swipeMenuSnapTarget(
+    const target: SwipeMenuSnapTarget = swipeMenuSnapTarget(
       current,
       inactiveHeightPx,
       dragMaxHeightPx,
       SwipeMenuConsts.EXPAND_SNAP_THRESHOLD_RATIO,
     );
+    if (target === "expanded") {
+      navigateToPage("mainMenu");
+    }
     const snapped = swipeMenuSnapHeightPx(
       target,
       inactiveHeightPx,
@@ -468,7 +506,7 @@ export function MainMenu({
           style={{
             height: contentHeightPx,
             minHeight: menuContentVisible
-              ? swipeUpMainMenuGridHeightPx(viewportSize.width)
+              ? swipeMenuPageContentMinHeightPx(pageId, viewportSize.width)
               : 0,
             overflow: menuContentVisible ? "auto" : "hidden",
             visibility: menuContentVisible ? "visible" : "hidden",

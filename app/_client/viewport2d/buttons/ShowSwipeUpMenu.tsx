@@ -4,7 +4,7 @@ import { Viewport2dButton as Viewport2dButtonConsts } from "../../ComponentConst
 import { createMonoColorImage } from "../../pure/Image";
 import { viewportRectangularButtonOuterSidePx } from "../../pure/viewport2d/ButtonLayout";
 import { VIEWPORT2D_TOP_LAYER_Z_INDEX } from "../../pure/viewport2d/PositionalAlertAnchor";
-import { useExpandSwipeMenu } from "../../swipeup/SwipeMenuExpansion";
+import { useSwipeMenuPage } from "../../swipeup/SwipeMenuPageContext";
 import { Button } from "../Button";
 
 export const BTN_IMG_SRC = "/hamburger_icon.svg";
@@ -54,7 +54,7 @@ export function ShowSwipeUpMenu({
   paddingPx = BTN_PADDING_PX,
   onClick,
 }: ShowSwipeUpMenuProps) {
-  const expandSwipeMenu = useExpandSwipeMenu();
+  const { expandToPage } = useSwipeMenuPage();
   const outerSidePx = showSwipeUpMenuButtonOuterSidePx(
     btnImgSizePx,
     paddingPx,
@@ -77,7 +77,7 @@ export function ShowSwipeUpMenu({
         padding={paddingPx}
         image={BTN_IMAGE}
         imageSize={btnImgSizePx}
-        onClick={onClick ?? expandSwipeMenu}
+        onClick={onClick ?? (() => expandToPage("mainMenu"))}
       />
     </div>
   );

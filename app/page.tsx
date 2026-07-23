@@ -11,21 +11,23 @@ import { Recenter } from "./_client/viewport2d/buttons/Recenter";
 import { FindNearestBathroom } from "./_client/viewport2d/buttons/FindNearestBathroom";
 import { ExitFindBathroom } from "./_client/viewport2d/buttons/ExitFindBathroom";
 import { ShowSwipeUpMenu } from "./_client/viewport2d/buttons/ShowSwipeUpMenu";
+import { ShowTestingBathroomMenu } from "./_client/viewport2d/buttons/ShowTestingBathroomMenu";
 import {
   GlobeViewport,
   type GlobeViewportHandle,
 } from "./_client/globe/GlobeViewport";
 import { CesiumAttribution } from "./_client/viewport2d/CesiumAttribution";
 import { ZoomIndicator } from "./_client/viewport2d/ZoomIndicator";
-import { MainMenu } from "./_client/swipeup/MainMenu";
+import { SwipeMenuShell } from "./_client/swipeup/SwipeMenuShell";
 import { SwipeMenuBackdrop } from "./_client/swipeup/SwipeMenuBackdrop";
 import { SwipeMenuTopShadow } from "./_client/swipeup/SwipeMenuTopShadow";
 import { SwipeMenuExpansionProvider } from "./_client/swipeup/SwipeMenuExpansion";
+import { SwipeMenuPageProvider } from "./_client/swipeup/SwipeMenuPageContext";
+import { SwipeMenuPageContent } from "./_client/swipeup/SwipeMenuPageContent";
 import {
   SwipeMenuInteractionContext,
   type SwipeMenuInteraction,
 } from "./_client/swipeup/SwipeMenuInteraction";
-import { SwipeUpMainMenuPage } from "./_client/swipeup/SwipeUpMainMenuPage";
 import { UserSettingsProvider } from "./_client/user-settings/UserSettingsContext";
 import { UserSettingsBootstrapGate } from "./_client/user-settings/UserSettingsBootstrapGate";
 import { UserSettingsDangerBand } from "./_client/user-settings/UserSettingsDangerBand";
@@ -299,6 +301,7 @@ function HomeContent({
 
   return (
     <SwipeMenuExpansionProvider>
+    <SwipeMenuPageProvider>
     <SwipeMenuInteractionContext.Provider value={swipeMenuInteraction}>
     <BathroomLocalDbOnAppOpen />
     <main className="flex h-full min-h-0 flex-col">
@@ -350,7 +353,12 @@ function HomeContent({
           </div>
         </div>
         <SwipeMenuTopShadow />
-        {!viewportChromeHidden ? <ShowSwipeUpMenu /> : null}
+        {!viewportChromeHidden ? (
+          <>
+            <ShowSwipeUpMenu />
+            <ShowTestingBathroomMenu />
+          </>
+        ) : null}
         {!viewportChromeHidden && showRecenterButton ? (
           <Recenter
             globeRef={globeRef}
@@ -376,17 +384,18 @@ function HomeContent({
           <SwipeMenuBackdrop />
         </div>
         <div className="pointer-events-none absolute inset-0 z-40">
-          <MainMenu
+          <SwipeMenuShell
             viewportRef={phoneFrameRef}
             onInteractionChange={setSwipeMenuInteraction}
           >
-            <SwipeUpMainMenuPage />
-          </MainMenu>
+            <SwipeMenuPageContent />
+          </SwipeMenuShell>
         </div>
         <UserSettingsOverlay />
       </div>
     </main>
     </SwipeMenuInteractionContext.Provider>
+    </SwipeMenuPageProvider>
     </SwipeMenuExpansionProvider>
   );
 }

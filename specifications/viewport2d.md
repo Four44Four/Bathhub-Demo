@@ -41,7 +41,7 @@
     - Is [rectangular](./components/viewport2d_button.md#circular-flag)
     - Has [hamburger icon](./resources.md#hamburger-icon) as the [image](./components/viewport2d_button.md#image)
  - When interacted with:
-    - The [swipe-up menu](./swipe_up_menu/swipe_up_menu.md) enters into [expanded mode](./swipe_up_menu/swipe_up_menu.md#expanded-mode) using the same transition as if its [pull handle](./swipe_up_menu/swipe_up_menu.md#pull-handle) was interacted with
+    - The [swipe-up menu](./swipe_up_menu/swipe_up_menu.md) enters into [expanded mode](./swipe_up_menu/swipe_up_menu.md#expanded-mode) on the [main menu page](./swipe_up_menu/main_menu.md) using the same transition as if its [pull handle](./swipe_up_menu/swipe_up_menu.md#pull-handle) was interacted with
 
 ## Zoom indicator
  - Display the [crosshairs icon](./resources.md#crosshairs-icon) at the [zoom location](#zoom-location-calculation)

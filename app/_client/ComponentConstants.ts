@@ -245,6 +245,14 @@ export const SwipeUpMainMenu = {
     MARGIN_SIDE_PX: 10,
 } as const;
 
+/** Swipe-up testing bathroom page (viewport2d testing button). */
+export const TestingBathroomPage = {
+    TEXT: "THIS IS A TESTING PAGE",
+    TEXT_FONT_SIZE_PX: 30,
+    TEXT_TOP_OFFSET_PX: 50,
+    TEXT_LINE_HEIGHT: 1.2,
+} as const;
+
 export const Alerts = {
     NEGATIVE_ACCENT_COLOR: "#EC3968",
     POSITIVE_ACCENT_COLOR: "#7BE3C7",

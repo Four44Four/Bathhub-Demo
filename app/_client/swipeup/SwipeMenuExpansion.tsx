@@ -9,9 +9,17 @@ import {
   type ReactNode,
 } from "react";
 
+import type { SwipeMenuPageId } from "../pure/swipeup/SwipeMenuPage";
+
+export type SwipeMenuExpandRequest = {
+  pageId?: SwipeMenuPageId;
+};
+
 export type SwipeMenuExpansionApi = {
-  registerExpandHandler: (handler: (() => void) | null) => () => void;
-  expandSwipeMenu: () => void;
+  registerExpandHandler: (
+    handler: ((request: SwipeMenuExpandRequest) => void) | null,
+  ) => () => void;
+  expandSwipeMenu: (request?: SwipeMenuExpandRequest) => void;
 };
 
 export const SwipeMenuExpansionContext = createContext<SwipeMenuExpansionApi>({
@@ -20,19 +28,24 @@ export const SwipeMenuExpansionContext = createContext<SwipeMenuExpansionApi>({
 });
 
 export function SwipeMenuExpansionProvider({ children }: { children: ReactNode }) {
-  const expandHandlerRef = useRef<(() => void) | null>(null);
+  const expandHandlerRef = useRef<
+    ((request: SwipeMenuExpandRequest) => void) | null
+  >(null);
 
-  const registerExpandHandler = useCallback((handler: (() => void) | null) => {
-    expandHandlerRef.current = handler;
-    return () => {
-      if (expandHandlerRef.current === handler) {
-        expandHandlerRef.current = null;
-      }
-    };
-  }, []);
+  const registerExpandHandler = useCallback(
+    (handler: ((request: SwipeMenuExpandRequest) => void) | null) => {
+      expandHandlerRef.current = handler;
+      return () => {
+        if (expandHandlerRef.current === handler) {
+          expandHandlerRef.current = null;
+        }
+      };
+    },
+    [],
+  );
 
-  const expandSwipeMenu = useCallback(() => {
-    expandHandlerRef.current?.();
+  const expandSwipeMenu = useCallback((request: SwipeMenuExpandRequest = {}) => {
+    expandHandlerRef.current?.(request);
   }, []);
 
   const value = useMemo(
@@ -47,7 +60,7 @@ export function SwipeMenuExpansionProvider({ children }: { children: ReactNode }
   );
 }
 
-export function useExpandSwipeMenu(): () => void {
+export function useExpandSwipeMenu(): SwipeMenuExpansionApi["expandSwipeMenu"] {
   return useContext(SwipeMenuExpansionContext).expandSwipeMenu;
 }
 

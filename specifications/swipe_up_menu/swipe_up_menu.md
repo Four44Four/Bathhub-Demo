@@ -55,6 +55,8 @@
     - Move the swipe-up menu along with the user's pointer vertically
  - When the user clicks or taps on the pull handle:
     - Toggle between [collapsed mode](#collapsed-mode) and [expanded mode](#expanded-mode) over [this duration](#move-animation-duration) with quadratic easing
+    - When entering into [expanded mode](#expanded-mode) through swiping up or tapping on the pull handle:
+       - Open the swipe-up menu on the [main menu page](./main_menu.md)
 
 # Top shadow
  - Is a gradient shadow that fades on the top edge

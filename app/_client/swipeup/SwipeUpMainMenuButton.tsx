@@ -16,7 +16,7 @@ import {
   swipeUpMainMenuButtonImageSizePx,
   swipeUpMainMenuButtonMaxContentHeightPx,
 } from "../pure/swipeup/MainMenuLayout";
-import { useSwipeMenuViewport } from "./MainMenu";
+import { useSwipeMenuViewport } from "./SwipeMenuShell";
 
 export type SwipeUpMainMenuButtonProps = {
   x: number;

@@ -13,7 +13,7 @@ import {
 import { useAddBathroomMode } from "../viewport2d/add-bathroom-mode";
 import { useUserSettings } from "../user-settings/UserSettingsContext";
 import { SwipeUpMainMenuButton } from "./SwipeUpMainMenuButton";
-import { useSwipeMenuViewport } from "./MainMenu";
+import { useSwipeMenuViewport } from "./SwipeMenuShell";
 
 const EDIT_SETTINGS_ICON = createMonoColorImage(
   "/gear_icon.svg",
@@ -24,7 +24,8 @@ const ADD_BATHROOM_ICON = createMonoColorImage(
   SwipeUpMainMenu.ICON_COLOR,
 );
 
-export function SwipeUpMainMenuPage() {
+/** Main menu page content (see specifications/swipe_up_menu/main_menu.md). */
+export function MainMenuPage() {
   const { widthPx } = useSwipeMenuViewport();
   const { openSettings } = useUserSettings();
   const { enterAddBathroomMode } = useAddBathroomMode();

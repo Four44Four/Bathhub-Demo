@@ -30,12 +30,15 @@ export const Viewport2dButton = {
     TEXT_WEIGHT: Shared.FONT_REGULAR_CLASS,
     PADDING: 0,
     TEXT: null,
+    WIDTH_OVERRIDE: null,
     IMAGE: null,
     IMAGE_LEFT_OF_TEXT: true,
     IMAGE_TEXT_GAP: 0,
     IMAGE_SIZE: 24,
     CIRCULAR: false,
     Z_INDEX: 0,
+    HOVER_INTERACT_BEHAVIOR: "invert",
+    HOVER_INTERACT_DARKENING_MULT_FACTOR: 0.7,
     /**
      * Mono-color icon tint for circular viewport2d controls (recenter, find bathroom).
      * From viewport2d.md find-bathroom icon color — not a viewport2d_button.md default.
@@ -47,7 +50,7 @@ export const BtnInteractAnim = {
     /** Shared interact transition duration; mirrors viewport2d button animation duration. */
     BTN_INTERACT_DURA_MS: Viewport2dButton.ANIMATION_DURATION_MS,
     /** Multiplier applied to button colors' brightness while hovered or pressed. */
-    BTN_COLOR_VALUE_FACTOR_MULT: 0.7,
+    BTN_COLOR_VALUE_FACTOR_MULT: Viewport2dButton.HOVER_INTERACT_DARKENING_MULT_FACTOR,
 } as const;
 
 /** Circular dismiss control (user settings close, exit find-bathroom mode, etc.). */

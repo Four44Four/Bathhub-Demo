@@ -31,13 +31,29 @@
  - Should trigger the important alert indicator
     - Background is white #ffffff
     - Alerts are considered major if they warrant stopping the client from making further inputs until they acknowledge and dismiss the alert
-    - Important alerts consists of a popup window with text detailing the alert and a large Ok button for dismissing the alert
+    - Important alerts consists of a popup window with text detailing the alert and a large [Ok button](#major-alert-button) for dismissing the alert
        - Display the [background darken overlay](./background_darken.md) until the major alert is dismissed
     - Can be a negative or positive alert
-       - Negative alerts will have [this color](#negative-color) as the button background fill color for the accent colored button
-       - Positive alerts will have [this color](#positive-color) as the button background fill color for the accent colored button
-    - Buttons will have some text displayed in the middle (centered horizontally and vertically)
-    - Can have 1 or more buttons of the same size in a row
-       - EXAMPLE: If there is 1 button, it expands to the entire width, if there are 3 buttons, each button occupies a 3rd of the width
-       - At least 1 button must have the [positive](#positive-color) or [negative](#negative-color) color depending on if it is a negative or positive aler
-       - Each button has a callback to run when the button is interacted with
+       - Negative alerts will have [this color](#negative-color) as the [button background fill color](#fill-color-major-alert-button) for the accent colored [button](#major-alert-button)
+       - Positive alerts will have [this color](#positive-color) as the [button background fill color](#fill-color-major-alert-button) for the accent colored [button](#major-alert-button)
+ - Can have 1 or more [buttons](#major-alert-button) of the same size in a row
+    - EXAMPLE: If there is 1 [button](#major-alert-button), it expands to the entire width, if there are 3 buttons, each button occupies a 3rd of the width
+    - At least 1 button must have the [positive](#positive-color) or [negative](#negative-color) color depending on if it is a negative or positive alert
+### Major alert button
+#### Properties (major alert button)
+##### Text (major alert button)
+ - Type:
+    - String
+##### Fill color (major alert button)
+ - Type:
+    - String
+##### On click callback (major alert button)
+ - Type:
+    - Function that takes in a click event
+#### Description (major alert button)
+ - Is a [viewport2d button](./components/viewport2d_button.md) with the following properties:
+     - [Text](./components/viewport2d_button.md#text) is [the text property](#text-major-alert-button)
+     - [Fill color](./components/viewport2d_button.md#fill-color) is the [fill color property](#fill-color-major-alert-button)
+     - [Width override](./components/viewport2d_button.md#width-override) is "100%" to allow for the specified button behavior in [here](#major-alerts)
+     - [On click callback](./components/viewport2d_button.md#on-click-callback) is the [on click callback property](#on-click-callback-major-alert-button)
+     - [Hover interaction behavior](./components/viewport2d_button.md#hover-interact-behavior) is "darken"

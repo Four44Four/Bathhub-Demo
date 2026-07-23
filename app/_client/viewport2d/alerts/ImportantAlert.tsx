@@ -2,7 +2,7 @@
 
 import type { CSSProperties } from "react";
 
-import { Alerts as AlertConsts, BtnInteractAnim, Menus as MenuConsts } from "../../ComponentConstants";
+import { Alerts as AlertConsts, Menus as MenuConsts } from "../../ComponentConstants";
 import type { ImportantAlertButton } from "../../pure/viewport2d/AlertSystemState";
 import { Button } from "../Button";
 import { TextWeight } from "../../Utils";
@@ -105,7 +105,8 @@ export function ImportantAlert({
                 <Button
                   x={0}
                   y={0}
-                  width="100%"
+                  widthOverride="100%"
+                  hoverInteractBehavior="darken"
                   // Spec padding is a single integer; prior layout used asymmetric 10px 16px.
                   padding={10}
                   text={button.label}
@@ -124,11 +125,6 @@ export function ImportantAlert({
                     isAccent
                       ? IMPORTANT_ALERT_ACCENT_BUTTON_TEXT_COLOR
                       : IMPORTANT_ALERT_TEXT_COLOR
-                  }
-                  interactBrightnessMult={
-                    isAccent
-                      ? BtnInteractAnim.BTN_COLOR_VALUE_FACTOR_MULT
-                      : undefined
                   }
                   onClick={() => handleButtonClick(button)}
                 />

@@ -1,4 +1,7 @@
 import { clamp01, hexToRgb, hslToRgb, rgbToHex, rgbToHsl } from "../../Utils";
+import { lerpHex } from "../HexColor";
+
+export type Viewport2dButtonHoverInteractBehavior = "invert" | "darken";
 
 /** Multiplies RGB channels, matching CSS `filter: brightness(factor)`. */
 export function multiplyHexColorBrightness(hex: string, factor: number): string {
@@ -68,6 +71,65 @@ export function viewportButtonInteractColorsAtProgress(
     outlineColor: lerpHexBrightnessInvert(outlineColor, t),
     textColor: lerpHexBrightnessInvert(textColor, t),
   };
+}
+
+/**
+ * Linearly interpolates fill, outline, and text colors toward their RGB-brightness-multiplied values.
+ * `t` = 0 returns the originals; `t` = 1 returns colors multiplied by `darkenFactor`.
+ */
+export function viewportButtonDarkenInteractColorsAtProgress(
+  fillColor: string,
+  outlineColor: string,
+  textColor: string,
+  progress: number,
+  darkenFactor: number,
+): { fillColor: string; outlineColor: string; textColor: string } {
+  const t = clamp01(progress);
+  if (t <= 0) {
+    return { fillColor, outlineColor, textColor };
+  }
+  return {
+    fillColor: lerpHex(
+      fillColor,
+      multiplyHexColorBrightness(fillColor, darkenFactor),
+      t,
+    ),
+    outlineColor: lerpHex(
+      outlineColor,
+      multiplyHexColorBrightness(outlineColor, darkenFactor),
+      t,
+    ),
+    textColor: lerpHex(
+      textColor,
+      multiplyHexColorBrightness(textColor, darkenFactor),
+      t,
+    ),
+  };
+}
+
+export function viewportButtonInteractColorsForBehavior(
+  fillColor: string,
+  outlineColor: string,
+  textColor: string,
+  progress: number,
+  behavior: Viewport2dButtonHoverInteractBehavior,
+  darkenFactor: number,
+): { fillColor: string; outlineColor: string; textColor: string } {
+  if (behavior === "darken") {
+    return viewportButtonDarkenInteractColorsAtProgress(
+      fillColor,
+      outlineColor,
+      textColor,
+      progress,
+      darkenFactor,
+    );
+  }
+  return viewportButtonInteractColorsAtProgress(
+    fillColor,
+    outlineColor,
+    textColor,
+    progress,
+  );
 }
 
 export function viewportButtonInteractColors(

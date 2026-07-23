@@ -14,9 +14,10 @@ import {
   resolveImageMonoColor,
 } from "../pure/Image";
 import {
-  viewportButtonBrightnessInteractColors,
-  viewportButtonInteractColorsAtProgress,
+  type Viewport2dButtonHoverInteractBehavior,
+  viewportButtonInteractColorsForBehavior,
   invertHexBrightness,
+  multiplyHexColorBrightness,
 } from "../pure/viewport2d/ButtonInteractColor";
 import {
   VIEWPORT2D_BUTTON_TEXT_FONT_SIZE_PX,
@@ -29,7 +30,7 @@ import {
   areViewportClicksSuppressed,
   useSwipeMenuBlocksViewport,
 } from "../swipeup/SwipeMenuInteraction";
-import { TextWeight } from "../Utils";
+import { TextWeight, lerp } from "../Utils";
 import { useAnimatedLinear01 } from "../useAnimatedLinear01";
 import { useButtonSvgInteractSrc } from "./useButtonSvgInteractSrc";
 
@@ -44,10 +45,9 @@ export type ButtonProps = {
   x: number;
   y: number;
   /**
-   * When set, applied as the button's CSS `width` (e.g. `"100%"` or a pixel value).
-   * Not in viewport2d_button.md — kept for ImportantAlert layout.
+   * When not `null`, passed directly to CSS `width`, overriding the computed rectangular width.
    */
-  width?: number | string;
+  widthOverride?: string | null;
   zIndex?: number;
   /** Image resource descriptor, or `null` for no image. */
   image?: ImageDescriptor | null;
@@ -64,29 +64,38 @@ export type ButtonProps = {
   circular?: boolean;
   /** Internal padding from the border on every side (CSS px). */
   padding?: number;
-  /**
-   * When set, dims fill/outline/text via brightness multiply on hover/press instead of brightness invert.
-   * Not in viewport2d_button.md — kept for ImportantAlert accent buttons.
-   */
-  interactBrightnessMult?: number;
+  /** Hover / press visual feedback mode (see viewport2d_button.md). */
+  hoverInteractBehavior?: Viewport2dButtonHoverInteractBehavior;
   onClick?: MouseEventHandler<HTMLButtonElement>;
 };
 
 function ButtonImage({
   imageSize,
-  invertProgress,
+  interactProgress,
+  hoverInteractBehavior,
+  darkenFactor,
   normalSrc,
   invertedSrc,
   isSvg,
   monoColor,
 }: {
   imageSize: number;
-  invertProgress: number;
+  interactProgress: number;
+  hoverInteractBehavior: Viewport2dButtonHoverInteractBehavior;
+  darkenFactor: number;
   normalSrc: string | undefined;
   invertedSrc: string | undefined;
   isSvg: boolean;
   monoColor: string | null;
 }) {
+  const usesInvertInteract = hoverInteractBehavior === "invert";
+  const darkenedMonoColor = useMemo(
+    () =>
+      monoColor != null
+        ? multiplyHexColorBrightness(monoColor, darkenFactor)
+        : undefined,
+    [darkenFactor, monoColor],
+  );
   const invertedImageColor = useMemo(
     () => (monoColor != null ? invertHexBrightness(monoColor) : undefined),
     [monoColor],
@@ -102,6 +111,13 @@ function ButtonImage({
         : undefined,
     [invertedImageColor],
   );
+  const darkenedIconFilter = useMemo(
+    () =>
+      darkenedMonoColor != null
+        ? blackMonoIconCssFilter(darkenedMonoColor)
+        : undefined,
+    [darkenedMonoColor],
+  );
 
   const imageStyle: CSSProperties = {
     height: imageSize,
@@ -111,10 +127,57 @@ function ButtonImage({
     objectFit: "contain",
   };
 
-  const normalOpacity = 1 - invertProgress;
-  const invertedOpacity = invertProgress;
+  const normalOpacity = 1 - interactProgress;
+  const alternateOpacity = interactProgress;
+  const darkenBrightness = lerp(1, darkenFactor, interactProgress);
 
   if (
+    !usesInvertInteract &&
+    isSvg &&
+    monoColor != null &&
+    normalSrc != null &&
+    normalIconFilter != null &&
+    darkenedIconFilter != null
+  ) {
+    return (
+      <div
+        style={{
+          position: "relative",
+          width: imageSize,
+          height: imageSize,
+          flexShrink: 0,
+        }}
+      >
+        <img
+          src={normalSrc}
+          alt=""
+          draggable={false}
+          style={{
+            ...imageStyle,
+            position: "absolute",
+            inset: 0,
+            filter: normalIconFilter,
+            opacity: normalOpacity,
+          }}
+        />
+        <img
+          src={normalSrc}
+          alt=""
+          draggable={false}
+          style={{
+            ...imageStyle,
+            position: "absolute",
+            inset: 0,
+            filter: darkenedIconFilter,
+            opacity: alternateOpacity,
+          }}
+        />
+      </div>
+    );
+  }
+
+  if (
+    usesInvertInteract &&
     isSvg &&
     monoColor != null &&
     normalSrc != null &&
@@ -151,14 +214,14 @@ function ButtonImage({
             position: "absolute",
             inset: 0,
             filter: invertedIconFilter,
-            opacity: invertedOpacity,
+            opacity: alternateOpacity,
           }}
         />
       </div>
     );
   }
 
-  if (isSvg && invertedSrc != null && normalSrc != null) {
+  if (usesInvertInteract && isSvg && invertedSrc != null && normalSrc != null) {
     return (
       <div
         style={{
@@ -187,10 +250,24 @@ function ButtonImage({
             ...imageStyle,
             position: "absolute",
             inset: 0,
-            opacity: invertedOpacity,
+            opacity: alternateOpacity,
           }}
         />
       </div>
+    );
+  }
+
+  if (!usesInvertInteract && normalSrc != null) {
+    return (
+      <img
+        src={normalSrc}
+        alt=""
+        draggable={false}
+        style={{
+          ...imageStyle,
+          filter: `brightness(${darkenBrightness})`,
+        }}
+      />
     );
   }
 
@@ -212,9 +289,9 @@ export function Button({
   textColor = Viewport2dButtonConsts.TEXT_COLOR,
   textWeight = Viewport2dButtonConsts.TEXT_WEIGHT,
   text = Viewport2dButtonConsts.TEXT,
+  widthOverride = Viewport2dButtonConsts.WIDTH_OVERRIDE,
   x,
   y,
-  width,
   zIndex = Viewport2dButtonConsts.Z_INDEX,
   image = Viewport2dButtonConsts.IMAGE,
   imageLeftOfText = Viewport2dButtonConsts.IMAGE_LEFT_OF_TEXT,
@@ -222,38 +299,30 @@ export function Button({
   imageSize = Viewport2dButtonConsts.IMAGE_SIZE,
   circular = Viewport2dButtonConsts.CIRCULAR,
   padding = Viewport2dButtonConsts.PADDING,
-  interactBrightnessMult,
+  hoverInteractBehavior = Viewport2dButtonConsts.HOVER_INTERACT_BEHAVIOR,
   onClick,
 }: ButtonProps) {
   const viewportPointerBlocked = useSwipeMenuBlocksViewport();
   const [isHovered, setIsHovered] = useState(false);
   const [isPressed, setIsPressed] = useState(false);
   const isHighlighted = isHovered || isPressed;
-  const usesBrightnessInteract = interactBrightnessMult != null;
-  const invertProgress = useAnimatedLinear01(
-    usesBrightnessInteract ? 0 : isHighlighted ? 1 : 0,
+  const interactProgress = useAnimatedLinear01(
+    isHighlighted ? 1 : 0,
     Viewport2dButtonConsts.ANIMATION_DURATION_MS,
   );
-  const interactTransition = `${Viewport2dButtonConsts.ANIMATION_DURATION_MS}ms linear`;
 
   const {
     fillColor: resolvedFillColor,
     outlineColor: resolvedOutlineColor,
     textColor: resolvedTextColor,
-  } = usesBrightnessInteract
-    ? viewportButtonBrightnessInteractColors(
-        fillColor,
-        outlineColor,
-        textColor,
-        isHighlighted,
-        interactBrightnessMult,
-      )
-    : viewportButtonInteractColorsAtProgress(
-        fillColor,
-        outlineColor,
-        textColor,
-        invertProgress,
-      );
+  } = viewportButtonInteractColorsForBehavior(
+    fillColor,
+    outlineColor,
+    textColor,
+    interactProgress,
+    hoverInteractBehavior,
+    Viewport2dButtonConsts.HOVER_INTERACT_DARKENING_MULT_FACTOR,
+  );
 
   const imagePath = image?.path;
   const monoColor = resolveImageMonoColor(image);
@@ -280,7 +349,9 @@ export function Button({
   const imageEl = hasImage ? (
     <ButtonImage
       imageSize={imageSize}
-      invertProgress={invertProgress}
+      interactProgress={interactProgress}
+      hoverInteractBehavior={hoverInteractBehavior}
+      darkenFactor={Viewport2dButtonConsts.HOVER_INTERACT_DARKENING_MULT_FACTOR}
       normalSrc={normalSrc}
       invertedSrc={invertedSrc}
       isSvg={isSvg}
@@ -296,9 +367,6 @@ export function Button({
         fontSize: VIEWPORT2D_BUTTON_TEXT_FONT_SIZE_PX,
         lineHeight: VIEWPORT2D_BUTTON_TEXT_LINE_HEIGHT,
         whiteSpace: "nowrap",
-        ...(usesBrightnessInteract
-          ? { transition: `color ${interactTransition}` }
-          : {}),
       }}
     >
       {text}
@@ -345,29 +413,24 @@ export function Button({
 
   const baseStyle: CSSProperties = {
     position: "absolute",
-    left: x,
-    top: y,
+    left: `${x}px`,
+    top: `${y}px`,
     zIndex,
     margin: 0,
     backgroundColor: resolvedFillColor,
-    borderWidth: outlineThickness,
+    borderWidth: `${outlineThickness}px`,
     borderStyle: "solid",
     borderColor: resolvedOutlineColor,
     cursor: "pointer",
     boxSizing: "border-box",
-    ...(usesBrightnessInteract
-      ? {
-          transition: `background-color ${interactTransition}, border-color ${interactTransition}, color ${interactTransition}`,
-        }
-      : {}),
   };
 
   const layoutStyle: CSSProperties = useCircularLayout
     ? {
         ...baseStyle,
-        width: outerSidePx,
-        height: outerSidePx,
-        padding,
+        width: `${outerSidePx}px`,
+        height: `${outerSidePx}px`,
+        padding: `${padding}px`,
         borderRadius: "50%",
         overflow: "hidden",
         display: "flex",
@@ -376,10 +439,10 @@ export function Button({
       }
     : {
         ...baseStyle,
-        padding,
-        borderRadius: cornerRadius,
+        padding: `${padding}px`,
+        borderRadius: `${cornerRadius}px`,
         overflow: "hidden",
-        ...(width != null ? { width } : {}),
+        ...(widthOverride != null ? { width: widthOverride } : {}),
       };
 
   const handleClick: MouseEventHandler<HTMLButtonElement> = (event) => {

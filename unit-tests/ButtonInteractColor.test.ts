@@ -6,8 +6,10 @@ import {
   lerpHexBrightnessInvert,
   multiplyHexColorBrightness,
   viewportButtonBrightnessInteractColors,
+  viewportButtonDarkenInteractColorsAtProgress,
   viewportButtonInteractColors,
   viewportButtonInteractColorsAtProgress,
+  viewportButtonInteractColorsForBehavior,
 } from "../app/_client/pure/viewport2d/ButtonInteractColor";
 
 describe("multiplyHexColorBrightness", () => {
@@ -103,6 +105,78 @@ describe("lerpHexBrightnessInvert", () => {
 
   test("midpoint only shifts brightness for a saturated hue", () => {
     expect(lerpHexBrightnessInvert("#800000", 0.5)).toBe("#ff0000");
+  });
+});
+
+describe("viewportButtonDarkenInteractColorsAtProgress", () => {
+  test("returns base colors at progress 0", () => {
+    expect(
+      viewportButtonDarkenInteractColorsAtProgress(
+        "#111111",
+        "#222222",
+        "#333333",
+        0,
+        0.7,
+      ),
+    ).toEqual({
+      fillColor: "#111111",
+      outlineColor: "#222222",
+      textColor: "#333333",
+    });
+  });
+
+  test("returns fully darkened colors at progress 1", () => {
+    expect(
+      viewportButtonDarkenInteractColorsAtProgress(
+        "#FFFFFF",
+        "#E06C89",
+        "#000000",
+        1,
+        0.7,
+      ),
+    ).toEqual({
+      fillColor: "#b3b3b3",
+      outlineColor: "#9d4c60",
+      textColor: "#000000",
+    });
+  });
+});
+
+describe("viewportButtonInteractColorsForBehavior", () => {
+  test("uses invert behavior by default path", () => {
+    expect(
+      viewportButtonInteractColorsForBehavior(
+        "#000000",
+        "#FFFFFF",
+        "#808080",
+        1,
+        "invert",
+        0.7,
+      ),
+    ).toEqual(
+      viewportButtonInteractColors("#000000", "#FFFFFF", "#808080", true),
+    );
+  });
+
+  test("uses darken behavior when requested", () => {
+    expect(
+      viewportButtonInteractColorsForBehavior(
+        "#FFFFFF",
+        "#FFFFFF",
+        "#FFFFFF",
+        1,
+        "darken",
+        0.7,
+      ),
+    ).toEqual(
+      viewportButtonDarkenInteractColorsAtProgress(
+        "#FFFFFF",
+        "#FFFFFF",
+        "#FFFFFF",
+        1,
+        0.7,
+      ),
+    );
   });
 });
 

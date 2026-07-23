@@ -39,6 +39,7 @@ import {
 
 import { subscribeOnTap, TAP_MAX_MOVEMENT_PX } from "../NonDragTapDetector";
 import { SwipeMenu as SwipeMenuConsts } from "../ComponentConstants";
+import { swipeUpMainMenuGridHeightPx } from "../pure/swipeup/MainMenuLayout";
 import {
   suppressViewportClicksBriefly,
   type SwipeMenuInteraction,
@@ -46,23 +47,6 @@ import {
 import { useRegisterSwipeMenuExpandHandler } from "./SwipeMenuExpansion";
 import { useAddBathroomMode } from "../viewport2d/add-bathroom-mode";
 import { useBathroomNavigationMode } from "../viewport2d/bathroom-navigation-mode";
-
-export function swipeMenuPrimaryButtonWidthPx(viewportWidthPx: number): number {
-  return Math.max(0, viewportWidthPx - 2 * SwipeMenuConsts.SIDE_PADDING_PX);
-}
-
-export function swipeMenuPrimaryButtonItemWidthPx(viewportWidthPx: number): number {
-  return Math.max(
-    0,
-    viewportWidthPx * SwipeMenuConsts.PRIMARY_BTN_WIDTH_RATIO,
-  );
-}
-
-export function swipeMenuPrimaryButtonHeightPx(): number {
-  const heightPx = SwipeMenuConsts.PRIMARY_BTN_HEIGHT_PX;
-  if (!Number.isFinite(heightPx)) return 0;
-  return Math.max(0, heightPx);
-}
 
 export type SwipeMenuViewport = {
   widthPx: number;
@@ -483,30 +467,19 @@ export function MainMenu({
           aria-hidden={!menuContentVisible}
           style={{
             height: contentHeightPx,
-            minHeight: 0,
+            minHeight: menuContentVisible
+              ? swipeUpMainMenuGridHeightPx(viewportSize.width)
+              : 0,
             overflow: menuContentVisible ? "auto" : "hidden",
             visibility: menuContentVisible ? "visible" : "hidden",
             pointerEvents: menuContentVisible ? "auto" : "none",
-            padding: "8px 0 12px",
-            display: "flex",
-            justifyContent: "center",
+            position: "relative",
+            width: "100%",
             boxSizing: "border-box",
             flexShrink: 0,
           }}
         >
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "row",
-              alignItems: "stretch",
-              gap: 8,
-              width: swipeMenuPrimaryButtonWidthPx(viewportSize.width),
-              maxWidth: "100%",
-              boxSizing: "border-box",
-            }}
-          >
-            {children}
-          </div>
+          {children}
         </div>
         </SwipeMenuViewportContext.Provider>
       ) : null}

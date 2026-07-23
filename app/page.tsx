@@ -25,12 +25,11 @@ import {
   SwipeMenuInteractionContext,
   type SwipeMenuInteraction,
 } from "./_client/swipeup/SwipeMenuInteraction";
-import { UserSettings } from "./_client/swipeup/buttons/UserSettings";
+import { SwipeUpMainMenuPage } from "./_client/swipeup/SwipeUpMainMenuPage";
 import { UserSettingsProvider } from "./_client/user-settings/UserSettingsContext";
 import { UserSettingsBootstrapGate } from "./_client/user-settings/UserSettingsBootstrapGate";
 import { UserSettingsDangerBand } from "./_client/user-settings/UserSettingsDangerBand";
 import { UserSettingsOverlay } from "./_client/user-settings/UserSettingsOverlay";
-import { RegisterNewBathroom } from "./_client/swipeup/buttons/RegisterNewBathroom";
 import { AlertSystemProvider } from "./_client/viewport2d/AlertSystem";
 import {
   AddBathroomMode,
@@ -381,8 +380,7 @@ function HomeContent({
             viewportRef={phoneFrameRef}
             onInteractionChange={setSwipeMenuInteraction}
           >
-            <UserSettings />
-            <RegisterNewBathroom />
+            <SwipeUpMainMenuPage />
           </MainMenu>
         </div>
         <UserSettingsOverlay />

@@ -200,19 +200,6 @@ const SwipeMenu0 = {
     SHADOW_ALPHA_HEIGHT_PX: 50,
     /** Menu shell top corner radius in CSS pixels. */
     TOP_CORNER_RADIUS_PX: 12,
-    SIDE_PADDING_PX: 10,
-    PRIMARY_BTN_BG_COLOR: "#FFFFFF",
-    PRIMARY_BTN_HEIGHT_PX: 100,
-    PRIMARY_BTN_FONT_SIZE: 10,
-    PRIMARY_BTN_FONT_COLOR: "#B5B5C4",
-    /** Main-menu primary button icon tint (see swipe_up_menu/main_menu.md). */
-    PRIMARY_BTN_ICON_COLOR: "#E4E4FF",
-    BTN_INTERACT_BG_COLOR: "#E6E6F0",
-    BTN_INTERACT_FG_VALUE_FACTOR: 0.7,
-    PRIMARY_BTN_IMG_WIDTH_RATIO: 0.5,
-    PRIMARY_BTN_WIDTH_RATIO: 0.25,
-    /** Box-shadow alpha for primary menu buttons (`rgba(18, 18, 47, α)`). */
-    PRIMARY_BTN_SHADOW_ALPHA: 0.25,
 };
 const SwipeMenu1 = {
     /** Inset from the menu shell edge to the pull-handle pill. */
@@ -220,6 +207,36 @@ const SwipeMenu1 = {
         (SwipeMenu0.INACTIVE_HEIGHT_PX - SwipeMenu0.PULL_HANDLE_HEIGHT_PX) / 2,
 };
 export const SwipeMenu = { ...SwipeMenu0, ...SwipeMenu1 };
+
+/** Swipe-up main menu button (see specifications/components/swipe_up_main_menu_button.md). */
+export const SwipeUpMainMenuButton = {
+    BOX_SHADOW: "0 2px 8px rgba(18, 18, 47, 0.25)",
+    FILL_COLOR: "#ffffff",
+    TEXT_COLOR: "#B5B5C4",
+    TEXT_FONT_SIZE: 10,
+    CORNER_RADIUS_PX: 15,
+    ANIMATION_DURATION_MS: 250,
+    HOVER_INTERACT_DARKENING_MULT_FACTOR: 0.85,
+    PADDING_VERTICAL_PX: 10,
+    PADDING_HORIZONTAL_PX: 10,
+    TEXT_MARGIN_PX: 10,
+    IMAGE_WIDTH_RATIO: 0.5,
+    DEFAULT_MIN_HEIGHT: "0px",
+    /** Matches the tallest button in the button's grid row (see main_menu.md). */
+    FULL_GRID_ROW_MIN_HEIGHT: "100%",
+    /** Fills one column of the main-menu grid (see main_menu.md). */
+    FULL_GRID_CELL_WIDTH: "100%",
+} as const;
+
+/** Swipe-up main menu page (see specifications/swipe_up_menu/main_menu.md). */
+export const SwipeUpMainMenu = {
+    ICON_COLOR: "#E4E4FF",
+    GRID_COLUMNS: 4,
+    GAP_PX: 8,
+    MARGIN_TOP_PX: 8,
+    MARGIN_BOTTOM_PX: 12,
+    MARGIN_SIDE_PX: 10,
+} as const;
 
 export const Alerts = {
     NEGATIVE_ACCENT_COLOR: "#EC3968",

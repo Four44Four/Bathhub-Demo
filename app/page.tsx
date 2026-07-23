@@ -22,7 +22,7 @@ import { SwipeMenuShell } from "./_client/swipeup/SwipeMenuShell";
 import { SwipeMenuBackdrop } from "./_client/swipeup/SwipeMenuBackdrop";
 import { SwipeMenuTopShadow } from "./_client/swipeup/SwipeMenuTopShadow";
 import { SwipeMenuExpansionProvider } from "./_client/swipeup/SwipeMenuExpansion";
-import { SwipeMenuPageProvider } from "./_client/swipeup/SwipeMenuPageContext";
+import { SwipeMenuPageProvider, useSwipeMenuPage } from "./_client/swipeup/SwipeMenuPageContext";
 import { SwipeMenuPageContent } from "./_client/swipeup/SwipeMenuPageContent";
 import {
   SwipeMenuInteractionContext,
@@ -173,6 +173,7 @@ function HomeContent({
   const clientGeo = useClientGeo();
   const { seedUserPosition, registerGlobeGeoHandlers } = useUserGeolocation();
   const { beginFindNearestBathroom } = useFindNearestBathroomFlow({ globeRef });
+  const { expandToPage } = useSwipeMenuPage();
   /** SSR-safe on first render; sessionStorage geo is merged in `useLayoutEffect` before Cesium init. */
   const [globeInit, setGlobeInit] = useState<FrozenGlobeInit>(DEFAULT_GLOBE_INIT);
   const [zoomIndicator, setZoomIndicator] = useState<{ x: number; y: number; pulse: number }>({
@@ -300,8 +301,6 @@ function HomeContent({
   }, [patchClientGeo, seedUserPosition]);
 
   return (
-    <SwipeMenuExpansionProvider>
-    <SwipeMenuPageProvider>
     <SwipeMenuInteractionContext.Provider value={swipeMenuInteraction}>
     <BathroomLocalDbOnAppOpen />
     <main className="flex h-full min-h-0 flex-col">
@@ -328,6 +327,9 @@ function HomeContent({
               setZoomIndicator((z) => ({ x, y, pulse: z.pulse + 1 }));
             }}
             onMapMarkerUserLatLonChange={syncMapMarkerFallbackCoords}
+            onBathroomMarkerClick={() => {
+              expandToPage("testingBathroom");
+            }}
           />
           <BathroomViewportSync globeRef={globeRef} />
           {!viewportChromeHidden ? (
@@ -395,8 +397,6 @@ function HomeContent({
       </div>
     </main>
     </SwipeMenuInteractionContext.Provider>
-    </SwipeMenuPageProvider>
-    </SwipeMenuExpansionProvider>
   );
 }
 
@@ -411,7 +411,11 @@ export default function Home() {
             <UserGeolocationProvider>
               <UserSettingsProvider>
               <UserSettingsBootstrapGate>
+              <SwipeMenuExpansionProvider>
+              <SwipeMenuPageProvider>
                 <HomeContent phoneFrameRef={phoneFrameRef} />
+              </SwipeMenuPageProvider>
+              </SwipeMenuExpansionProvider>
               </UserSettingsBootstrapGate>
               </UserSettingsProvider>
             </UserGeolocationProvider>

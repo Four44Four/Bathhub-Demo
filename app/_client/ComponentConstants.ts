@@ -81,16 +81,6 @@ export const CircularCloseButton = {
     BOX_SHADOW: "0 2px 8px rgba(18, 18, 47, 0.25)",
 } as const;
 
-export const ClickedIndicator = {
-    // Screen-space sizing (in CSS pixels). This stays constant regardless of zoom.
-    SIZE: 50,
-    // Public asset path for the clicked-location indicator.
-    // Default points at `./public/bathhub_logo_no_bg.svg`.
-    IMAGE: "/bathhub_logo_no_bg.svg",
-    COLOR: "#E4E4FF",
-    OPACITY: 1.0,
-} as const;
-
 export const MapMarker = {
     SIZE: 50,
     IMAGE: "/bathhub_map_marker.svg",

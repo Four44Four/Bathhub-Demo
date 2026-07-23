@@ -1,4 +1,4 @@
-import { Globe as GlobeConsts } from "../app/_client/ComponentConstants";
+import { BathroomMapMarker, Globe as GlobeConsts } from "../app/_client/ComponentConstants";
 import {
   installOrbitCameraControls,
   type InstalledOrbitCameraControls,
@@ -63,6 +63,9 @@ export type GlobeOrbitHarness = {
   radiusM: number;
   zoomPulses: { x: number; y: number }[];
   clickLatLon: { lat: number; lon: number }[];
+  bathroomMarkerClicks: number[];
+  setScenePickResult: (picked: unknown) => void;
+  setCameraHeightM: (heightM: number) => void;
   readOrbitState: () => OrbitStateSnapshot;
   readCameraOrientation: () => {
     looksAtCenter: boolean;
@@ -120,6 +123,8 @@ export function createGlobeOrbitHarness(
 
   const zoomPulses: { x: number; y: number }[] = [];
   const clickLatLon: { lat: number; lon: number }[] = [];
+  const bathroomMarkerClicks: number[] = [];
+  let scenePickResult: unknown;
 
   const pinchHandlers: Record<number, PinchHandler> = {
     1: null,
@@ -261,6 +266,10 @@ export function createGlobeOrbitHarness(
       canvas,
       requestRender: jest.fn(),
       pickPositionSupported: false,
+      pick: jest.fn(() => scenePickResult),
+      drillPick: jest.fn(() =>
+        scenePickResult == null ? [] : [scenePickResult],
+      ),
       globe: { pick: () => undefined },
       screenSpaceCameraController: {
         minimumZoomDistance: GlobeConsts.MIN_SURFACE_CLEARANCE_M,
@@ -328,6 +337,10 @@ export function createGlobeOrbitHarness(
     onClickLatLonDegrees: (lat, lon) => {
       clickLatLon.push({ lat, lon });
     },
+    onBathroomMarkerClick: (bathroomId) => {
+      bathroomMarkerClicks.push(bathroomId);
+    },
+    maxBathroomMarkerClickCameraHeightM: BathroomMapMarker.MAX_QUERY_CAMERA_HEIGHT_M,
     isUserGlobeOrbitInputAllowed: () => GeoArrival.isGlobeOrbitUserInputAllowed(geoLockState),
   });
 
@@ -654,6 +667,14 @@ export function createGlobeOrbitHarness(
     radiusM,
     zoomPulses,
     clickLatLon,
+    bathroomMarkerClicks,
+    setScenePickResult: (picked: unknown) => {
+      scenePickResult = picked;
+    },
+    setCameraHeightM: (heightM: number) => {
+      positionCartographic.height = heightM;
+      lastRangeM = radiusM + heightM;
+    },
     readOrbitState: readOrbitStateFixed,
     readCameraOrientation,
     simulateLeftDrag,

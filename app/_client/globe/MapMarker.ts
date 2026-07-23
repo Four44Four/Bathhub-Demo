@@ -40,7 +40,7 @@ export type MapMarkerInitOptions = {
  * “You are here” marker: until a geolocation fix is available (permission denied,
  * prompt, or watch pending), use screen-space UI via `onStaticOverlayModeChange`.
  * After a fix, the Cesium billboard tracks the device position. Billboard anchor is
- * bottom-center on the ground point (with a small lift matching `ClickedIndicator`).
+ * bottom-center on the ground point (with the default GlobeImage surface lift).
  *
  * The parent (`GlobeViewport` / `page.tsx`) pushes the user's confirmed geolocation
  * via `MapMarkerHandle.setUserLatLonDegrees` from the centralized user geolocation

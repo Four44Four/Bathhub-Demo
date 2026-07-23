@@ -26,8 +26,6 @@
  - When using 2 fingers on the [Globe](#globe), panning and zooming can happen simultaneously
  - When any action that triggers a zoom occurs:
     - Render the [zoom indicator](./viewport2d.md#zoom-indicator)
- - <TODO:have-not-impled-this-yet>If the user clicks or taps on the Globe AND [the zoom level is low enough to render bathroom markers](./bathroom_db_reading.md#maximum-display-bathroom-map-markers-height) AND the user clicks or taps on the image of the Bathroom map markers:
-    - Open that bathroom map marker's [bathroom page](./bathroom_page.md)
  - If the user has not allowed geolocation data permissions or has blocked access to geolocation data:
     - Render the [user current location marker](#user-current-location-marker) with [`location` property](#location-user-current-location-marker) as `null`
     - When the user allows geolocation data permissions:

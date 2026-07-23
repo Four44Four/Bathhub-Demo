@@ -10,14 +10,17 @@ import {
 } from "react";
 import type * as CesiumTypes from "cesium";
 
-import { Globe as GlobeConsts, MapMarker as MapMarkerConsts, Path as PathConsts } from "../ComponentConstants";
+import {
+  BathroomMapMarker,
+  Globe as GlobeConsts,
+  MapMarker as MapMarkerConsts,
+  Path as PathConsts,
+} from "../ComponentConstants";
 import { composeCssFilters, blackMonoIconCssFilter } from "../pure/svg/BlackMonoIconCssFilter";
 import { loadCesium } from "./loadCesium";
 import * as Utils from "../Utils";
-import * as ServerDebug from "../../_server/Debug";
 import { type Point } from "../../_shared/Utils";
 import { type ViewportBounds } from "../../_shared/BathroomDataPrimary";
-import { installClickedIndicator } from "./ClickedIndicator";
 import { installDebugCrosshair } from "./DebugCrosshair";
 import { installMapMarker } from "./MapMarker";
 import { installPath, type PathHandle } from "./Path";
@@ -249,6 +252,8 @@ type GlobeViewportProps = {
    * client geo fallback coordinates current without relying on React re-renders.
    */
   onMapMarkerUserLatLonChange?: (latitude: number, longitude: number) => void;
+  /** Opens the bathroom page when a bathroom map marker is tapped (see bathroom_db_reading spec). */
+  onBathroomMarkerClick?: (bathroomId: number) => void;
   /**
    * React 19 ref-as-prop. Receives a `GlobeViewportHandle` once the Cesium
    * viewer has finished initializing.
@@ -266,6 +271,7 @@ export function GlobeViewport({
   zoomIndicatorRootRef,
   onZoomIndicatorPulse,
   onMapMarkerUserLatLonChange,
+  onBathroomMarkerClick,
   ref,
 }: GlobeViewportProps) {
   const mountRef = useRef<HTMLDivElement | null>(null);
@@ -273,6 +279,8 @@ export function GlobeViewport({
   const blocksViewportPointer = useSwipeMenuBlocksViewport();
   const blocksViewportPointerRef = useRef(blocksViewportPointer);
   blocksViewportPointerRef.current = blocksViewportPointer;
+  const onBathroomMarkerClickRef = useRef(onBathroomMarkerClick);
+  onBathroomMarkerClickRef.current = onBathroomMarkerClick;
   /** Latest mount props; read when async Cesium init runs (parent may update before first effect). */
   const mountInitPropsRef = useRef({
     initLat,
@@ -622,6 +630,7 @@ export function GlobeViewport({
       // Reduce GPU usage: render only when needed, and throttle periodic renders.
       // When enabled, Cesium will render on interaction/changes (we also call requestRender explicitly).
       viewer.scene.requestRenderMode = true;
+      viewer.scene.pickTranslucentDepth = true;
       // Maximum time delta (seconds) before Cesium renders again due to time changes.
       // Smaller => more frequent renders. Larger => fewer background renders.
       viewer.scene.maximumRenderTimeChange = 1 / 15; // ~15 FPS max for "background" updates
@@ -672,8 +681,6 @@ export function GlobeViewport({
 
       viewer.imageryLayers.removeAll();
       viewer.imageryLayers.addImageryProvider(provider);
-
-      const clickedIndicator = installClickedIndicator(Cesium, viewer);
 
       const pathHandle = installPath(Cesium, viewer, ellipsoid);
       pathHandleRef.current = pathHandle;
@@ -816,12 +823,10 @@ export function GlobeViewport({
           viewportSamplerIdleCallbacks.armIdleDetection?.();
           viewportSamplerWakeRef.ensureBusy?.();
         },
-        onClickLatLonDegrees: (lat, lon) => {
-          const logString = `Lat: ${lat}, Lon: ${lon}`;
-          ServerDebug.log(logString);
-          console.log(logString);
-          clickedIndicator.setLatLonDegrees(lat, lon);
+        onBathroomMarkerClick: (bathroomId) => {
+          onBathroomMarkerClickRef.current?.(bathroomId);
         },
+        maxBathroomMarkerClickCameraHeightM: BathroomMapMarker.MAX_QUERY_CAMERA_HEIGHT_M,
         isUserGlobeOrbitInputAllowed: () => {
           if (blocksViewportPointerRef.current) return false;
           tickGeoArrivalLock();
@@ -1128,7 +1133,6 @@ export function GlobeViewport({
         tileProcessor,
         onSamplerCameraChanged: samplerKickOnCameraChanged,
         camera: viewer.camera,
-        clickedIndicator,
         pathHandle,
         mapMarker,
         debugCrosshair,
@@ -1148,7 +1152,6 @@ export function GlobeViewport({
           onSamplerCameraChanged: () => void;
           tileProcessor: TwoToneTileProcessor;
           camera: CesiumTypes.Camera;
-          clickedIndicator: { destroy: () => void };
           pathHandle: PathHandle;
           mapMarker: ReturnType<typeof installMapMarker>;
           debugCrosshair: ReturnType<typeof installDebugCrosshair>;
@@ -1182,7 +1185,6 @@ export function GlobeViewport({
       cleanup?.camera.changed.removeEventListener(cleanup.onCameraChanged);
       cleanup?.tileProcessor.destroy();
       cleanup?.removeInputListeners();
-      cleanup?.clickedIndicator.destroy();
       cleanup?.pathHandle.destroy();
       pathHandleRef.current = null;
       cleanup?.mapMarker.destroy();

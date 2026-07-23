@@ -24,13 +24,7 @@ export type SwipeMenuPageApi = {
   openMainMenuPage: () => void;
 };
 
-export const SwipeMenuPageContext = createContext<SwipeMenuPageApi>({
-  pageId: SWIPE_MENU_DEFAULT_PAGE_ID,
-  setPageId: () => {},
-  navigateToPage: () => {},
-  expandToPage: () => {},
-  openMainMenuPage: () => {},
-});
+export const SwipeMenuPageContext = createContext<SwipeMenuPageApi | null>(null);
 
 export function SwipeMenuPageProvider({ children }: { children: ReactNode }) {
   const expandSwipeMenu = useExpandSwipeMenu();
@@ -72,5 +66,9 @@ export function SwipeMenuPageProvider({ children }: { children: ReactNode }) {
 }
 
 export function useSwipeMenuPage(): SwipeMenuPageApi {
-  return useContext(SwipeMenuPageContext);
+  const value = useContext(SwipeMenuPageContext);
+  if (value === null) {
+    throw new Error("useSwipeMenuPage must be used within SwipeMenuPageProvider");
+  }
+  return value;
 }

@@ -1,4 +1,4 @@
-import { Globe as GlobeConsts } from "../app/_client/ComponentConstants";
+import { BathroomMapMarker, Globe as GlobeConsts } from "../app/_client/ComponentConstants";
 import { createUserSettingsDbSqlite } from "../app/_client/user-settings-db/UserSettingsDbSqlite";
 import { USER_SETTINGS_MIGRATION_V0_TO_V1 } from "../app/_shared/user-settings/migrations/v0-to-v1";
 import { USER_SETTINGS_DEFAULTS } from "../app/_shared/user-settings/UserSettingsSchema";
@@ -231,15 +231,43 @@ describe("Globe viewport Cesium integration (GlobeViewport + user settings specs
     });
   });
 
-  describe("tap / click picking (GlobeViewport spec §7–8)", () => {
-    test("tap on globe reports a picked lat/lon (ClickedIndicator source)", () => {
+  describe("tap / click picking", () => {
+    test("tap on globe reports a picked lat/lon when no bathroom marker is hit", () => {
       withHarness({ initLat: 12, initLong: 34, width: 800 }, ({ harness }) => {
+        harness.setScenePickResult(undefined);
         expect(harness.clickLatLon).toHaveLength(0);
         harness.simulateTap();
         expect(harness.clickLatLon).toHaveLength(1);
         const pick = harness.clickLatLon[0]!;
         expect(Number.isFinite(pick.lat)).toBe(true);
         expect(Number.isFinite(pick.lon)).toBe(true);
+        expect(harness.bathroomMarkerClicks).toHaveLength(0);
+      });
+    });
+
+    test("tap on bathroom marker invokes onBathroomMarkerClick when zoomed in enough", () => {
+      withHarness({ initLat: 12, initLong: 34, width: 800 }, ({ harness }) => {
+        harness.setScenePickResult({
+          id: { name: "BathroomMarker-42" },
+          primitive: {},
+        });
+        harness.setCameraHeightM(BathroomMapMarker.MAX_QUERY_CAMERA_HEIGHT_M - 1);
+        harness.simulateTap();
+        expect(harness.bathroomMarkerClicks).toEqual([42]);
+        expect(harness.clickLatLon).toHaveLength(0);
+      });
+    });
+
+    test("tap on bathroom marker is ignored when zoomed out beyond marker query height", () => {
+      withHarness({ initLat: 12, initLong: 34, width: 800 }, ({ harness }) => {
+        harness.setScenePickResult({
+          id: { name: "BathroomMarker-42" },
+          primitive: {},
+        });
+        harness.setCameraHeightM(BathroomMapMarker.MAX_QUERY_CAMERA_HEIGHT_M + 1);
+        harness.simulateTap();
+        expect(harness.bathroomMarkerClicks).toHaveLength(0);
+        expect(harness.clickLatLon).toHaveLength(1);
       });
     });
   });

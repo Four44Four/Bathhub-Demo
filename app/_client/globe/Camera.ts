@@ -3,6 +3,8 @@ import type { RefObject } from "react";
 
 import { Globe as GlobeConsts } from "../ComponentConstants";
 import * as Utils from "../Utils";
+import { bathroomMarkerIdFromDrillPick } from "../pure/bathroom/BathroomMarkerPick";
+import { isCameraCloseEnoughForBathroomQuery } from "../pure/bathroom/BathroomViewportQuery";
 import * as OrbitCam from "../pure/globe/OrbitCamera";
 import { isGlobeViewportPointerIdle } from "../pure/globe/GlobeViewportPointerIdle";
 import {
@@ -29,6 +31,10 @@ export type InstallOrbitCameraOptions = {
   zoomIndicatorRootRef?: RefObject<HTMLElement | null>;
   onZoomIndicatorPulse?: (x: number, y: number) => void;
   onClickLatLonDegrees?: (lat: number, lon: number) => void;
+  /** Fired when the user taps a bathroom map marker billboard (see bathroom_db_reading spec). */
+  onBathroomMarkerClick?: (bathroomId: number) => void;
+  /** Max camera height (m) for bathroom marker taps to be handled. */
+  maxBathroomMarkerClickCameraHeightM?: number;
   /**
    * Fired when the user rotates or zooms the globe.
    * `start` — pointer down, wheel tick, pinch start (discrete input).
@@ -126,6 +132,8 @@ export function installOrbitCameraControls({
   zoomIndicatorRootRef,
   onZoomIndicatorPulse,
   onClickLatLonDegrees,
+  onBathroomMarkerClick,
+  maxBathroomMarkerClickCameraHeightM,
   onGlobeViewportInteraction,
   isUserGlobeOrbitInputAllowed,
   onOrbitRotateAnimationEnd,
@@ -991,6 +999,31 @@ export function installOrbitCameraControls({
       if (isClickCandidate) {
         const rect = canvas.getBoundingClientRect();
         const pos = new Cesium.Cartesian2(e.clientX - rect.left, e.clientY - rect.top);
+
+        if (onBathroomMarkerClick && maxBathroomMarkerClickCameraHeightM != null) {
+          try {
+            const pickedObjects =
+              typeof viewer.scene.drillPick === "function"
+                ? viewer.scene.drillPick(pos)
+                : [viewer.scene.pick(pos)];
+            const bathroomId = bathroomMarkerIdFromDrillPick(pickedObjects);
+            const cameraHeightM = viewer.camera.positionCartographic.height;
+            if (
+              bathroomId !== null &&
+              isCameraCloseEnoughForBathroomQuery(
+                cameraHeightM,
+                maxBathroomMarkerClickCameraHeightM,
+              )
+            ) {
+              onBathroomMarkerClick(bathroomId);
+              e.preventDefault();
+              return;
+            }
+          } catch {
+            // Fall through to globe surface pick.
+          }
+        }
+
         let carto: CesiumTypes.Cartographic | undefined;
 
         try {

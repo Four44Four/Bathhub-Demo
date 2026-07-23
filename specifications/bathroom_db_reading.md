@@ -67,6 +67,8 @@
     - It's image is the [verified bathroom marker image](./resources.md#verified-bathroom-marker-image)
  - Else:
     - It's image is the [pending verify bathroom marker image](./resources.md#pending-verify-bathroom-marker-image)
+ - If the user clicks or taps on the Globe AND [the zoom level is low enough to render bathroom markers](#maximum-display-bathroom-map-markers-height) AND the user clicks or taps on the image of a [Bathroom map marker](#bathroom-marker):
+    - Open that [bathroom map marker](#bathroom-marker)'s [bathroom page](./swipe_up_menu/bathroom_page.md)
 
 # Localized caching
 - Maintain a local SQLite database with GeoPackage which will be backed up to disk in a .gpkg file

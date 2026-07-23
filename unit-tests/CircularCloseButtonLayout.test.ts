@@ -1,11 +1,10 @@
-import { circularCloseButtonFontSizePx } from "../app/_client/pure/CircularCloseButtonLayout";
+import { CircularCloseButton } from "../app/_client/ComponentConstants";
 
-describe("circularCloseButtonFontSizePx", () => {
-  it("returns the reference font size at the default diameter", () => {
-    expect(circularCloseButtonFontSizePx(44)).toBe(22);
-  });
-
-  it("scales the font size proportionally to the button diameter", () => {
-    expect(circularCloseButtonFontSizePx(57)).toBe(29);
+describe("CircularCloseButton constants", () => {
+  it("matches circular_close_button.md sizing (18px image, 15px padding, no outline)", () => {
+    expect(CircularCloseButton.IMAGE_SIZE_PX).toBe(18);
+    expect(CircularCloseButton.PADDING_PX).toBe(15);
+    expect(CircularCloseButton.OUTLINE_THICKNESS).toBe(0);
+    expect(CircularCloseButton.SIZE_PX).toBe(48);
   });
 });

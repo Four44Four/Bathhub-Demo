@@ -23,8 +23,7 @@
     - On the native app version:
        - It should stay on if the client closes app or turns off device
  - Confirm Find Bathroom mode:
-    - Similar to Add bathroom mode, where most viewport2d elements + swipe-up menu are removed
-    - Has [X and checkmark buttons](./add_bathroom_mode.md#reject-or-confirm-buttons) at bottom to reject navigation or start navigating
+    - Similar to [Add bathroom mode](./add_bathroom_mode.md), where most viewport2d elements + swipe-up menu are removed
     - Display [confirm and reject button](./components/confirm_reject_buttons.md)
        - [Reject button click callback](./components/confirm_reject_buttons.md#on-reject-click-callback) is the following:
           - If [toggle globe movement animations user setting](./user_settings.md#toggle-globe-movement-animations) is `true`:
@@ -40,17 +39,15 @@
           - Else:
              - Instantly snap camera to the client's location at height from Globe surface ["Init camera height" from user settings](./user_settings.md#initial-camera-height)
  - Find bathroom mode
-    - Restore viewport2d buttons EXCEPT for Find nearest bathroom button
-    - Replace Find nearest bathroom button with a circular button reddish button of the same size with an X
-        - Borderless
-        - Background color of the button should be NEGATIVE_COLOR
-        - Foreground color will be the background color but with the brightness value multipied by FG_COLOR_VALUE_FACTOR
-        - When interacted with:
-            - Exit Find Bathroom mode
-            - Remove the Exit Find Bathroom mode button
-            - Restore Find bathroom button
-            - Set `bathroomActiveNavigation` to false
-            - Clear the rendered path
+    - Restore [viewport2d buttons](./viewport2d.md#components) EXCEPT for [Find nearest bathroom button](./viewport2d.md#find-nearest-bathroom-button)
+    - Replace [Find nearest bathroom button](./viewport2d.md#find-nearest-bathroom-button) with a [circular close button](./components/circular_close_button.md)
+       - [X position](./components/circular_close_button.md#x-position) and [Y position](./components/circular_close_button.md#y-position) will be set so that it occupies the same *center* position as the [Find nearest bathroom button](./viewport2d.md#find-nearest-bathroom-button)
+       - [Click callback](./components/circular_close_button.md#on-click-callback) is the following:
+          - Exit Find Bathroom mode
+          - Remove the Exit Find Bathroom mode button
+          - Restore Find bathroom button
+          - Set `bathroomActiveNavigation` to false
+          - Clear the rendered path
 
 # Actions after interacting with Find bathroom button
  - Save the camera position and zoom level that the client is currently at at the moment that they interact with the Find nearest bathroom button from viewport2d

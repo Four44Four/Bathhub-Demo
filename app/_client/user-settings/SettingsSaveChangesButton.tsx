@@ -14,6 +14,32 @@ const SETTINGS_ACTION_BTN_INTERACT_BG_COLOR = "#E6E6F0";
 const SETTINGS_ACTION_BTN_FONT_COLOR = "#B5B5C4";
 const SETTINGS_ACTION_BTN_FONT_SIZE = 13;
 const SETTINGS_ACTION_BTN_SHADOW_ALPHA = 0.25;
+const SAVE_SPINNER_BORDER_COLOR = "rgba(181, 181, 196, 0.35)";
+const SAVE_SPINNER_ACCENT_COLOR = "#B5B5C4";
+
+function SaveChangesSpinner() {
+  const sizePx = UserSettingsConsts.SAVE_BTN_SPINNER_SIZE_PX;
+  const style: CSSProperties = {
+    width: sizePx,
+    height: sizePx,
+    borderRadius: "50%",
+    border: `2px solid ${SAVE_SPINNER_BORDER_COLOR}`,
+    borderTopColor: SAVE_SPINNER_ACCENT_COLOR,
+    animation: "settings-save-spinner-spin 0.8s linear infinite",
+    boxSizing: "border-box",
+  };
+
+  return (
+    <>
+      <style>{`
+        @keyframes settings-save-spinner-spin {
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
+      <div aria-hidden="true" style={style} />
+    </>
+  );
+}
 
 export type SettingsSaveChangesButtonProps = {
   isSaving: boolean;
@@ -60,12 +86,17 @@ export function SettingsSaveChangesButton({
   const contentStyle: CSSProperties = {
     filter: `brightness(${interactFgBrightness})`,
     transition: `filter ${interactTransition}`,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: UserSettingsConsts.SAVE_BTN_SPINNER_SIZE_PX,
   };
 
   return (
     <button
       type="button"
       aria-label="Save changes"
+      aria-busy={isSaving}
       disabled={disabled || isSaving}
       onClick={onClick}
       className={TextWeight.BOLD}
@@ -79,7 +110,9 @@ export function SettingsSaveChangesButton({
       onPointerUp={() => setIsPressed(false)}
       onPointerCancel={() => setIsPressed(false)}
     >
-      <span style={contentStyle}>{isSaving ? "Loading…" : "Save changes"}</span>
+      <span style={contentStyle}>
+        {isSaving ? <SaveChangesSpinner /> : "Save changes"}
+      </span>
     </button>
   );
 }

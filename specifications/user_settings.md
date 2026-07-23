@@ -47,28 +47,27 @@
 
 # Components
 ## Close user settings page button
- - A circular borderless button with [this bg fill color](./positive_negative_buttons.md#negative-color)
- - Has an [X icon image](./resources.md#x-symbol-icon) in the center with color white #ffffff
- - Has a soft dropshadow
- - Located at the bottom of the screen
- - Anchored to the same screen coordinates so that it remains on the same screen position as the user scrolls
- - When it is interacted with:
-    - If there are unsaved changes:
-       - If USER_SETTING_SCHEMA_UPDATE_HAS_ERRORED is `true`:
-          - Don't save anything, just close the user settings page
-       - Else:
-          - Don't close the user settings page
-          - Display a [negative important alert](./AlertSystem.md#major-alerts) with the text "You have unsaved changes" with 2 buttons
-             - One button has the [negative color](./AlertSystem.md#negative-color) with text "Exit anyways"
-                - When interacted with:
-                   - The user settings page closes
-                   - Nothing is written to the in-memory user settings datastructures or the persistent SQLite DB containing the user settings
-             - The other button has the alert background color with text "Don't exit"
-                - When interacted with:
-                   - The alert closes and user remains on user settings page
-    - Else:
-       - Close the user settings page
-## Back subpage button
+ - Is a [circular close button](./components/circular_close_button.md)
+    - Located at the bottom of the screen (see [x position](./components/circular_close_button.md#x-position) and [y position](./components/circular_close_button.md#y-position))
+    - [Click callback](./components/circular_close_button.md#on-click-callback) is the following:
+       - If there are unsaved changes:
+         - If USER_SETTING_SCHEMA_UPDATE_HAS_ERRORED is `true`:
+            - Don't save anything, just close the user settings page
+         - Else:
+            - Don't close the user settings page
+            - Display a [negative important alert](./AlertSystem.md#major-alerts) with the text "You have unsaved changes" with 2 buttons
+               - One button has the [negative color](./AlertSystem.md#negative-color) with text "Exit anyways"
+                  - When interacted with:
+                     - The user settings page closes
+                     - Nothing is written to the in-memory user settings datastructures or the persistent SQLite DB containing the user settings
+               - The other button has the alert background color with text "Don't exit"
+                  - When interacted with:
+                     - The alert closes and user remains on user settings page
+      - Else:
+         - Close the user settings page
+   - Has a soft dropshadow
+   - Anchored to the same screen coordinates so that it remains on the same screen position as the user scrolls
+ ## Back subpage button
  - Borderless button with [this text color](#back-button-foreground-color) and [this background fill color](#background-color)
  - Has text "Back"
  - Has a soft dropshadow

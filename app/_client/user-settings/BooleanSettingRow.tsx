@@ -102,7 +102,7 @@ export function BooleanSettingRow({
             backgroundColor: checked
               ? UserSettingsConsts.COMPONENT_ACCENT_COLOR
               : UserSettingsConsts.COMPONENT_BG_COLOR,
-            transition: "background-color 150ms ease",
+            transition: `background-color ${UserSettingsConsts.BOOLEAN_TOGGLE_ANIMATE_DURATION_MS}ms ease`,
           }}
         />
         <span
@@ -118,7 +118,7 @@ export function BooleanSettingRow({
               ? UserSettingsConsts.COMPONENT_KNOB_COLOR
               : UserSettingsConsts.COMPONENT_BOOLEAN_OFF_KNOB_COLOR,
             transform: `translateX(${knobOffsetPx}px)`,
-            transition: "transform 150ms ease, background-color 150ms ease",
+            transition: `transform ${UserSettingsConsts.BOOLEAN_TOGGLE_ANIMATE_DURATION_MS}ms ease, background-color ${UserSettingsConsts.BOOLEAN_TOGGLE_ANIMATE_DURATION_MS}ms ease`,
             pointerEvents: "none",
           }}
         />

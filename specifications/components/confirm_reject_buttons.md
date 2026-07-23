@@ -31,6 +31,8 @@
      - [Fill color](./viewport2d_button.md#fill-color) is the [negative color](#negative-color)
      - [On click callback](./viewport2d_button.md#on-click-callback) is the [on reject click callback property](#on-reject-click-callback)
      - [Hover interaction behavior](./viewport2d_button.md#hover-interact-behavior) is "darken"
+     - Is [rectangular](./viewport2d_button.md#circular-flag)
+     - Has a [outline thickness](./viewport2d_button.md#outline-thickness) of 0 (no outline)
  - Is located on the right side
 ## Confirm button
  - Is a [viewport2d button](./viewport2d_button.md) with the following properties:
@@ -38,4 +40,6 @@
      - [Fill color](./viewport2d_button.md#fill-color) is the [positive color](#positive-color)
      - [On click callback](./viewport2d_button.md#on-click-callback) is the [on confirm click callback property](#on-confirm-click-callback)
      - [Hover interaction behavior](./viewport2d_button.md#hover-interact-behavior) is "darken"
+     - Is [rectangular](./viewport2d_button.md#circular-flag)
+     - Has a [outline thickness](./viewport2d_button.md#outline-thickness) of 0 (no outline)
  - Is located on the left side

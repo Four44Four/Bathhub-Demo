@@ -12,6 +12,10 @@ export function UserSettingsDangerBand() {
   }
 
   return (
-    <BandAlert message={UserSettingsConsts.DANGER_BAND_MESSAGE} persistUntilRemoved />
+    <BandAlert
+      message={UserSettingsConsts.DANGER_BAND_MESSAGE}
+      backgroundColor={UserSettingsConsts.DANGER_BAND_BACKGROUND_COLOR}
+      persistUntilRemoved
+    />
   );
 }

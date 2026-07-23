@@ -66,6 +66,7 @@ export type ButtonProps = {
   padding?: number;
   /** Hover / press visual feedback mode (see viewport2d_button.md). */
   hoverInteractBehavior?: Viewport2dButtonHoverInteractBehavior;
+  ariaLabel?: string;
   onClick?: MouseEventHandler<HTMLButtonElement>;
 };
 
@@ -300,6 +301,7 @@ export function Button({
   circular = Viewport2dButtonConsts.CIRCULAR,
   padding = Viewport2dButtonConsts.PADDING,
   hoverInteractBehavior = Viewport2dButtonConsts.HOVER_INTERACT_BEHAVIOR,
+  ariaLabel,
   onClick,
 }: ButtonProps) {
   const viewportPointerBlocked = useSwipeMenuBlocksViewport();
@@ -457,6 +459,7 @@ export function Button({
   return (
     <button
       type="button"
+      aria-label={ariaLabel}
       className={viewportPointerBlocked ? "pointer-events-none" : "pointer-events-auto"}
       disabled={viewportPointerBlocked}
       onClick={handleClick}

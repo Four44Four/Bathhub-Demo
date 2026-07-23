@@ -3,6 +3,8 @@
 import * as Fonts from "../_server/Fonts";
 import { PathColorMode } from "./globe/Path";
 import { lerpHex } from "./pure/HexColor";
+import { createMonoColorImage } from "./pure/Image";
+import { viewportCircularButtonOuterSidePx } from "./pure/viewport2d/ButtonLayout";
 
 export const Shared = {
     FONT_REGULAR_CLASS: Fonts.NOTOSANS_REGULAR_CLASS,
@@ -53,12 +55,23 @@ export const BtnInteractAnim = {
     BTN_COLOR_VALUE_FACTOR_MULT: Viewport2dButton.HOVER_INTERACT_DARKENING_MULT_FACTOR,
 } as const;
 
-/** Circular dismiss control (user settings close, exit find-bathroom mode, etc.). */
+/** Circular dismiss control (see specifications/components/circular_close_button.md). */
+const CIRCULAR_CLOSE_IMAGE_SIZE_PX = 18;
+const CIRCULAR_CLOSE_PADDING_PX = 15;
+const CIRCULAR_CLOSE_OUTLINE_THICKNESS_PX = 0;
+
 export const CircularCloseButton = {
-    SIZE_PX: 44,
+    IMAGE_SIZE_PX: CIRCULAR_CLOSE_IMAGE_SIZE_PX,
+    PADDING_PX: CIRCULAR_CLOSE_PADDING_PX,
+    OUTLINE_THICKNESS: CIRCULAR_CLOSE_OUTLINE_THICKNESS_PX,
     FILL: Shared.NEGATIVE_COLOR,
-    TEXT_COLOR: "#FFFFFF",
-    FONT_SIZE_PX: 22,
+    ICON_PATH: "/cross.svg",
+    IMAGE: createMonoColorImage("/cross.svg", Shared.ICON_ON_TINTED_BUTTON_COLOR),
+    SIZE_PX: viewportCircularButtonOuterSidePx(
+        CIRCULAR_CLOSE_IMAGE_SIZE_PX,
+        CIRCULAR_CLOSE_PADDING_PX,
+        CIRCULAR_CLOSE_OUTLINE_THICKNESS_PX,
+    ),
     BOX_SHADOW: "0 2px 8px rgba(18, 18, 47, 0.25)",
 } as const;
 
@@ -241,16 +254,20 @@ const UserSettings0 = {
     CLOSE_BTN_INSET_PX: 16,
     HEADER_FONT_SIZE_PX: 22,
     HEADER_HORIZONTAL_PADDING_PX: 16,
-    HEADER_TEXT_COLOR: "#0E0F11",
+    HEADER_TEXT_COLOR: "#000000",
     HEADER_SEPARATOR_BRIGHTNESS_RATIO: 0.7,
     PAGE_BG: "#FFFFFF",
     ROW_HOVER_BRIGHTNESS_FACTOR: 0.9,
     ROW_HOVER_TRANSITION_MS: 200,
-    ROW_BORDER_COLOR: "#E6E6F0",
+    ROW_BORDER_COLOR: "#DCDCE4",
     LABEL_COLOR: "#3A3D4A",
     SUBPAGE_ARROW_ICON: "/arrow.svg",
     SUBPAGE_ARROW_SIZE_PX: 18,
     DANGER_BAND_MESSAGE: "Danger: user settings cannot be changed",
+    /** Copied by value from Alerts.NEGATIVE_ACCENT_COLOR (user_settings.md). */
+    DANGER_BAND_BACKGROUND_COLOR: "#EC3968",
+    BOOLEAN_TOGGLE_ANIMATE_DURATION_MS: 150,
+    SAVE_BTN_SPINNER_SIZE_PX: 18,
     /** Off boolean switch background; number-slider bar right of the knob (CSS hex). */
     COMPONENT_BG_COLOR: "#DCDCE4",
     /** On boolean switch background; number-slider accent bar left of the knob (CSS hex). */

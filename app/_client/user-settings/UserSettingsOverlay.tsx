@@ -234,6 +234,7 @@ export function UserSettingsOverlay() {
           position: "absolute",
           right: UserSettingsConsts.CLOSE_BTN_INSET_PX,
           bottom: UserSettingsConsts.CLOSE_BTN_INSET_PX,
+          zIndex: 1,
           display: "flex",
           flexDirection: "row-reverse",
           alignItems: "flex-end",

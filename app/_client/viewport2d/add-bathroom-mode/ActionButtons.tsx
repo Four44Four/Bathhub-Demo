@@ -72,7 +72,7 @@ function TintedActionButton({
     height: AddBathroomConsts.ACTION_BUTTON_HEIGHT_PX,
     margin: 0,
     padding: 0,
-    border: `${Viewport2dButtonConsts.OUTLINE_THICKNESS}px solid ${resolvedFillColor}`,
+    border: `${0}px solid ${resolvedFillColor}`,
     borderRadius: Viewport2dButtonConsts.CORNER_RADIUS,
     backgroundColor: resolvedFillColor,
     cursor: disabled ? "default" : "pointer",

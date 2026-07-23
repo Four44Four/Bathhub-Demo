@@ -12,6 +12,8 @@ export type BandAlertLayout = "overlay" | "stack-item";
 export type BandAlertProps = {
   message: string;
   positive?: boolean;
+  /** Overrides the default positive/negative band background color. */
+  backgroundColor?: string;
   /** When true, the band stays visible until the parent unmounts it or clears the message. */
   persistUntilRemoved?: boolean;
   onAutoHide?: () => void;
@@ -21,6 +23,7 @@ export type BandAlertProps = {
 export function BandAlert({
   message,
   positive = false,
+  backgroundColor,
   persistUntilRemoved = false,
   onAutoHide,
   layout = "overlay",
@@ -46,9 +49,11 @@ export function BandAlert({
     };
   }, [message, persistUntilRemoved]);
 
-  const backgroundColor = positive
-    ? AlertConsts.POSITIVE_ACCENT_COLOR
-    : AlertConsts.NEGATIVE_ACCENT_COLOR;
+  const resolvedBackgroundColor =
+    backgroundColor ??
+    (positive
+      ? AlertConsts.POSITIVE_ACCENT_COLOR
+      : AlertConsts.NEGATIVE_ACCENT_COLOR);
 
   const layoutStyle: CSSProperties =
     layout === "overlay"
@@ -65,7 +70,7 @@ export function BandAlert({
 
   const style: CSSProperties = {
     ...layoutStyle,
-    backgroundColor,
+    backgroundColor: resolvedBackgroundColor,
     color: AlertConsts.TEXT_COLOR,
     fontSize: AlertConsts.BAND_ALERT_FONT_SIZE_PX,
     lineHeight: AlertConsts.BAND_ALERT_LINE_HEIGHT,

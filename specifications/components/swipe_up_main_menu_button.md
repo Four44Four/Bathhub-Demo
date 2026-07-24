@@ -52,8 +52,10 @@
  - Is a rounded rectangle with corners radius of [this size](#corner-radius-size)
  - Internal padding is [this much vertically](#padding-vertical-size-pixel) and [this much horizontally](#padding-horizontal-size-pixel)
  - Has a drop shadow with [these specifications](../swipe_up_menu/dropshadow_descriptor.md)
- - Displays [this text](#text) with [this color](#text-color) in the [bold font](../resources.md#bold-font) on the top of the button with [this font size](#text-font-size) horizontally centered in the button
-    - [The text](#text) should be centered vertically in the area between the top of the button (padding included) and [image](#image) + [margin between the text and image](#text-margin-size-pixel)
+ - Displays a [text discriptor](../text.md) with the following properties on the top of the button centered horizontally in the button and centered vertically in the area between the top of the button (padding included) and the [image](#image) + [margin between the text and image](#text-margin-size-pixel):
+    - [Content](../text.md#content) is [this text](#text)
+    - [Color](../text.md#color) is [this color](#text-color)
+    - [Weight](../text.md#weight) is [TextWeight.BOLD](./text_weight.md)
  - Displays [this image](#image) below [the text](#text) anchored to the bottom of the button with at least margin of [this size](#text-margin-size-pixel) between them as a square of half the width of the button horizontally centered in the button
  - The button's width will be [the width property](#width)
  - The button's minimum height will be [the min height property](#min-height)

@@ -89,9 +89,10 @@
   - Is a [viewport2d button](./components/viewport2d_button.md) with the following properties:
     - Located to the left of the [close user settings button](#close-user-settings-page-button) (see [x position](./components/viewport2d_button.md#x-position) and [y position](./components/viewport2d_button.md#y-position))
     - Is [rectangular](./components/viewport2d_button.md#circular-flag)
-    - [Text](./components/viewport2d_button.md#text) is "Back"
-    - [Text color](./components/viewport2d_button.md#text-color) is [this color](#back-button-foreground-color)
-    - [Text weight](./components/viewport2d_button.md#text-weight) is [TextWeight.BOLD](./text_weight.md)
+    - [Text](./components/viewport2d_button.md#text) is a [text discriptor](./text.md) with the following properties:
+       - [Content](./text.md#content) is "Back"
+       - [Color](./text.md#color) is [this color](#back-button-foreground-color)
+       - [Weight](./text.md#weight) is [TextWeight.BOLD](./text_weight.md)
     - [Hover interact behavior](./components/viewport2d_button.md#hover-interact-behavior) is "darken"
     - [Fill color](./components/viewport2d_button.md#fill-color) is [this color](#background-color)
     - [Corner radius](./components/viewport2d_button.md#corner-radius) is [this radius](#bottom-buttons-corner-radius)
@@ -104,9 +105,10 @@
   - Is a [viewport2d button](./components/viewport2d_button.md) with the following properties:
     - Located as the leftmost element in the row with [close button](#close-user-settings-page-button) and [back subpage button](#back-subpage-button) (see [x position](./components/viewport2d_button.md#x-position) and [y position](./components/viewport2d_button.md#y-position))
     - Is [rectangular](./components/viewport2d_button.md#circular-flag)
-    - [Text](./components/viewport2d_button.md#text) is "Save changes"
-    - [Text color](./components/viewport2d_button.md#text-color) is [this color](#back-button-foreground-color)
-    - [Text weight](./components/viewport2d_button.md#text-weight) is [TextWeight.BOLD](./text_weight.md)
+    - [Text](./components/viewport2d_button.md#text) is a [text discriptor](./text.md) with the following properties:
+       - [Content](./text.md#content) is "Save changes"
+       - [Color](./text.md#color) is [this color](#back-button-foreground-color)
+       - [Weight](./text.md#weight) is [TextWeight.BOLD](./text_weight.md)
     - [Hover interact behavior](./components/viewport2d_button.md#hover-interact-behavior) is "darken"
     - [Fill color](./components/viewport2d_button.md#fill-color) is [this color](#background-color)
     - [Corner radius](./components/viewport2d_button.md#corner-radius) is [this radius](#bottom-buttons-corner-radius)

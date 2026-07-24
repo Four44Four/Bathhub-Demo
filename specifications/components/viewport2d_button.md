@@ -31,26 +31,16 @@
     - Integer
  - Default value:
     - 1
-## Text color
+## Text
  - Type:
-    - String
+    - [Text discriptor](../text.md) or `null`
  - Default value:
-    - #AFB4C6
-## Text weight
- - Type:
-    - [TextWeight](../text_weight.md)
- - Default value:
-    - TextWeight.REGULAR
+    - `null`
 ## Padding
  - Type:
     - Integer
  - Default value:
     - 0
-## Text
- - Type:
-    - String or `null`
- - Default value:
-    - `null`
 ## Width override
  - Type:
      - String or `null`
@@ -108,10 +98,8 @@
  - Else:
     - The button is displayed relative to [the anchor element](#anchor-element)'s top left corner at at absolute position [x](#x-position) and [y](#y-position)
     - The button will also be z layered above [the anchor element](#anchor-element)
- - It displays [this text](#text) with [this color](#text-color) in the following fonts depending on the value of [the text weight](#text-weight):
-    - TextWeight.REGULAR -> [regular font](../resources.md#regular-font)
-    - TextWeight.BOLD -> [bold font](../resources.md#bold-font)
-    - TextWeight.LIGHT -> [light font](../resources.md#light-font)
+ - If [text property](#text) is not `null`:
+    - Display the [text](../text.md) specified by the [text property](#text)
  - If [image left of text flag](#image-left-of-text-flag) is `true`:
     - It displays [this image](#image) left of the text with [this offset](#image-text-gap)
  - Else:

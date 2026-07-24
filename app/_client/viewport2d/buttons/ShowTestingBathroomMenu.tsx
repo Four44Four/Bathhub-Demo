@@ -2,6 +2,7 @@
 
 import { TextWeight } from "../../Utils";
 import { Viewport2dButton as Viewport2dButtonConsts } from "../../ComponentConstants";
+import { createTextDescriptor } from "../../pure/Text";
 import { useSwipeMenuPage } from "../../swipeup/SwipeMenuPageContext";
 import {
   showSwipeUpMenuButtonLeftPx,
@@ -13,7 +14,9 @@ import {
 } from "./ShowSwipeUpMenu";
 import { Button } from "../Button";
 
-export const BTN_TEXT = "Test";
+export const BTN_TEXT = createTextDescriptor("Test", "#AFB4C6", {
+  weight: TextWeight.BOLD,
+});
 export const BTN_TEXT_PADDING_PX = 8;
 
 export function showTestingBathroomMenuButtonTopPx(
@@ -63,7 +66,6 @@ export function ShowTestingBathroomMenu({
         y={0}
         padding={paddingPx}
         text={BTN_TEXT}
-        textWeight={TextWeight.BOLD}
         onClick={() => {
           expandToPage("testingBathroom");
         }}

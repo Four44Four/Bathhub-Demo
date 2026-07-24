@@ -1,6 +1,7 @@
 "use client";
 
 import { UserSettings as UserSettingsConsts } from "../ComponentConstants";
+import { createTextDescriptor } from "../pure/Text";
 import { TextWeight } from "../Utils";
 import { Button } from "../viewport2d/Button";
 
@@ -22,11 +23,13 @@ export function SettingsBackButton({
       anchorElement={anchorElement}
       x={x}
       y={y}
-      text="Back"
-      textWeight={TextWeight.BOLD}
+      text={createTextDescriptor(
+        "Back",
+        UserSettingsConsts.SETTINGS_BACK_BTN_FONT_COLOR,
+        { weight: TextWeight.BOLD },
+      )}
       hoverInteractBehavior="darken"
       fillColor={UserSettingsConsts.PAGE_BG}
-      textColor={UserSettingsConsts.SETTINGS_BACK_BTN_FONT_COLOR}
       outlineThickness={UserSettingsConsts.ACTION_BUTTON_OUTLINE_THICKNESS_PX}
       cornerRadius={UserSettingsConsts.BOTTOM_BUTTON_CORNER_RADIUS_PX}
       padding={UserSettingsConsts.ACTION_BUTTON_PADDING_VERTICAL_PX}

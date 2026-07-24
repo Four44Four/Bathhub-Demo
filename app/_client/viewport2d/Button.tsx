@@ -16,6 +16,14 @@ import {
   resolveImageMonoColor,
 } from "../pure/Image";
 import {
+  type TextDescriptor,
+  hasTextDescriptorContent,
+  resolveTextColor,
+  resolveTextContent,
+  resolveTextFontSizePx,
+  resolveTextWeight,
+} from "../pure/Text";
+import {
   type Viewport2dButtonHoverInteractBehavior,
   viewportButtonInteractColorsForBehavior,
   invertHexBrightness,
@@ -25,6 +33,7 @@ import {
   VIEWPORT2D_BUTTON_TEXT_FONT_SIZE_PX,
   VIEWPORT2D_BUTTON_TEXT_LINE_HEIGHT,
   viewport2dButtonCircularContentSizePx,
+  viewport2dButtonTextHeightPx,
   viewportCircularButtonOuterSidePx,
 } from "../pure/viewport2d/ButtonLayout";
 import { viewport2dButtonZIndex } from "../pure/viewport2d/Viewport2dButtonZIndex";
@@ -34,7 +43,7 @@ import {
   areViewportClicksSuppressed,
   useSwipeMenuBlocksViewport,
 } from "../swipeup/SwipeMenuInteraction";
-import { TextWeight, lerp } from "../Utils";
+import { lerp } from "../Utils";
 import { useAnimatedLinear01 } from "../useAnimatedLinear01";
 import { useButtonSvgInteractSrc } from "./useButtonSvgInteractSrc";
 
@@ -43,9 +52,8 @@ export type ButtonProps = {
   fillColor?: string;
   outlineColor?: string;
   outlineThickness?: number;
-  textColor?: string;
-  text?: string | null;
-  textWeight?: TextWeight;
+  /** Text descriptor, or `null` for no text (see specifications/text.md). */
+  text?: TextDescriptor | null;
   x: number;
   y: number;
   /**
@@ -308,8 +316,6 @@ export function Button({
   fillColor = Viewport2dButtonConsts.FILL_COLOR,
   outlineColor = Viewport2dButtonConsts.OUTLINE_COLOR,
   outlineThickness = Viewport2dButtonConsts.OUTLINE_THICKNESS,
-  textColor = Viewport2dButtonConsts.TEXT_COLOR,
-  textWeight = Viewport2dButtonConsts.TEXT_WEIGHT,
   text = Viewport2dButtonConsts.TEXT,
   widthOverride = Viewport2dButtonConsts.WIDTH_OVERRIDE,
   minWidthPx,
@@ -361,6 +367,14 @@ export function Button({
     [dropShadow],
   );
 
+  const textContent = resolveTextContent(text);
+  const textColor = resolveTextColor(text);
+  const textFontSizePx = resolveTextFontSizePx(
+    text,
+    VIEWPORT2D_BUTTON_TEXT_FONT_SIZE_PX,
+  );
+  const textWeight = resolveTextWeight(text);
+
   const {
     fillColor: resolvedFillColor,
     outlineColor: resolvedOutlineColor,
@@ -368,7 +382,7 @@ export function Button({
   } = viewportButtonInteractColorsForBehavior(
     fillColor,
     outlineColor,
-    textColor,
+    textColor ?? fillColor,
     interactProgress,
     hoverInteractBehavior,
     Viewport2dButtonConsts.HOVER_INTERACT_DARKENING_MULT_FACTOR,
@@ -384,7 +398,7 @@ export function Button({
     isMonoColor,
   );
 
-  const hasText = text != null && text.length > 0;
+  const hasText = hasTextDescriptorContent(text);
   const hasImage = imagePath != null && imagePath.length > 0;
   const useCircularLayout = circular && (hasImage || hasText);
 
@@ -414,12 +428,12 @@ export function Button({
       className={textWeight}
       style={{
         color: resolvedTextColor,
-        fontSize: VIEWPORT2D_BUTTON_TEXT_FONT_SIZE_PX,
+        fontSize: textFontSizePx,
         lineHeight: VIEWPORT2D_BUTTON_TEXT_LINE_HEIGHT,
         whiteSpace: "nowrap",
       }}
     >
-      {text}
+      {textContent}
     </span>
   ) : null;
 
@@ -456,6 +470,10 @@ export function Button({
     hasImage,
     imageSize,
     hasText,
+    viewport2dButtonTextHeightPx(
+      textFontSizePx,
+      VIEWPORT2D_BUTTON_TEXT_LINE_HEIGHT,
+    ),
   );
   const outerSidePx = useCircularLayout
     ? viewportCircularButtonOuterSidePx(

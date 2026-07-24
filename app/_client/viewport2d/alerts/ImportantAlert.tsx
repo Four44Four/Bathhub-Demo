@@ -4,6 +4,7 @@ import { useState, type CSSProperties } from "react";
 
 import { Alerts as AlertConsts, Menus as MenuConsts } from "../../ComponentConstants";
 import type { ImportantAlertButton } from "../../pure/viewport2d/AlertSystemState";
+import { createTextDescriptor } from "../../pure/Text";
 import { Button } from "../Button";
 import { TextWeight } from "../../Utils";
 
@@ -48,16 +49,16 @@ function ImportantAlertActionButton({
         hoverInteractBehavior="darken"
         // Spec padding is a single integer; prior layout used asymmetric 10px 16px.
         padding={10}
-        text={button.label}
-        textWeight={TextWeight.BOLD}
+        text={createTextDescriptor(
+          button.label,
+          isAccent
+            ? IMPORTANT_ALERT_ACCENT_BUTTON_TEXT_COLOR
+            : IMPORTANT_ALERT_TEXT_COLOR,
+          { weight: TextWeight.BOLD },
+        )}
         fillColor={isAccent ? accentColor : IMPORTANT_ALERT_PANEL_BG_COLOR}
         outlineColor={
           isAccent ? accentColor : IMPORTANT_ALERT_SECONDARY_BUTTON_BORDER_COLOR
-        }
-        textColor={
-          isAccent
-            ? IMPORTANT_ALERT_ACCENT_BUTTON_TEXT_COLOR
-            : IMPORTANT_ALERT_TEXT_COLOR
         }
         onClick={() => onActivate(button)}
       />

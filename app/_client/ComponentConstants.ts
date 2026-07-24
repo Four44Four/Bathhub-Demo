@@ -29,9 +29,6 @@ export const Viewport2dButton = {
     FILL_COLOR: "#0E0F11",
     OUTLINE_COLOR: "#20232D",
     OUTLINE_THICKNESS: 1,
-    TEXT_COLOR: "#AFB4C6",
-    /** Default text weight font class ({@link Shared.FONT_REGULAR_CLASS} / TextWeight.REGULAR). */
-    TEXT_WEIGHT: Shared.FONT_REGULAR_CLASS,
     PADDING: 0,
     TEXT: null,
     WIDTH_OVERRIDE: null,

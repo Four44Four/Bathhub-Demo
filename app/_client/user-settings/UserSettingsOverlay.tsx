@@ -148,6 +148,8 @@ export function UserSettingsOverlay() {
   const { showImportantAlert } = useAlertSystem();
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const overlayRef = useRef<HTMLDivElement | null>(null);
+  const [bottomButtonsAnchor, setBottomButtonsAnchor] =
+    useState<HTMLDivElement | null>(null);
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
 
   useLayoutEffect(() => {
@@ -277,6 +279,7 @@ export function UserSettingsOverlay() {
           : null}
       </div>
       <div
+        ref={setBottomButtonsAnchor}
         style={{
           position: "absolute",
           inset: 0,
@@ -300,23 +303,21 @@ export function UserSettingsOverlay() {
               />
             </div>
             {showBackButton && bottomButtonPositions.back != null ? (
-              <div style={{ pointerEvents: "auto" }}>
-                <SettingsBackButton
-                  x={bottomButtonPositions.back.x}
-                  y={bottomButtonPositions.back.y}
-                  onClick={popPage}
-                />
-              </div>
+              <SettingsBackButton
+                anchorElement={bottomButtonsAnchor}
+                x={bottomButtonPositions.back.x}
+                y={bottomButtonPositions.back.y}
+                onClick={popPage}
+              />
             ) : null}
             {showSaveButton && bottomButtonPositions.save != null ? (
-              <div style={{ pointerEvents: "auto" }}>
-                <SettingsSaveChangesButton
-                  x={bottomButtonPositions.save.x}
-                  y={bottomButtonPositions.save.y}
-                  isSaving={isSaving}
-                  onClick={handleSave}
-                />
-              </div>
+              <SettingsSaveChangesButton
+                anchorElement={bottomButtonsAnchor}
+                x={bottomButtonPositions.save.x}
+                y={bottomButtonPositions.save.y}
+                isSaving={isSaving}
+                onClick={handleSave}
+              />
             ) : null}
           </>
         ) : null}

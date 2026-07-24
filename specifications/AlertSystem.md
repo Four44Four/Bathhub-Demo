@@ -57,3 +57,4 @@
      - [Width override](./components/viewport2d_button.md#width-override) is "100%" to allow for the specified button behavior in [here](#major-alerts)
      - [On click callback](./components/viewport2d_button.md#on-click-callback) is the [on click callback property](#on-click-callback-major-alert-button)
      - [Hover interaction behavior](./components/viewport2d_button.md#hover-interact-behavior) is "darken"
+     - [Anchor element](./components/viewport2d_button.md#anchor-element) is whatever element is appropriate to keep this [major alert button](#major-alert-button) at the correct position

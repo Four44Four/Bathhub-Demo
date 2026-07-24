@@ -5,14 +5,21 @@ import { TextWeight } from "../Utils";
 import { Button } from "../viewport2d/Button";
 
 export type SettingsBackButtonProps = {
+  anchorElement: HTMLElement | null;
   x: number;
   y: number;
   onClick: () => void;
 };
 
-export function SettingsBackButton({ x, y, onClick }: SettingsBackButtonProps) {
+export function SettingsBackButton({
+  anchorElement,
+  x,
+  y,
+  onClick,
+}: SettingsBackButtonProps) {
   return (
     <Button
+      anchorElement={anchorElement}
       x={x}
       y={y}
       text="Back"
@@ -23,7 +30,7 @@ export function SettingsBackButton({ x, y, onClick }: SettingsBackButtonProps) {
       outlineThickness={UserSettingsConsts.ACTION_BUTTON_OUTLINE_THICKNESS_PX}
       cornerRadius={UserSettingsConsts.BOTTOM_BUTTON_CORNER_RADIUS_PX}
       padding={UserSettingsConsts.ACTION_BUTTON_PADDING_VERTICAL_PX}
-      boxShadow={UserSettingsConsts.BOTTOM_BUTTON_BOX_SHADOW}
+      dropShadow={UserSettingsConsts.BOTTOM_BUTTON_DROP_SHADOW}
       ignoreViewportInteractionGuards
       ariaLabel="Back"
       onClick={onClick}

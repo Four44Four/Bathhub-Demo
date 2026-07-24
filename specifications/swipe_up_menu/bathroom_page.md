@@ -1,14 +1,26 @@
 # Constants
 ## Non verified color
- - <TODO: define this>
+ - #DCA36E
 ## Verified color
- - <TODO: define this>
+ - #6EDCB9
 ## Ratings panel expand duration
  - 600 milliseconds
-## Star rating fill color
- - <TODO: define this>
+## Text color
+ - #B5B5C4
+## Button fill color
+ - #ffffff
+## Star rating 5 fill color
+ - #F0E1A0
+## Star rating 4 fill color
+ - #F0CFA0
+## Star rating 3 fill color
+ - #F0C2A0
+## Star rating 2 fill color
+ - #F0AFA0
+## Star rating 1 fill color
+ - #F0A0A0
 ## Star rating unfill color
- - <TODO: define this>
+ - #E4E4FF
 
 # Description
  - Is page to be displayed on the [swipe-up menu](./swipe_up_menu.md)
@@ -22,19 +34,34 @@
  - When interacted with AND closed:
     - Rotate the [arrow icon](?????link-to-arrow-icon????) 90 degrees clockwise and expand the height to fit the below elements at the same time over [this duration](#ratings-panel-expand-duration) (specified in top-bottom order):
        - Store the sum of [`rating_1_count`, `rating_2_count`, `rating_3_count`, `rating_4_count`, or `rating_5_count` columns of this bathroom](../bathroom_db.md#description) in <total-rating-count> 
-       - Display 5 [rating bars](#rating-bar) stacked vertically, with [property `rating_total_count`](#rating_total_count-rating-bar) as <total-rating-count> , and with [property `rating_count_space`](#rating_count_space-rating-bar) as the width of the visually widest out of [`rating_1_count`, `rating_2_count`, `rating_3_count`, `rating_4_count`, or `rating_5_count` columns of this bathroom](../bathroom_db.md#description) plus some padding (below [rating bars](#rating-bar) are in top-bottom order):
-          - 1 with the [property `rating_count`](#rating_count-rating-bar) as [`rating_5_count` column](../bathroom_db.md#description) of this bathroom
-          - 1 with the [property `rating_count`](#rating_count-rating-bar) as [`rating_4_count` column](../bathroom_db.md#description) of this bathroom
-          - 1 with the [property `rating_count`](#rating_count-rating-bar) as [`rating_3_count` column](../bathroom_db.md#description) of this bathroom
-          - 1 with the [property `rating_count`](#rating_count-rating-bar) as [`rating_2_count` column](../bathroom_db.md#description) of this bathroom
-          - 1 with the [property `rating_count`](#rating_count-rating-bar) as [`rating_1_count` column](../bathroom_db.md#description) of this bathroom
+       - Display 5 [rating bars](#rating-bar) stacked vertically, all with:
+          - [Property `rating_total_count`](#rating_total_count-rating-bar) as <total-rating-count>
+          - [Property `rating_count_space`](#rating_count_space-rating-bar) as the width of the visually widest out of [`rating_1_count`, `rating_2_count`, `rating_3_count`, `rating_4_count`, or `rating_5_count` columns of this bathroom](../bathroom_db.md#description) plus some padding (below [rating bars](#rating-bar) are in top-bottom order):
+       - The first [rating bar](#rating-bar) has unique properties:
+          - [Property `rating_count`](#rating_count-rating-bar) as [`rating_5_count` column](../bathroom_db.md#description) of this bathroom
+          - [Property `left_color`](#left_color-rating-bar) as [star rating 5 fill color](#star-rating-5-fill-color)
+       - The second [rating bar](#rating-bar) has unique properties:
+          - [Property `rating_count`](#rating_count-rating-bar) as [`rating_4_count` column](../bathroom_db.md#description) of this bathroom
+          - [Property `left_color`](#left_color-rating-bar) as [star rating 4 fill color](#star-rating-4-fill-color)
+       - The third [rating bar](#rating-bar) has unique properties:
+          - [Property `rating_count`](#rating_count-rating-bar) as [`rating_3_count` column](../bathroom_db.md#description) of this bathroom
+          - [Property `left_color`](#left_color-rating-bar) as [star rating 3 fill color](#star-rating-3-fill-color)
+       - The fourth [rating bar](#rating-bar) has unique properties:
+          - [Property `rating_count`](#rating_count-rating-bar) as [`rating_2_count` column](../bathroom_db.md#description) of this bathroom
+          - [Property `left_color`](#left_color-rating-bar) as [star rating 2 fill color](#star-rating-2-fill-color)
+       - The fifth [rating bar](#rating-bar) has unique properties:
+          - [Property `rating_count`](#rating_count-rating-bar) as [`rating_1_count` column](../bathroom_db.md#description) of this bathroom
+          - [Property `left_color`](#left_color-rating-bar) as [star rating 1 fill color](#star-rating-1-fill-color)
        - Display a [panel](?????link-to-panel-element?????) that contains:
           - A [star rating graphic](#star-rating-graphic) with the [property `rating`](#rating-star-rating-graphic) as 0.0 and the [property `interactive`](#interactive-star-rating-graphic) as `true`
-          - A [button](?????link-to-button-element????) that has:
-             - Text reading "Post"
-             - Background color of <TODO:???????>
-             - Foreground color of <TODO:?????>
-             - When interacted with:
+          - A [button](../components/viewport2d_button.md) that has:
+             - [Text](../components/viewport2d_button.md#text) as "Post"
+             - [Fill color](../components/viewport2d_button.md#fill-color) of [this color](#button-fill-color)
+             - [Text color](../components/viewport2d_button.md#text-color) color of [this color](#text-color)
+             - [Text weight](../components/viewport2d_button.md#text-weight) as [TextWeight.BOLD](../text_weight.md)
+             - [Anchor element](../components/viewport2d_button.md#anchor-element) is the [swipe-up menu](./swipe_up_menu.md)
+             - [Drop shadow](../components/viewport2d_button.md#drop-shadow) is [this drop shadow descriptor](./dropshadow_descriptor.md)
+             - [Click callback](../components/viewport2d_button.md#on-click-callback) is the following:
                 - Depending on the filled star value of the [interactive](#interactive-star-rating-graphic) [star rating graphic](#star-rating-graphic):
                    - Update **one** of the [bathroom_data_primary `rating_1_count`, `rating_2_count`, `rating_3_count`, `rating_4_count`, or `rating_5_count` columns for this bathroom](../bathroom_db.md#description)
                 - Update the average star rating number to the newly calculated average
@@ -57,7 +84,7 @@
  - 5 stars in a row horizontally
     - Use [this icon](?????link-to-star-icon?????) as the star icon
  - Fill up the stars from the left to right depending on the value of the [`rating` parameter](#rating-star-rating-graphic)
-    - The filled color of the stars on the left side is [this color](#star-rating-fill-color)
+    - The filled color of the stars on the left side is [this color](#star-rating-5-fill-color)
     - The unfilled color of the stars on the right side is [this color](#star-rating-unfill-color)
     - EXAMPLE:
        - If the [`rating` parameter](#rating-star-rating-graphic) is 3.5:
@@ -80,10 +107,13 @@
 ### `rating_total_count` (rating bar)
  - Type:
     - Integer
+### `left_color` (rating bar)
+ - Type:
+    - String
 ## Description (rating bar)
  - [`rating_count` parameter](#rating_count-rating-bar) as a number with a horizontal bar representing [`rating_count` parameter](#rating_count-rating-bar) divided by [`rating_total_count` parameter](#rating_total_count-rating-bar)
     - The left side of the bar represents the base of the bar
-    - The left side bar will have [this color](#star-rating-fill-color)
+    - The left side bar will have [this color](#left_color-rating-bar)
     - The right side bar will have [this color](#star-rating-unfill-color)
     - The bar will start [`rating_count_space` amount of CSS pixels](#rating_count_space-rating-bar) from the left edge of the [`rating_count` parameter's](#rating_count-rating-bar) number
     - EXAMPLE:

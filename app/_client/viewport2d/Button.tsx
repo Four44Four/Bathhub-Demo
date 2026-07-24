@@ -7,8 +7,10 @@ import {
   type MouseEventHandler,
   type ReactNode,
 } from "react";
+import { createPortal } from "react-dom";
 
 import { Viewport2dButton as Viewport2dButtonConsts } from "../ComponentConstants";
+import { dropshadowToBoxShadowCss, type DropshadowDescriptor } from "../pure/Dropshadow";
 import {
   type ImageDescriptor,
   resolveImageMonoColor,
@@ -25,6 +27,8 @@ import {
   viewport2dButtonCircularContentSizePx,
   viewportCircularButtonOuterSidePx,
 } from "../pure/viewport2d/ButtonLayout";
+import { viewport2dButtonZIndex } from "../pure/viewport2d/Viewport2dButtonZIndex";
+import { VIEWPORT2D_TOP_LAYER_Z_INDEX } from "../pure/viewport2d/PositionalAlertAnchor";
 import { blackMonoIconCssFilter } from "../pure/svg/BlackMonoIconCssFilter";
 import {
   areViewportClicksSuppressed,
@@ -52,7 +56,8 @@ export type ButtonProps = {
   minWidthPx?: number;
   /** Minimum rectangular button height in CSS pixels. */
   minHeightPx?: number;
-  zIndex?: number;
+  /** HTML element to position against; `null` places the button on the viewport2d layer. */
+  anchorElement?: HTMLElement | null;
   /** Image resource descriptor, or `null` for no image. */
   image?: ImageDescriptor | null;
   /** When both text and image are set, places the image on the left (`true`) or right (`false`). */
@@ -70,8 +75,8 @@ export type ButtonProps = {
   padding?: number;
   /** Hover / press visual feedback mode (see viewport2d_button.md). */
   hoverInteractBehavior?: Viewport2dButtonHoverInteractBehavior;
-  /** Optional CSS box-shadow (e.g. user-settings bottom buttons). */
-  boxShadow?: string;
+  /** Optional drop shadow descriptor (see specifications/dropshadow.md). */
+  dropShadow?: DropshadowDescriptor | null;
   /**
    * When true, swipe-menu viewport blocking and brief click suppression do not
    * disable this control (e.g. user-settings overlay buttons above the menu).
@@ -311,7 +316,7 @@ export function Button({
   minHeightPx,
   x,
   y,
-  zIndex = Viewport2dButtonConsts.Z_INDEX,
+  anchorElement = Viewport2dButtonConsts.ANCHOR_ELEMENT,
   image = Viewport2dButtonConsts.IMAGE,
   imageLeftOfText = Viewport2dButtonConsts.IMAGE_LEFT_OF_TEXT,
   imageTextGap = Viewport2dButtonConsts.IMAGE_TEXT_GAP,
@@ -319,7 +324,7 @@ export function Button({
   circular = Viewport2dButtonConsts.CIRCULAR,
   padding = Viewport2dButtonConsts.PADDING,
   hoverInteractBehavior = Viewport2dButtonConsts.HOVER_INTERACT_BEHAVIOR,
-  boxShadow,
+  dropShadow = Viewport2dButtonConsts.DROP_SHADOW,
   ignoreViewportInteractionGuards = false,
   disabled = false,
   busy = false,
@@ -339,6 +344,21 @@ export function Button({
   const interactProgress = useAnimatedLinear01(
     isHighlighted ? 1 : 0,
     Viewport2dButtonConsts.ANIMATION_DURATION_MS,
+  );
+
+  const resolvedZIndex = useMemo(
+    () =>
+      typeof window !== "undefined"
+        ? viewport2dButtonZIndex(anchorElement ?? null, (element) =>
+            window.getComputedStyle(element),
+          )
+        : VIEWPORT2D_TOP_LAYER_Z_INDEX,
+    [anchorElement],
+  );
+
+  const resolvedBoxShadow = useMemo(
+    () => (dropShadow != null ? dropshadowToBoxShadowCss(dropShadow) : undefined),
+    [dropShadow],
   );
 
   const {
@@ -449,7 +469,7 @@ export function Button({
     position: "absolute",
     left: `${x}px`,
     top: `${y}px`,
-    zIndex,
+    zIndex: resolvedZIndex,
     margin: 0,
     backgroundColor: resolvedFillColor,
     borderWidth: `${outlineThickness}px`,
@@ -457,7 +477,7 @@ export function Button({
     borderColor: resolvedOutlineColor,
     cursor: blocksInteraction ? "default" : "pointer",
     boxSizing: "border-box",
-    ...(boxShadow != null ? { boxShadow } : {}),
+    ...(resolvedBoxShadow != null ? { boxShadow: resolvedBoxShadow } : {}),
     ...(disabled ? { opacity: 0.6 } : {}),
   };
 
@@ -498,7 +518,7 @@ export function Button({
     onClick?.(event);
   };
 
-  return (
+  const buttonEl = (
     <button
       type="button"
       aria-label={ariaLabel}
@@ -519,4 +539,10 @@ export function Button({
       {inner}
     </button>
   );
+
+  if (anchorElement != null) {
+    return createPortal(buttonEl, anchorElement);
+  }
+
+  return buttonEl;
 }

@@ -81,22 +81,33 @@
     - Boolean
  - Default value:
     - `false`
-## Z index
- - Type:
-    - Integer
- - Default value:
-    - 0
 ## Hover interact behavior
  - Type:
     - "invert" or "darken"
  - Default value:
     - "invert"
+## Anchor element
+ - Type:
+    - HTML element or `null`
+ - Default value:
+    - `null`
+## Drop shadow
+ - Type:
+    - [Dropshadow descriptor] or `null`
+ - Default value:
+    - `null`
 ## On click callback
  - Type:
     - Function that takes in a click event
 
 # Description
- - A button to be displayed on the [viewport2d](../viewport2d.md) at absolute position [x](#x-position) and [y](#y-position) relative to the [viewport2d's](../viewport2d.md) top left corner with a CSS z index layering of [this](#z-index) with a [this bg fill color](#fill-color), and an outline of [this color](#outline-color) as [this many CSS pixels thick](#outline-thickness)
+ - A 2d button with a [this bg fill color](#fill-color), and an outline of [this color](#outline-color) as [this many CSS pixels thick](#outline-thickness) 
+ - If [the anchor element property](#anchor-element) is `null`:
+    - The button is displayed on the [viewport2d](../viewport2d.md) at absolute position [x](#x-position) and [y](#y-position) relative to the [viewport2d's](../viewport2d.md) top left corner
+    - The button is z layered above the [GlobeViewport](../GlobeViewport.md) but below the [swipe-up menu](../swipe_up_menu/swipe_up_menu.md)
+ - Else:
+    - The button is displayed relative to [the anchor element](#anchor-element)'s top left corner at at absolute position [x](#x-position) and [y](#y-position)
+    - The button will also be z layered above [the anchor element](#anchor-element)
  - It displays [this text](#text) with [this color](#text-color) in the following fonts depending on the value of [the text weight](#text-weight):
     - TextWeight.REGULAR -> [regular font](../resources.md#regular-font)
     - TextWeight.BOLD -> [bold font](../resources.md#bold-font)
@@ -108,6 +119,8 @@
  - The [image](#image) will be forced to be a square with each side being [this many CSS pixels](#image-size) long
     - Use CSS property `object-fit: contain` on the [image](#image)
  - This [amount of internal padding from the border](#padding) will be applied to the button's [image](#image) and [text](#text) contents
+ - If [drop shadow property](#drop-shadow) is **not** `null`:
+    - Display a dropshadow behind the button with [the specifications from the drop shadow property](#drop-shadow)
  - When hovered or interacted with:
     - If the [hover interaction behavior property](#hover-interact-behavior) is "invert":
        - Invert the brightness of all the colors (fill, text, outline, and images) linearly over [this duration](#animation-duration)

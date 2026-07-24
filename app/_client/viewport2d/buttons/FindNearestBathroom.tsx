@@ -2,7 +2,6 @@
 
 import { Viewport2dButton as Viewport2dButtonConsts, SwipeMenu as SwipeMenuConsts } from "../../ComponentConstants";
 import { createMonoColorImage } from "../../pure/Image";
-import { VIEWPORT2D_TOP_LAYER_Z_INDEX } from "../../pure/viewport2d/PositionalAlertAnchor";
 import { viewportCircularButtonOuterSidePx } from "../../Utils";
 import { Button } from "../Button";
 import { useBathroomNavigationMode } from "../bathroom-navigation-mode";
@@ -81,7 +80,6 @@ export function FindNearestBathroom({
         bottom: bottomPx,
         width: outerSidePx,
         height: outerSidePx,
-        zIndex: VIEWPORT2D_TOP_LAYER_Z_INDEX,
       }}
     >
       <Button

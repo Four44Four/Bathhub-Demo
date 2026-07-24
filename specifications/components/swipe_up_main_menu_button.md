@@ -1,13 +1,4 @@
 # Constants
-## Drop shadow
- - Offset y:
-    - 2px
- - Blur radius:
-    - 8px
- - Spread:
-    - 0px
- - Color:
-    - "rgba(18, 18, 47, 0.25)"
 ## Fill color
  - #ffffff
 ## Text color
@@ -60,7 +51,7 @@
  - A button to be displayed on the [swipe-up menu](../swipe_up_menu/swipe_up_menu.md) at absolute position [x](#x-position) and [y](#y-position) relative to the [swipe-up menu's](../swipe_up_menu/swipe_up_menu.md) top left corner with no outline with [this bg fill color](#fill-color)
  - Is a rounded rectangle with corners radius of [this size](#corner-radius-size)
  - Internal padding is [this much vertically](#padding-vertical-size-pixel) and [this much horizontally](#padding-horizontal-size-pixel)
- - Has a drop shadow with [these specifications](#drop-shadow)
+ - Has a drop shadow with [these specifications](../swipe_up_menu/dropshadow_descriptor.md)
  - Displays [this text](#text) with [this color](#text-color) in the [bold font](../resources.md#bold-font) on the top of the button with [this font size](#text-font-size) horizontally centered in the button
     - [The text](#text) should be centered vertically in the area between the top of the button (padding included) and [image](#image) + [margin between the text and image](#text-margin-size-pixel)
  - Displays [this image](#image) below [the text](#text) anchored to the bottom of the button with at least margin of [this size](#text-margin-size-pixel) between them as a square of half the width of the button horizontally centered in the button

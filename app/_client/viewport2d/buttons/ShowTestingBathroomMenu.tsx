@@ -2,7 +2,6 @@
 
 import { TextWeight } from "../../Utils";
 import { Viewport2dButton as Viewport2dButtonConsts } from "../../ComponentConstants";
-import { VIEWPORT2D_TOP_LAYER_Z_INDEX } from "../../pure/viewport2d/PositionalAlertAnchor";
 import { useSwipeMenuPage } from "../../swipeup/SwipeMenuPageContext";
 import {
   showSwipeUpMenuButtonLeftPx,
@@ -57,7 +56,6 @@ export function ShowTestingBathroomMenu({
       style={{
         top,
         left,
-        zIndex: VIEWPORT2D_TOP_LAYER_Z_INDEX,
       }}
     >
       <Button

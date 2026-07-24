@@ -3,8 +3,10 @@
 import * as Fonts from "../_server/Fonts";
 import { PathColorMode } from "./globe/Path";
 import { lerpHex } from "./pure/HexColor";
+import { SWIPE_MENU_DROP_SHADOW } from "./pure/Dropshadow";
 import { createMonoColorImage } from "./pure/Image";
 import { viewportCircularButtonOuterSidePx } from "./pure/viewport2d/ButtonLayout";
+import { VIEWPORT2D_TOP_LAYER_Z_INDEX } from "./pure/viewport2d/PositionalAlertAnchor";
 
 export const Shared = {
     FONT_REGULAR_CLASS: Fonts.NOTOSANS_REGULAR_CLASS,
@@ -38,7 +40,10 @@ export const Viewport2dButton = {
     IMAGE_TEXT_GAP: 0,
     IMAGE_SIZE: 24,
     CIRCULAR: false,
-    Z_INDEX: 0,
+    ANCHOR_ELEMENT: null,
+    DROP_SHADOW: null,
+    /** Viewport2d layer z-index when {@link ANCHOR_ELEMENT} is `null`. */
+    VIEWPORT2D_LAYER_Z_INDEX: VIEWPORT2D_TOP_LAYER_Z_INDEX,
     HOVER_INTERACT_BEHAVIOR: "invert",
     HOVER_INTERACT_DARKENING_MULT_FACTOR: 0.7,
     /**
@@ -78,6 +83,7 @@ export const CircularCloseButton = {
         CIRCULAR_CLOSE_PADDING_PX,
         CIRCULAR_CLOSE_OUTLINE_THICKNESS_PX,
     ),
+    DROP_SHADOW: SWIPE_MENU_DROP_SHADOW,
     BOX_SHADOW: "0 2px 8px rgba(18, 18, 47, 0.25)",
 } as const;
 
@@ -207,6 +213,7 @@ export const SwipeMenu = { ...SwipeMenu0, ...SwipeMenu1 };
 
 /** Swipe-up main menu button (see specifications/components/swipe_up_main_menu_button.md). */
 export const SwipeUpMainMenuButton = {
+    DROP_SHADOW: SWIPE_MENU_DROP_SHADOW,
     BOX_SHADOW: "0 2px 8px rgba(18, 18, 47, 0.25)",
     FILL_COLOR: "#ffffff",
     TEXT_COLOR: "#B5B5C4",
@@ -310,6 +317,7 @@ const UserSettings0 = {
     NUMBER_SLIDER_KNOB_SIZE_PX: 20,
     SETTINGS_BACK_BTN_FONT_COLOR: "#B5B5C4",
     /** Soft drop shadow shared by user-settings bottom buttons (see user_settings.md). */
+    BOTTOM_BUTTON_DROP_SHADOW: SWIPE_MENU_DROP_SHADOW,
     BOTTOM_BUTTON_BOX_SHADOW: CircularCloseButton.BOX_SHADOW,
     BOTTOM_BUTTON_GAP_PX: 10,
     BOTTOM_BUTTON_CORNER_RADIUS_PX: 15,

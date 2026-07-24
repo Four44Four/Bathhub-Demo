@@ -1,6 +1,6 @@
 "use client";
 
-import type { CSSProperties } from "react";
+import { useState, type CSSProperties } from "react";
 
 import { Alerts as AlertConsts, Menus as MenuConsts } from "../../ComponentConstants";
 import type { ImportantAlertButton } from "../../pure/viewport2d/AlertSystemState";
@@ -13,6 +13,57 @@ const IMPORTANT_ALERT_ACCENT_BUTTON_TEXT_COLOR = AlertConsts.TEXT_COLOR;
 const IMPORTANT_ALERT_SECONDARY_BUTTON_BORDER_COLOR = "#E4E4FF";
 /** Button row width as a percentage of the alert panel background width (edge to edge). */
 const IMPORTANT_ALERT_BUTTON_ROW_WIDTH_PERCENTAGE = 90;
+
+type ImportantAlertActionButtonProps = {
+  button: ImportantAlertButton;
+  accentColor: string;
+  onActivate: (button: ImportantAlertButton) => void;
+};
+
+function ImportantAlertActionButton({
+  button,
+  accentColor,
+  onActivate,
+}: ImportantAlertActionButtonProps) {
+  const [anchorElement, setAnchorElement] = useState<HTMLDivElement | null>(
+    null,
+  );
+  const isAccent = button.style === "accent";
+
+  return (
+    <div
+      ref={setAnchorElement}
+      style={{
+        flex: 1,
+        minWidth: 0,
+        position: "relative",
+        height: 40,
+      }}
+    >
+      <Button
+        anchorElement={anchorElement}
+        x={0}
+        y={0}
+        widthOverride="100%"
+        hoverInteractBehavior="darken"
+        // Spec padding is a single integer; prior layout used asymmetric 10px 16px.
+        padding={10}
+        text={button.label}
+        textWeight={TextWeight.BOLD}
+        fillColor={isAccent ? accentColor : IMPORTANT_ALERT_PANEL_BG_COLOR}
+        outlineColor={
+          isAccent ? accentColor : IMPORTANT_ALERT_SECONDARY_BUTTON_BORDER_COLOR
+        }
+        textColor={
+          isAccent
+            ? IMPORTANT_ALERT_ACCENT_BUTTON_TEXT_COLOR
+            : IMPORTANT_ALERT_TEXT_COLOR
+        }
+        onClick={() => onActivate(button)}
+      />
+    </div>
+  );
+}
 
 export type ImportantAlertProps = {
   message: string;
@@ -90,47 +141,14 @@ export function ImportantAlert({
             gap: 8,
           }}
         >
-          {buttons.map((button) => {
-            const isAccent = button.style === "accent";
-            return (
-              <div
-                key={button.label}
-                style={{
-                  flex: 1,
-                  minWidth: 0,
-                  position: "relative",
-                  height: 40,
-                }}
-              >
-                <Button
-                  x={0}
-                  y={0}
-                  widthOverride="100%"
-                  hoverInteractBehavior="darken"
-                  // Spec padding is a single integer; prior layout used asymmetric 10px 16px.
-                  padding={10}
-                  text={button.label}
-                  textWeight={TextWeight.BOLD}
-                  fillColor={
-                    isAccent
-                      ? accentColor
-                      : IMPORTANT_ALERT_PANEL_BG_COLOR
-                  }
-                  outlineColor={
-                    isAccent
-                      ? accentColor
-                      : IMPORTANT_ALERT_SECONDARY_BUTTON_BORDER_COLOR
-                  }
-                  textColor={
-                    isAccent
-                      ? IMPORTANT_ALERT_ACCENT_BUTTON_TEXT_COLOR
-                      : IMPORTANT_ALERT_TEXT_COLOR
-                  }
-                  onClick={() => handleButtonClick(button)}
-                />
-              </div>
-            );
-          })}
+          {buttons.map((button) => (
+            <ImportantAlertActionButton
+              key={button.label}
+              button={button}
+              accentColor={accentColor}
+              onActivate={handleButtonClick}
+            />
+          ))}
         </div>
       </div>
     </div>

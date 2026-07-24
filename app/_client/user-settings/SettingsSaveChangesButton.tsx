@@ -20,6 +20,7 @@ const SAVE_CHANGES_BUTTON_MIN_HEIGHT_PX = userSettingsActionButtonOuterHeightPx(
 );
 
 export type SettingsSaveChangesButtonProps = {
+  anchorElement: HTMLElement | null;
   x: number;
   y: number;
   isSaving: boolean;
@@ -28,6 +29,7 @@ export type SettingsSaveChangesButtonProps = {
 };
 
 export function SettingsSaveChangesButton({
+  anchorElement,
   x,
   y,
   isSaving,
@@ -36,6 +38,7 @@ export function SettingsSaveChangesButton({
 }: SettingsSaveChangesButtonProps) {
   return (
     <Button
+      anchorElement={anchorElement}
       x={x}
       y={y}
       text={isSaving ? null : "Save changes"}
@@ -48,7 +51,7 @@ export function SettingsSaveChangesButton({
       padding={UserSettingsConsts.ACTION_BUTTON_PADDING_VERTICAL_PX}
       minWidthPx={SAVE_CHANGES_BUTTON_MIN_WIDTH_PX}
       minHeightPx={SAVE_CHANGES_BUTTON_MIN_HEIGHT_PX}
-      boxShadow={UserSettingsConsts.BOTTOM_BUTTON_BOX_SHADOW}
+      dropShadow={UserSettingsConsts.BOTTOM_BUTTON_DROP_SHADOW}
       ignoreViewportInteractionGuards
       busy={isSaving}
       disabled={disabled}

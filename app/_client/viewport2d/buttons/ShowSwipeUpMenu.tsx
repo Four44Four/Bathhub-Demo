@@ -3,7 +3,6 @@
 import { Viewport2dButton as Viewport2dButtonConsts } from "../../ComponentConstants";
 import { createMonoColorImage } from "../../pure/Image";
 import { viewportRectangularButtonOuterSidePx } from "../../pure/viewport2d/ButtonLayout";
-import { VIEWPORT2D_TOP_LAYER_Z_INDEX } from "../../pure/viewport2d/PositionalAlertAnchor";
 import { useSwipeMenuPage } from "../../swipeup/SwipeMenuPageContext";
 import { Button } from "../Button";
 
@@ -68,7 +67,6 @@ export function ShowSwipeUpMenu({
         left: showSwipeUpMenuButtonLeftPx(leftInsetPx),
         width: outerSidePx,
         height: outerSidePx,
-        zIndex: VIEWPORT2D_TOP_LAYER_Z_INDEX,
       }}
     >
       <Button

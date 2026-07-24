@@ -72,11 +72,14 @@ export function useFindNearestBathroomFlow({
     const maxDistanceM =
       settings?.find_nearest_bathroom_max_dist_m ??
       USER_SETTINGS_DEFAULTS.find_nearest_bathroom_max_dist_m;
+    const minRating =
+      settings?.find_nearest_bathroom_min_rating ??
+      USER_SETTINGS_DEFAULTS.find_nearest_bathroom_min_rating;
 
     const result = await runAbortableTimeout(
       (signal) =>
         requestFindNearestBathroom(
-          { location: startPos, constraints: { maxDistanceM } },
+          { location: startPos, constraints: { maxDistanceM, minRating } },
           signal,
         ),
       NearestBathroomConsts.FIND_NEAREST_BATHROOM_REQUEST_TIMEOUT_MS,
@@ -137,6 +140,7 @@ export function useFindNearestBathroomFlow({
     globeRef,
     setRequestState,
     settings?.find_nearest_bathroom_max_dist_m,
+    settings?.find_nearest_bathroom_min_rating,
     showImportantAlert,
     reportRateLimitViolation,
   ]);

@@ -71,6 +71,7 @@ function rowToUserSettings(row: Record<string, unknown>): UserSettingsRow {
     globe_movement_smooth: row.globe_movement_smooth === 1,
     camera_init_surface_offset_m: Number(row.camera_init_surface_offset_m),
     find_nearest_bathroom_max_dist_m: Number(row.find_nearest_bathroom_max_dist_m),
+    find_nearest_bathroom_min_rating: Number(row.find_nearest_bathroom_min_rating),
   };
 }
 
@@ -79,7 +80,8 @@ function readSettingsRow(db: SqliteDb): UserSettingsRow {
     `SELECT
       globe_movement_smooth,
       camera_init_surface_offset_m,
-      find_nearest_bathroom_max_dist_m
+      find_nearest_bathroom_max_dist_m,
+      find_nearest_bathroom_min_rating
     FROM ${USER_SETTINGS_TABLE_NAME}
     WHERE id = 1`,
   );
@@ -217,13 +219,15 @@ export function createUserSettingsDbSqlite(
         `UPDATE ${USER_SETTINGS_TABLE_NAME}
          SET globe_movement_smooth = ?,
              camera_init_surface_offset_m = ?,
-             find_nearest_bathroom_max_dist_m = ?
+             find_nearest_bathroom_max_dist_m = ?,
+             find_nearest_bathroom_min_rating = ?
          WHERE id = 1`,
         {
           bind: [
             settings.globe_movement_smooth ? 1 : 0,
             settings.camera_init_surface_offset_m,
             settings.find_nearest_bathroom_max_dist_m,
+            settings.find_nearest_bathroom_min_rating,
           ],
         },
       );

@@ -34,7 +34,9 @@ export function validateDefaultUserSettingsDb(
     input.settings.camera_init_surface_offset_m ===
       input.expectedDefaults.camera_init_surface_offset_m &&
     input.settings.find_nearest_bathroom_max_dist_m ===
-      input.expectedDefaults.find_nearest_bathroom_max_dist_m;
+      input.expectedDefaults.find_nearest_bathroom_max_dist_m &&
+    input.settings.find_nearest_bathroom_min_rating ===
+      input.expectedDefaults.find_nearest_bathroom_min_rating;
 
   if (!settingsMatch) {
     return {

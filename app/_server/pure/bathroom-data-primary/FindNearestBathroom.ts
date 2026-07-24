@@ -13,8 +13,12 @@ export const FIND_NEAREST_INVALID_COORDINATES_MESSAGE =
 export const FIND_NEAREST_INVALID_MAX_DISTANCE_MESSAGE =
   "invalid nearest-bathroom max distance" as const;
 
+export const FIND_NEAREST_INVALID_MIN_RATING_MESSAGE =
+  "invalid nearest-bathroom min rating" as const;
+
 export type FindNearestBathroomConstraints = {
   maxDistanceM: number;
+  minRating: number;
 };
 
 export type FindNearestBathroomRpcRow = NearestBathroomLocation;
@@ -23,6 +27,7 @@ export type FindNearestBathroomRpcParams = {
   p_latitude: number;
   p_longitude: number;
   p_max_distance_m: number;
+  p_min_rating: number;
 };
 
 export type FindNearestBathroomRpcResult = {
@@ -77,13 +82,18 @@ export function findNearestBathroomQueryValidationError(
   if (
     !Number.isFinite(location.latitude) ||
     !Number.isFinite(location.longitude) ||
-    !Number.isFinite(constraints.maxDistanceM)
+    !Number.isFinite(constraints.maxDistanceM) ||
+    !Number.isFinite(constraints.minRating)
   ) {
     return FIND_NEAREST_INVALID_COORDINATES_MESSAGE;
   }
 
   if (constraints.maxDistanceM < 0) {
     return FIND_NEAREST_INVALID_MAX_DISTANCE_MESSAGE;
+  }
+
+  if (constraints.minRating < 0 || constraints.minRating > 5) {
+    return FIND_NEAREST_INVALID_MIN_RATING_MESSAGE;
   }
 
   return null;
@@ -97,5 +107,6 @@ export function buildFindNearestBathroomRpcParams(
     p_latitude: location.latitude,
     p_longitude: location.longitude,
     p_max_distance_m: constraints.maxDistanceM,
+    p_min_rating: constraints.minRating,
   };
 }

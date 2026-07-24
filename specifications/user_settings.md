@@ -249,25 +249,38 @@
  - Client name: Globe movement smooth animations
  - SQL Name: globe_movement_smooth
  - SQL Type: BOOLEAN
- - SQL Restrictions: CHECK (globe_movement_smooth IN (0, 1))
+ - Other SQL Restrictions: Value can only be 0 or 1
 ## Initial camera height
  - Setting type: [Number slider](#number-slider-setting)
+    - Integer variant
  - Client name: Init camera height (meters)
  - Min: 500
  - Max: 10000
  - SQL Name: camera_init_surface_offset_m
  - SQL Type: INTEGER
- - SQL Restrictions: CHECK (camera_init_surface_offset_m >= <Min-value-for-this-setting> AND camera_init_surface_offset_m <= <Max-value-for-this-setting>)
+ - Other SQL Restrictions: N/A
+
 ## Bathroom settings subsettings page
  - Setting type: [Subsettings page](#subpage-setting)
 ### Find nearest bathroom maximum distance
  - Setting type: [Number slider](#number-slider-setting)
+    - Integer variant
  - Client name: Find nearest bathroom max. distance (meters)
  - Min: 0
  - Max: 10000
  - SQL Name: find_nearest_bathroom_max_dist_m
  - SQL Type: INTEGER
- - SQL Restrictions: CHECK (find_nearest_bathroom_max_dist_m >= <Min-value-for-this-setting> AND find_nearest_bathroom_max_dist_m <= <Max-value-for-this-setting>)
+ - Other SQL Restrictions: N/A
+### Find nearest bathroom minimum rating
+ - Setting type: [Number slider](#number-slider-setting)
+    - Float variant
+ - Client name: Find nearest bathrrom min. rating
+ - Min: 0.0
+ - Max: 5.0
+ - SQL Name: find_nearest_bathroom_min_rating
+ - SQL Type: REAL
+ - Other SQL Restrictions: N/A
+
 # Integration tests
  - Migrations between every sequential pair of user setting schema versions should be tested
     - If a new user setting schema version is published or added:

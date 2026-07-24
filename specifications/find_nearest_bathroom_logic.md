@@ -78,10 +78,13 @@
 
 # Actions after interacting with Find bathroom button
  - Save the camera position and zoom level that the client is currently at at the moment that they interact with the Find nearest bathroom button from viewport2d
- - Client sends their current location + [user settings from under their bathroom settings subsettings](./user_settings.md#bathroom-settings-subsettings-page) to use as constraints
+ - Client sends their current location + [all user settings from under their bathroom settings subsettings](./user_settings.md#bathroom-settings-subsettings-page) to use as constraints in one request
  - On the server:
     - Using the provided user location and user bathroom constraints:
        - The nearest bathroom is calculated from the bathroom DB
+          - Bathrooms farther than [the find nearest bathroom maximum distance](./user_settings.md#find-nearest-bathroom-maximum-distance) from the provided user location will be excluded from consideration
+          - Bathrooms with an average rating under [the find nearest bathroom bathroom minimum rating](./user_settings.md#find-nearest-bathroom-minimum-rating) will be excluded from consideration 
+             - Calculate the average rating of a bathroom using the [rating_*_count columns](./bathroom_db.md#table-schema) in the formula (`rating_1_count` * 1 + `rating_2_count` * 2 + `rating_3_count` * 3 + `rating_4_count` * 4 + `rating_5_count` * 5) / (`rating_1_count` + `rating_2_count` + `rating_3_count` + `rating_4_count` + `rating_5_count`)
        - Send the id and location of the nearest bathroom back to the client
     - If an error occurs while finding a bathroom:
        - Send back the error to the client

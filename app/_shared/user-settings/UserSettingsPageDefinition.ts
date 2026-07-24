@@ -68,6 +68,13 @@ export const USER_SETTINGS_PAGES: Record<
         min: 0,
         max: 10000,
       },
+      {
+        type: "slider-float",
+        column: "find_nearest_bathroom_min_rating",
+        label: "Find nearest bathrrom min. rating",
+        min: 0,
+        max: 5,
+      },
     ],
   },
   root: {

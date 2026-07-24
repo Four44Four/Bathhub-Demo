@@ -1,6 +1,7 @@
 import {
   FIND_NEAREST_INVALID_COORDINATES_MESSAGE,
   FIND_NEAREST_INVALID_MAX_DISTANCE_MESSAGE,
+  FIND_NEAREST_INVALID_MIN_RATING_MESSAGE,
   buildFindNearestBathroomRpcParams,
   findNearestBathroomQueryValidationError,
   parseFindNearestBathroomRpcData,
@@ -13,31 +14,58 @@ describe("FindNearestBathroom", () => {
     expect(
       findNearestBathroomQueryValidationError(
         { latitude: Number.NaN, longitude: 0 },
-        { maxDistanceM: 100 },
+        { maxDistanceM: 100, minRating: 0 },
       ),
     ).toBe(FIND_NEAREST_INVALID_COORDINATES_MESSAGE);
     expect(
       findNearestBathroomQueryValidationError(
         { latitude: 0, longitude: Number.POSITIVE_INFINITY },
-        { maxDistanceM: 100 },
+        { maxDistanceM: 100, minRating: 0 },
       ),
     ).toBe(FIND_NEAREST_INVALID_COORDINATES_MESSAGE);
     expect(
       findNearestBathroomQueryValidationError(
         { latitude: 0, longitude: 0 },
-        { maxDistanceM: Number.NaN },
+        { maxDistanceM: Number.NaN, minRating: 0 },
       ),
     ).toBe(FIND_NEAREST_INVALID_COORDINATES_MESSAGE);
     expect(
       findNearestBathroomQueryValidationError(
         { latitude: 0, longitude: 0 },
-        { maxDistanceM: -1 },
+        { maxDistanceM: -1, minRating: 0 },
       ),
     ).toBe(FIND_NEAREST_INVALID_MAX_DISTANCE_MESSAGE);
     expect(
       findNearestBathroomQueryValidationError(
         { latitude: 0, longitude: 0 },
-        { maxDistanceM: 0 },
+        { maxDistanceM: 0, minRating: 0 },
+      ),
+    ).toBeNull();
+  });
+
+  test("findNearestBathroomQueryValidationError rejects invalid min rating", () => {
+    expect(
+      findNearestBathroomQueryValidationError(
+        { latitude: 0, longitude: 0 },
+        { maxDistanceM: 100, minRating: Number.NaN },
+      ),
+    ).toBe(FIND_NEAREST_INVALID_COORDINATES_MESSAGE);
+    expect(
+      findNearestBathroomQueryValidationError(
+        { latitude: 0, longitude: 0 },
+        { maxDistanceM: 100, minRating: -0.1 },
+      ),
+    ).toBe(FIND_NEAREST_INVALID_MIN_RATING_MESSAGE);
+    expect(
+      findNearestBathroomQueryValidationError(
+        { latitude: 0, longitude: 0 },
+        { maxDistanceM: 100, minRating: 5.1 },
+      ),
+    ).toBe(FIND_NEAREST_INVALID_MIN_RATING_MESSAGE);
+    expect(
+      findNearestBathroomQueryValidationError(
+        { latitude: 0, longitude: 0 },
+        { maxDistanceM: 100, minRating: 4.5 },
       ),
     ).toBeNull();
   });
@@ -46,12 +74,13 @@ describe("FindNearestBathroom", () => {
     expect(
       buildFindNearestBathroomRpcParams(
         { latitude: 12.3, longitude: 45.6 },
-        { maxDistanceM: 5000 },
+        { maxDistanceM: 5000, minRating: 3.5 },
       ),
     ).toEqual({
       p_latitude: 12.3,
       p_longitude: 45.6,
       p_max_distance_m: 5000,
+      p_min_rating: 3.5,
     });
   });
 

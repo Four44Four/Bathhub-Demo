@@ -62,14 +62,14 @@
     - [Color](../text.md#color) is [this color](#text-color)
     - [Weight](../text.md#weight) is [TextWeight.BOLD](../text_weight.md)
 ## Ratings panel
- - Store the sum of [`rating_1_count`, `rating_2_count`, `rating_3_count`, `rating_4_count`, or `rating_5_count` columns of this bathroom](../bathroom_db.md#description) in <total-rating-count> 
+ - Store the sum of [`rating_1_count`, `rating_2_count`, `rating_3_count`, `rating_4_count`, or `rating_5_count` columns of this bathroom](../bathroom_db.md#table-schema) in <total-rating-count> 
  - Is a [dropdown menu](../components/dropdown_menu.md) with the following properties:
     - [Anchor element](../components/dropdown_menu.md#anchor-element) is the [swipe-up menu](./swipe_up_menu.md)
     - Located on the top middle of the swipe-up menu (set the [x position](../components/dropdown_menu.md#x-position) and [y position](../components/dropdown_menu.md#y-position) accordingly)
     - [Width override](../components/dropdown_menu.md#width-override) is to be set appropriately to ensure that the width of the dropdown menu takes up the right half of the swipe-up menu, minus any padding/margins on the sides
     - [Initial display content](../components/dropdown_menu.md#initial-display-content) is a HTML element that consists of the following components:
        - A text on the left side from a [text descriptor](../text.md) with the following properties:
-          - [Content](../text.md#content) as the String equivalent of the average of [columns `rating_1_count`, `rating_2_count`, `rating_3_count`, `rating_4_count`, and `rating_5_count` of this bathroom](../bathroom_db.md#description) as a decimal number rounded to 1 place
+          - [Content](../text.md#content) as the String equivalent of the average of [columns `rating_1_count`, `rating_2_count`, `rating_3_count`, `rating_4_count`, and `rating_5_count` of this bathroom](../bathroom_db.md#table-schema) as a decimal number rounded to 1 place
              - Use formula (`rating_1_count` * 1 + `rating_2_count` * 2 + `rating_3_count` * 3 + `rating_4_count` * 4 + `rating_5_count` * 5) / (`rating_1_count` + `rating_2_count` + `rating_3_count` + `rating_4_count` + `rating_5_count`)
           - [Color](../text.md#color) is [this color](#text-color)
           - [Weight](../text.md#weight) is [TextWeight.BOLD](../text_weight.md)
@@ -80,21 +80,21 @@
     - [Subcomponents list](../components/dropdown_menu.md#subcomponents-list) consists of the following elements (top to bottom order):
        - Display 5 [rating bars](#rating-bar) stacked vertically, all with:
           - [Property `rating_total_count`](#rating_total_count-rating-bar) as <total-rating-count>
-          - [Property `rating_count_space`](#rating_count_space-rating-bar) as the width of the visually widest out of [`rating_1_count`, `rating_2_count`, `rating_3_count`, `rating_4_count`, or `rating_5_count` columns of this bathroom](../bathroom_db.md#description) plus some padding (below [rating bars](#rating-bar) are in top-bottom order):
+          - [Property `rating_count_space`](#rating_count_space-rating-bar) as the width of the visually widest out of [`rating_1_count`, `rating_2_count`, `rating_3_count`, `rating_4_count`, or `rating_5_count` columns of this bathroom](../bathroom_db.md#table-schema) plus some padding (below [rating bars](#rating-bar) are in top-bottom order):
        - The first [rating bar](#rating-bar) has unique properties:
-          - [Property `rating_count`](#rating_count-rating-bar) as [`rating_5_count` column](../bathroom_db.md#description) of this bathroom
+          - [Property `rating_count`](#rating_count-rating-bar) as [`rating_5_count` column](../bathroom_db.md#table-schema) of this bathroom
           - [Property `left_color`](#left_color-rating-bar) as [star rating 5 fill color](#star-rating-5-fill-color)
        - The second [rating bar](#rating-bar) has unique properties:
-          - [Property `rating_count`](#rating_count-rating-bar) as [`rating_4_count` column](../bathroom_db.md#description) of this bathroom
+          - [Property `rating_count`](#rating_count-rating-bar) as [`rating_4_count` column](../bathroom_db.md#table-schema) of this bathroom
           - [Property `left_color`](#left_color-rating-bar) as [star rating 4 fill color](#star-rating-4-fill-color)
        - The third [rating bar](#rating-bar) has unique properties:
-          - [Property `rating_count`](#rating_count-rating-bar) as [`rating_3_count` column](../bathroom_db.md#description) of this bathroom
+          - [Property `rating_count`](#rating_count-rating-bar) as [`rating_3_count` column](../bathroom_db.md#table-schema) of this bathroom
           - [Property `left_color`](#left_color-rating-bar) as [star rating 3 fill color](#star-rating-3-fill-color)
        - The fourth [rating bar](#rating-bar) has unique properties:
-          - [Property `rating_count`](#rating_count-rating-bar) as [`rating_2_count` column](../bathroom_db.md#description) of this bathroom
+          - [Property `rating_count`](#rating_count-rating-bar) as [`rating_2_count` column](../bathroom_db.md#table-schema) of this bathroom
           - [Property `left_color`](#left_color-rating-bar) as [star rating 2 fill color](#star-rating-2-fill-color)
        - The fifth [rating bar](#rating-bar) has unique properties:
-          - [Property `rating_count`](#rating_count-rating-bar) as [`rating_1_count` column](../bathroom_db.md#description) of this bathroom
+          - [Property `rating_count`](#rating_count-rating-bar) as [`rating_1_count` column](../bathroom_db.md#table-schema) of this bathroom
           - [Property `left_color`](#left_color-rating-bar) as [star rating 1 fill color](#star-rating-1-fill-color)
        - A buffer/margin space of [this height](#ratings-panel-buffer-height)
        - A [star rating graphic](#star-rating-graphic) with the [property `rating`](#rating-star-rating-graphic) as 0.0 and the [property `interactive`](#interactive-star-rating-graphic) as `true`
@@ -114,7 +114,7 @@
                 - Do nothing
              - Else:
                 - Depending on the filled star value of the [interactive](#interactive-star-rating-graphic) [star rating graphic](#star-rating-graphic):
-                   - Update **one** of the [bathroom_data_primary `rating_1_count`, `rating_2_count`, `rating_3_count`, `rating_4_count`, or `rating_5_count` columns for this bathroom](../bathroom_db.md#description)
+                   - Update **one** of the [bathroom_data_primary `rating_1_count`, `rating_2_count`, `rating_3_count`, `rating_4_count`, or `rating_5_count` columns for this bathroom](../bathroom_db.md#table-schema)
                    - Ensure that the update is written to the remote [bathroom DB](../bathroom_db.md)
                 - Replace the text of the Post [button](../components/viewport2d_button.md) with a [loading spinner](../components/loading_spinner.md) in the center of the [button](#save-user-settings-button) until the rating is successfully written to the remote [bathroom DB](../bathroom_db.md)
                 - [Loading spinner](../components/loading_spinner.md) has the following properties:

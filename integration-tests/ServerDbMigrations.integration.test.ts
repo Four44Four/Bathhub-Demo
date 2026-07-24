@@ -5,7 +5,7 @@ import { spawnSync } from "node:child_process";
 const WORKSPACE_ROOT = path.resolve(__dirname, "..");
 const MIGRATIONS_DIR = path.join(WORKSPACE_ROOT, "supabase", "migrations");
 const IDEMPOTENT_MIGRATION_START = "20260706000000";
-const EXPECTED_LATEST_SCHEMA_VERSION = 12;
+const EXPECTED_LATEST_SCHEMA_VERSION = 13;
 const EXPECTED_RATING_COLUMNS = 5;
 const EXPECTED_RPC_COUNT = 3;
 
@@ -122,6 +122,7 @@ describe("server PostgreSQL migration reruns", () => {
       "20260713000000_bathroom_data_primary_rating_counts.sql",
       "20260714000000_bathroom_data_primary_read_by_id_rpc.sql",
       "20260715000000_bathroom_data_primary_increment_rating_rpc.sql",
+      "20260716000000_bathroom_nearest_rpc_min_rating.sql",
     ]);
 
     const before = readServerSchemaState(databaseUrl);

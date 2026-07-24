@@ -36,9 +36,9 @@ describe("validateDefaultUserSettingsDb", () => {
   test("accepts matching schema version and defaults", () => {
     expect(
       validateDefaultUserSettingsDb({
-        schemaVersion: 1,
+        schemaVersion: 2,
         settings: USER_SETTINGS_DEFAULTS,
-        expectedSchemaVersion: 1,
+        expectedSchemaVersion: 2,
         expectedDefaults: USER_SETTINGS_DEFAULTS,
       }),
     ).toEqual({ ok: true });
@@ -49,12 +49,12 @@ describe("validateDefaultUserSettingsDb", () => {
       validateDefaultUserSettingsDb({
         schemaVersion: 0,
         settings: USER_SETTINGS_DEFAULTS,
-        expectedSchemaVersion: 1,
+        expectedSchemaVersion: 2,
         expectedDefaults: USER_SETTINGS_DEFAULTS,
       }),
     ).toEqual({
       ok: false,
-      reason: "Expected schema version 1, got 0.",
+      reason: "Expected schema version 2, got 0.",
     });
   });
 });
@@ -63,6 +63,6 @@ describe("shouldInstallInitialUserSettingsDbFromServer", () => {
   test("installs only when there is no local DB and no schema version", () => {
     expect(shouldInstallInitialUserSettingsDbFromServer(null, false)).toBe(true);
     expect(shouldInstallInitialUserSettingsDbFromServer(null, true)).toBe(false);
-    expect(shouldInstallInitialUserSettingsDbFromServer(1, false)).toBe(false);
+    expect(shouldInstallInitialUserSettingsDbFromServer(2, false)).toBe(false);
   });
 });

@@ -1,4 +1,7 @@
-import type { UserSettingsRow } from "@/app/_shared/user-settings/UserSettingsSchema";
+import {
+  USER_SETTINGS_DEFAULTS,
+  type UserSettingsRow,
+} from "@/app/_shared/user-settings/UserSettingsSchema";
 import type { UserSettingsSchemaMigrationResult } from "@/app/_shared/user-settings/UserSettingsSchemaMigration";
 import { getUserSettingsSchemaMigration } from "@/app/_server/user-settings/UserSettingsSchemaMigration";
 import { reportUserSettingsSchemaUpdateError } from "@/app/_server/user-settings/reportUserSettingsSchemaUpdateError";
@@ -51,7 +54,10 @@ export async function runUserSettingsSchemaMigrationStep(
     };
   }
 
-  deps.preloadDefaults(migration.defaults);
+  deps.preloadDefaults({
+    ...USER_SETTINGS_DEFAULTS,
+    ...migration.defaults,
+  });
 
   try {
     await db.runForwardMigration(migration.forwardSql);

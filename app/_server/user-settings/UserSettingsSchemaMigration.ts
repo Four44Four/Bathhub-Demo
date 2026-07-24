@@ -4,7 +4,7 @@ import {
   resolveUserSettingsSchemaMigration,
   type UserSettingsSchemaMigrationResult,
 } from "@/app/_shared/user-settings/UserSettingsSchemaMigration";
-import { USER_SETTINGS_SCHEMA_MIGRATIONS } from "@/app/_shared/user-settings/migrations/v0-to-v1";
+import { USER_SETTINGS_SCHEMA_MIGRATIONS } from "@/app/_shared/user-settings/migrations";
 import { tryEnforceServerRateLimit } from "../rate-limit/enforceRateLimit";
 
 /**

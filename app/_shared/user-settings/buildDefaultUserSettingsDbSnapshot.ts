@@ -1,6 +1,7 @@
-import { USER_SETTINGS_SCHEMA_MIGRATIONS } from "./migrations/v0-to-v1";
+import { USER_SETTINGS_SCHEMA_MIGRATIONS } from "./migrations";
 import { runSequentialUserSettingsMigrations } from "./runSequentialUserSettingsMigrations";
 import {
+  USER_SETTINGS_DEFAULTS,
   USER_SETTINGS_MAX_SCHEMA_VERSION,
   type UserSettingsRow,
 } from "./UserSettingsSchema";
@@ -28,19 +29,24 @@ export function validateBuiltDefaultUserSettingsDbSnapshot(
   targetVersion: number = USER_SETTINGS_MAX_SCHEMA_VERSION,
   migrations: ReadonlyArray<UserSettingsSchemaMigrationScripts | undefined> = USER_SETTINGS_SCHEMA_MIGRATIONS,
 ): ReturnType<typeof validateDefaultUserSettingsDb> {
-  const expectedDefaults = migrations[targetVersion - 1]?.defaults;
-  if (!expectedDefaults) {
+  const migrationDefaults = migrations[targetVersion - 1]?.defaults;
+  if (!migrationDefaults) {
     return {
       ok: false,
       reason: `Missing defaults for user settings schema version ${targetVersion}.`,
     };
   }
 
+  const expectedDefaults =
+    targetVersion === USER_SETTINGS_MAX_SCHEMA_VERSION
+      ? USER_SETTINGS_DEFAULTS
+      : migrationDefaults;
+
   return validateDefaultUserSettingsDb({
     schemaVersion: db.readSchemaVersion(),
     settings: db.readSettings(),
     expectedSchemaVersion: targetVersion,
-    expectedDefaults,
+    expectedDefaults: expectedDefaults as UserSettingsRow,
   });
 }
 

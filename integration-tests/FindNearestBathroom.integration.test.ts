@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import {
   createAt as bathroomDbCreate,
   findNearest as bathroomDbFindNearest,
+  incrementRatingCount as bathroomDbIncrementRating,
 } from "../app/_server/database/bathroom-data-primary/CrudCore";
 import { FIND_NEAREST_BATHROOM_ERROR_CONTEXT } from "../app/_server/pure/bathroom-data-primary/FindNearestBathroom";
 import { disconnectRedisTestGlobals } from "./disconnectRedisTestGlobals";
@@ -64,7 +65,10 @@ describe("find nearest bathroom against local Supabase", () => {
       ISOLATED_OCEAN_FAR.longitude,
     );
 
-    const result = await bathroomDbFindNearest(origin, { maxDistanceM: 20_000 });
+    const result = await bathroomDbFindNearest(origin, {
+      maxDistanceM: 20_000,
+      minRating: 0,
+    });
     expect(result).not.toBeNull();
     expect(result?.id).toBe(near.id);
     expect(result?.latitude).toBeCloseTo(ISOLATED_OCEAN_NEAR.latitude, 3);
@@ -74,7 +78,7 @@ describe("find nearest bathroom against local Supabase", () => {
   test("returns null when no bathroom is within max distance", async () => {
     const result = await bathroomDbFindNearest(
       { latitude: -81, longitude: 1 },
-      { maxDistanceM: 100 },
+      { maxDistanceM: 100, minRating: 0 },
     );
     expect(result).toBeNull();
   });
@@ -86,11 +90,51 @@ describe("find nearest bathroom against local Supabase", () => {
       ISOLATED_BOUNDARY_ORIGIN.longitude + 0.001,
     );
 
-    const within = await bathroomDbFindNearest(origin, { maxDistanceM: 500 });
+    const within = await bathroomDbFindNearest(origin, {
+      maxDistanceM: 500,
+      minRating: 0,
+    });
     expect(within?.id).toBe(bathroom.id);
 
-    const outside = await bathroomDbFindNearest(origin, { maxDistanceM: 1 });
+    const outside = await bathroomDbFindNearest(origin, {
+      maxDistanceM: 1,
+      minRating: 0,
+    });
     expect(outside).toBeNull();
+  });
+
+  test("excludes bathrooms below minimum average rating", async () => {
+    const origin = { latitude: -4.6, longitude: -9.6 } as const;
+    const closeLowRated = await createTrackedBathroom(
+      origin.latitude + 0.0001,
+      origin.longitude + 0.0001,
+    );
+    const fartherHighRated = await createTrackedBathroom(
+      origin.latitude + 0.002,
+      origin.longitude + 0.002,
+    );
+
+    await bathroomDbIncrementRating(closeLowRated.id, 1);
+    await bathroomDbIncrementRating(fartherHighRated.id, 5);
+    await bathroomDbIncrementRating(fartherHighRated.id, 5);
+
+    const closest = await bathroomDbFindNearest(origin, {
+      maxDistanceM: 20_000,
+      minRating: 0,
+    });
+    expect(closest?.id).toBe(closeLowRated.id);
+
+    const highRatedOnly = await bathroomDbFindNearest(origin, {
+      maxDistanceM: 20_000,
+      minRating: 4,
+    });
+    expect(highRatedOnly?.id).toBe(fartherHighRated.id);
+
+    const tooStrict = await bathroomDbFindNearest(origin, {
+      maxDistanceM: 20_000,
+      minRating: 5,
+    });
+    expect(tooStrict).toBeNull();
   });
 
   describe("error paths", () => {
@@ -98,16 +142,27 @@ describe("find nearest bathroom against local Supabase", () => {
       await expect(
         bathroomDbFindNearest(
           { latitude: Number.NaN, longitude: 0 },
-          { maxDistanceM: 1_000 },
+          { maxDistanceM: 1_000, minRating: 0 },
         ),
       ).rejects.toThrow(FIND_NEAREST_BATHROOM_ERROR_CONTEXT);
     });
 
     test("bathroomDbFindNearest rejects negative max distance from RPC validation", async () => {
       await expect(
-        bathroomDbFindNearest(ISOLATED_OCEAN_ORIGIN, { maxDistanceM: -1 }),
+        bathroomDbFindNearest(ISOLATED_OCEAN_ORIGIN, {
+          maxDistanceM: -1,
+          minRating: 0,
+        }),
       ).rejects.toThrow(FIND_NEAREST_BATHROOM_ERROR_CONTEXT);
     });
 
+    test("bathroomDbFindNearest rejects invalid min rating from RPC validation", async () => {
+      await expect(
+        bathroomDbFindNearest(ISOLATED_OCEAN_ORIGIN, {
+          maxDistanceM: 1_000,
+          minRating: 6,
+        }),
+      ).rejects.toThrow(FIND_NEAREST_BATHROOM_ERROR_CONTEXT);
+    });
   });
 });

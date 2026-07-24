@@ -113,7 +113,7 @@ describe("rate-limited server entrypoints", () => {
       method: "POST",
       body: JSON.stringify({
         location: { latitude: 1, longitude: 2 },
-        constraints: { maxDistanceM: 1000 },
+        constraints: { maxDistanceM: 1000, minRating: 0 },
       }),
     });
 
@@ -256,7 +256,7 @@ describe("rate-limited server entrypoints", () => {
     await expect(
       bathroomDbFindNearest(
         { latitude: 1, longitude: 2 },
-        { maxDistanceM: 1000 },
+        { maxDistanceM: 1000, minRating: 0 },
       ),
     ).rejects.toThrow(message);
     expect(mockTryEnforceServerRateLimit).toHaveBeenCalledWith(

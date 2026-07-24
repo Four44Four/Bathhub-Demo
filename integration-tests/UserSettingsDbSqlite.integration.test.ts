@@ -7,10 +7,9 @@ import type {
   SqliteDb,
   SqliteWasm,
 } from "../app/_client/local-db/web/LocalDbSqlite";
-import {
-  USER_SETTINGS_MIGRATION_V0_TO_V1,
-  USER_SETTINGS_SCHEMA_MIGRATIONS,
-} from "../app/_shared/user-settings/migrations/v0-to-v1";
+import { USER_SETTINGS_SCHEMA_MIGRATIONS } from "../app/_shared/user-settings/migrations";
+import { USER_SETTINGS_MIGRATION_V0_TO_V1 } from "../app/_shared/user-settings/migrations/v0-to-v1";
+import { USER_SETTINGS_MIGRATION_V1_TO_V2 } from "../app/_shared/user-settings/migrations/v1-to-v2";
 import {
   USER_SETTINGS_DEFAULTS,
   USER_SETTINGS_MAX_SCHEMA_VERSION,
@@ -18,6 +17,7 @@ import {
   USER_SETTINGS_SCHEMA_VERSION_META_KEY,
   USER_SETTINGS_TABLE_NAME,
   type UserSettingsRow,
+  type UserSettingsRowSchemaV1,
 } from "../app/_shared/user-settings/UserSettingsSchema";
 import type { UserSettingsSchemaMigrationScripts } from "../app/_shared/user-settings/UserSettingsSchemaMigration";
 
@@ -107,62 +107,106 @@ const CUSTOM_SETTINGS_FOR_MIGRATION_TEST: UserSettingsRow = {
   globe_movement_smooth: false,
   camera_init_surface_offset_m: 3200,
   find_nearest_bathroom_max_dist_m: 750,
+  find_nearest_bathroom_min_rating: 2.5,
+};
+
+const CUSTOM_SETTINGS_SCHEMA_V1_FOR_MIGRATION_TEST: UserSettingsRowSchemaV1 = {
+  globe_movement_smooth: false,
+  camera_init_surface_offset_m: 3200,
+  find_nearest_bathroom_max_dist_m: 750,
 };
 
 type RawUserSettingsSqliteRow = {
   globe_movement_smooth: number;
   camera_init_surface_offset_m: number;
   find_nearest_bathroom_max_dist_m: number;
+  find_nearest_bathroom_min_rating: number;
 };
 
 function userSettingsRowToRawSqlite(
-  settings: UserSettingsRow,
-): RawUserSettingsSqliteRow {
+  settings: UserSettingsRow | UserSettingsRowSchemaV1,
+): RawUserSettingsSqliteRow | Omit<RawUserSettingsSqliteRow, "find_nearest_bathroom_min_rating"> {
   return {
     globe_movement_smooth: settings.globe_movement_smooth ? 1 : 0,
     camera_init_surface_offset_m: settings.camera_init_surface_offset_m,
     find_nearest_bathroom_max_dist_m: settings.find_nearest_bathroom_max_dist_m,
+    ...("find_nearest_bathroom_min_rating" in settings
+      ? {
+          find_nearest_bathroom_min_rating:
+            settings.find_nearest_bathroom_min_rating,
+        }
+      : {}),
   };
 }
 
-function readRawSettingsRow(sqliteDb: SqliteDb): RawUserSettingsSqliteRow {
-  const rows = sqliteDb.selectObjects(
-    `SELECT
+function readRawSettingsRow(
+  sqliteDb: SqliteDb,
+): RawUserSettingsSqliteRow | Omit<RawUserSettingsSqliteRow, "find_nearest_bathroom_min_rating"> {
+  const columnRows = sqliteDb.selectObjects(
+    `SELECT name FROM pragma_table_info(?)`,
+    [USER_SETTINGS_TABLE_NAME],
+  );
+  const columns = columnRows
+    .map((row) => row.name)
+    .filter((name): name is string => typeof name === "string");
+  const hasMinRating = columns.includes("find_nearest_bathroom_min_rating");
+  const selectSql = hasMinRating
+    ? `SELECT
+      globe_movement_smooth,
+      camera_init_surface_offset_m,
+      find_nearest_bathroom_max_dist_m,
+      find_nearest_bathroom_min_rating
+    FROM ${USER_SETTINGS_TABLE_NAME}
+    WHERE id = 1`
+    : `SELECT
       globe_movement_smooth,
       camera_init_surface_offset_m,
       find_nearest_bathroom_max_dist_m
     FROM ${USER_SETTINGS_TABLE_NAME}
-    WHERE id = 1`,
-  );
+    WHERE id = 1`;
+  const rows = sqliteDb.selectObjects(selectSql);
   if (rows.length === 0) {
     throw new Error("User settings row is missing from persistent SQLite.");
   }
   const row = rows[0]!;
-  return {
+  const base = {
     globe_movement_smooth: Number(row.globe_movement_smooth),
     camera_init_surface_offset_m: Number(row.camera_init_surface_offset_m),
     find_nearest_bathroom_max_dist_m: Number(
       row.find_nearest_bathroom_max_dist_m,
     ),
   };
+  if (!hasMinRating) {
+    return base;
+  }
+  return {
+    ...base,
+    find_nearest_bathroom_min_rating: Number(
+      row.find_nearest_bathroom_min_rating,
+    ),
+  };
 }
 
 async function expectUserSettingsTableContains(
   db: ReturnType<typeof createUserSettingsDbSqlite>,
-  expected: UserSettingsRow,
+  expected: UserSettingsRow | UserSettingsRowSchemaV1,
 ): Promise<void> {
-  expect(await db.readSettingsFromDb()).toEqual(expected);
   const sqliteDb = await db.getSqliteDbForTests();
-  expect(readRawSettingsRow(sqliteDb)).toEqual(
-    userSettingsRowToRawSqlite(expected),
-  );
+  const raw = readRawSettingsRow(sqliteDb);
+  if ("find_nearest_bathroom_min_rating" in expected) {
+    expect(await db.readSettingsFromDb()).toEqual(expected);
+    expect(raw).toEqual(userSettingsRowToRawSqlite(expected));
+    return;
+  }
+
+  expect(raw).toEqual(userSettingsRowToRawSqlite(expected));
 }
 
 function expectedSettingsAfterForwardMigration(
   fromVersion: number,
   migration: UserSettingsSchemaMigrationScripts,
-  settingsBeforeMigration: UserSettingsRow | null,
-): UserSettingsRow {
+  settingsBeforeMigration: UserSettingsRow | UserSettingsRowSchemaV1 | null,
+): UserSettingsRow | UserSettingsRowSchemaV1 {
   if (fromVersion === 0) {
     return migration.defaults;
   }
@@ -171,7 +215,10 @@ function expectedSettingsAfterForwardMigration(
       `Migration from v${fromVersion} requires seeded settings to verify data preservation.`,
     );
   }
-  return settingsBeforeMigration;
+  return {
+    ...migration.defaults,
+    ...settingsBeforeMigration,
+  };
 }
 
 describe("UserSettingsDbSqlite — real sqlite-wasm layer (user_settings spec §56–75, §103)", () => {
@@ -214,10 +261,34 @@ describe("UserSettingsDbSqlite — real sqlite-wasm layer (user_settings spec §
           fromVersion === 0 ? null : fromVersion,
         );
 
-        let settingsBeforeMigration: UserSettingsRow | null = null;
+        let settingsBeforeMigration: UserSettingsRow | UserSettingsRowSchemaV1 | null =
+          null;
         if (fromVersion > 0) {
-          settingsBeforeMigration = CUSTOM_SETTINGS_FOR_MIGRATION_TEST;
-          await db.saveSettingsToDb(settingsBeforeMigration);
+          settingsBeforeMigration =
+            fromVersion === 1
+              ? CUSTOM_SETTINGS_SCHEMA_V1_FOR_MIGRATION_TEST
+              : CUSTOM_SETTINGS_FOR_MIGRATION_TEST;
+          if (fromVersion === 1) {
+            const sqliteDb = await db.getSqliteDbForTests();
+            sqliteDb.exec(
+              `UPDATE ${USER_SETTINGS_TABLE_NAME}
+               SET globe_movement_smooth = ?,
+                   camera_init_surface_offset_m = ?,
+                   find_nearest_bathroom_max_dist_m = ?
+               WHERE id = 1`,
+              {
+                bind: [
+                  settingsBeforeMigration.globe_movement_smooth ? 1 : 0,
+                  settingsBeforeMigration.camera_init_surface_offset_m,
+                  settingsBeforeMigration.find_nearest_bathroom_max_dist_m,
+                ],
+              },
+            );
+          } else {
+            await db.saveSettingsToDb(
+              settingsBeforeMigration as UserSettingsRow,
+            );
+          }
           await expectUserSettingsTableContains(db, settingsBeforeMigration);
         }
 
@@ -257,10 +328,34 @@ describe("UserSettingsDbSqlite — real sqlite-wasm layer (user_settings spec §
         async (fromVersion) => {
           const migration = requireSequentialMigration(fromVersion);
           const db = await initDbAtSchemaVersion(fromVersion);
-          await db.saveSettingsToDb(CUSTOM_SETTINGS_FOR_MIGRATION_TEST);
+          const settingsBeforeMigration =
+            fromVersion === 1
+              ? CUSTOM_SETTINGS_SCHEMA_V1_FOR_MIGRATION_TEST
+              : CUSTOM_SETTINGS_FOR_MIGRATION_TEST;
+          if (fromVersion === 1) {
+            const sqliteDb = await db.getSqliteDbForTests();
+            sqliteDb.exec(
+              `UPDATE ${USER_SETTINGS_TABLE_NAME}
+               SET globe_movement_smooth = ?,
+                   camera_init_surface_offset_m = ?,
+                   find_nearest_bathroom_max_dist_m = ?
+               WHERE id = 1`,
+              {
+                bind: [
+                  settingsBeforeMigration.globe_movement_smooth ? 1 : 0,
+                  settingsBeforeMigration.camera_init_surface_offset_m,
+                  settingsBeforeMigration.find_nearest_bathroom_max_dist_m,
+                ],
+              },
+            );
+          } else {
+            await db.saveSettingsToDb(
+              settingsBeforeMigration as UserSettingsRow,
+            );
+          }
           await expectUserSettingsTableContains(
             db,
-            CUSTOM_SETTINGS_FOR_MIGRATION_TEST,
+            settingsBeforeMigration,
           );
 
           await runSequentialMigrationStep(db, fromVersion);
@@ -270,7 +365,7 @@ describe("UserSettingsDbSqlite — real sqlite-wasm layer (user_settings spec §
             expectedSettingsAfterForwardMigration(
               fromVersion,
               migration,
-              CUSTOM_SETTINGS_FOR_MIGRATION_TEST,
+              settingsBeforeMigration,
             ),
           );
         },
@@ -280,7 +375,7 @@ describe("UserSettingsDbSqlite — real sqlite-wasm layer (user_settings spec §
 
   describe("v0→v1 migration", () => {
     test("forward migration creates schema tables and persists SCHEMA_VERSION=1", async () => {
-      const db = await initMigratedDb();
+      const db = await initDbAtSchemaVersion(1);
 
       expect(await db.getPersistentSchemaVersion()).toBe(1);
 
@@ -295,7 +390,7 @@ describe("UserSettingsDbSqlite — real sqlite-wasm layer (user_settings spec §
     });
 
     test("readSettingsFromDb returns migration defaults after forward migration", async () => {
-      const db = await initMigratedDb();
+      const db = await initDbAtSchemaVersion(1);
       await expectUserSettingsTableContains(
         db,
         USER_SETTINGS_MIGRATION_V0_TO_V1.defaults,
@@ -307,12 +402,26 @@ describe("UserSettingsDbSqlite — real sqlite-wasm layer (user_settings spec §
       await db.init();
       await runSequentialMigrationStep(db, 0);
 
-      const settingsBeforeRepeat: UserSettingsRow = {
+      const settingsBeforeRepeat: UserSettingsRowSchemaV1 = {
         globe_movement_smooth: false,
         camera_init_surface_offset_m: 4200,
         find_nearest_bathroom_max_dist_m: 1200,
       };
-      await db.saveSettingsToDb(settingsBeforeRepeat);
+      const sqliteDb = await db.getSqliteDbForTests();
+      sqliteDb.exec(
+        `UPDATE ${USER_SETTINGS_TABLE_NAME}
+         SET globe_movement_smooth = ?,
+             camera_init_surface_offset_m = ?,
+             find_nearest_bathroom_max_dist_m = ?
+         WHERE id = 1`,
+        {
+          bind: [
+            settingsBeforeRepeat.globe_movement_smooth ? 1 : 0,
+            settingsBeforeRepeat.camera_init_surface_offset_m,
+            settingsBeforeRepeat.find_nearest_bathroom_max_dist_m,
+          ],
+        },
+      );
       await expectUserSettingsTableContains(db, settingsBeforeRepeat);
       expect(await db.getPersistentSchemaVersion()).toBe(1);
 
@@ -347,11 +456,41 @@ describe("UserSettingsDbSqlite — real sqlite-wasm layer (user_settings spec §
 
   });
 
+  describe("v1→v2 migration", () => {
+    test("forward migration adds find_nearest_bathroom_min_rating and persists SCHEMA_VERSION=2", async () => {
+      const db = await initDbAtSchemaVersion(1);
+      await runSequentialMigrationStep(db, 1);
+
+      expect(await db.getPersistentSchemaVersion()).toBe(2);
+      await expectUserSettingsTableContains(
+        db,
+        USER_SETTINGS_MIGRATION_V1_TO_V2.defaults,
+      );
+    });
+
+    test("repeat forward migration aborts on duplicate column and leaves schema unchanged", async () => {
+      const db = await initDbAtSchemaVersion(2);
+      const settingsBeforeRepeat: UserSettingsRow = {
+        ...CUSTOM_SETTINGS_FOR_MIGRATION_TEST,
+      };
+      await db.saveSettingsToDb(settingsBeforeRepeat);
+      await expectUserSettingsTableContains(db, settingsBeforeRepeat);
+
+      await expect(
+        db.runForwardMigration(USER_SETTINGS_MIGRATION_V1_TO_V2.forwardSql),
+      ).rejects.toThrow(/duplicate column name/i);
+
+      expect(await db.getPersistentSchemaVersion()).toBe(2);
+      await expectUserSettingsTableContains(db, settingsBeforeRepeat);
+    });
+  });
+
   describe("saveSettingsToDb / readSettingsFromDb round-trip", () => {
     const customSettings: UserSettingsRow = {
       globe_movement_smooth: false,
       camera_init_surface_offset_m: 3200,
       find_nearest_bathroom_max_dist_m: 750,
+      find_nearest_bathroom_min_rating: 3.5,
     };
 
     test("persists and reads all setting columns", async () => {
@@ -430,6 +569,26 @@ describe("UserSettingsDbSqlite — real sqlite-wasm layer (user_settings spec §
       ).rejects.toThrow();
     });
 
+    test("rejects find_nearest_bathroom_min_rating below minimum", async () => {
+      const db = await initMigratedDb();
+      await expect(
+        db.saveSettingsToDb({
+          ...USER_SETTINGS_DEFAULTS,
+          find_nearest_bathroom_min_rating: -0.1,
+        }),
+      ).rejects.toThrow();
+    });
+
+    test("rejects find_nearest_bathroom_min_rating above maximum", async () => {
+      const db = await initMigratedDb();
+      await expect(
+        db.saveSettingsToDb({
+          ...USER_SETTINGS_DEFAULTS,
+          find_nearest_bathroom_min_rating: 5.1,
+        }),
+      ).rejects.toThrow();
+    });
+
     test("rejects invalid globe_movement_smooth values via direct SQL", async () => {
       const db = await initMigratedDb();
       const sqliteDb = await db.getSqliteDbForTests();
@@ -462,11 +621,16 @@ describe("UserSettingsDbSqlite — real sqlite-wasm layer (user_settings spec §
         },
       });
       await sourceDb.init();
-      await sourceDb.runForwardMigration(USER_SETTINGS_MIGRATION_V0_TO_V1.forwardSql);
+      for (const migration of USER_SETTINGS_SCHEMA_MIGRATIONS) {
+        if (migration) {
+          await sourceDb.runForwardMigration(migration.forwardSql);
+        }
+      }
       const savedSettings: UserSettingsRow = {
         globe_movement_smooth: false,
         camera_init_surface_offset_m: 4200,
         find_nearest_bathroom_max_dist_m: 1200,
+        find_nearest_bathroom_min_rating: 1.5,
       };
       await sourceDb.saveSettingsToDb(savedSettings);
       expect(exportedBytes).not.toBeNull();
@@ -476,7 +640,9 @@ describe("UserSettingsDbSqlite — real sqlite-wasm layer (user_settings spec §
       });
       await hydratedDb.init();
 
-      expect(await hydratedDb.getPersistentSchemaVersion()).toBe(1);
+      expect(await hydratedDb.getPersistentSchemaVersion()).toBe(
+        USER_SETTINGS_MAX_SCHEMA_VERSION,
+      );
       expect(await hydratedDb.readSettingsFromDb()).toEqual(savedSettings);
     });
 

@@ -16,7 +16,7 @@ describe("findNearestBathroom server action", () => {
 
   test("passes location and constraints through to the database layer", async () => {
     const location = { latitude: 40.7128, longitude: -74.006 };
-    const constraints = { maxDistanceM: 5000 };
+    const constraints = { maxDistanceM: 5000, minRating: 0 };
     const bathroom = { id: 7, latitude: 40.7135, longitude: -74.0065 };
     mockBathroomDbFindNearest.mockResolvedValue(bathroom);
 
@@ -32,7 +32,7 @@ describe("findNearestBathroom server action", () => {
 
     const result = await findNearestBathroom(
       { latitude: -80, longitude: 0 },
-      { maxDistanceM: 100 },
+      { maxDistanceM: 100, minRating: 0 },
     );
 
     expect(result).toEqual({ val: null });
@@ -44,7 +44,7 @@ describe("findNearestBathroom server action", () => {
 
     const result = await findNearestBathroom(
       { latitude: 1, longitude: 2 },
-      { maxDistanceM: 100 },
+      { maxDistanceM: 100, minRating: 0 },
     );
 
     expect(result).toEqual({ val: null, errorMsg: "rpc failed" });
@@ -55,7 +55,7 @@ describe("findNearestBathroom server action", () => {
 
     const result = await findNearestBathroom(
       { latitude: 1, longitude: 2 },
-      { maxDistanceM: 100 },
+      { maxDistanceM: 100, minRating: 0 },
     );
 
     expect(result).toEqual({

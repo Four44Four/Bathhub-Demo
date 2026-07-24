@@ -5,6 +5,7 @@ export const FIND_NEAREST_BATHROOM_API_PATH = "/api/find-nearest-bathroom";
 
 export type FindNearestBathroomConstraints = {
   maxDistanceM: number;
+  minRating: number;
 };
 
 export type FindNearestBathroomTarget = {

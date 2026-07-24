@@ -1,12 +1,13 @@
 import {
   USER_SETTINGS_MAX_SCHEMA_VERSION,
   type UserSettingsRow,
+  type UserSettingsRowSchemaV1,
 } from "./UserSettingsSchema";
 
 export type UserSettingsSchemaMigrationScripts = {
   forwardSql: readonly string[];
   /** Defaults for the target schema version after this migration completes. */
-  defaults: UserSettingsRow;
+  defaults: UserSettingsRow | UserSettingsRowSchemaV1;
 };
 
 export type UserSettingsSchemaMigrationSuccess = {
@@ -14,7 +15,7 @@ export type UserSettingsSchemaMigrationSuccess = {
   fromVersion: number;
   toVersion: number;
   forwardSql: readonly string[];
-  defaults: UserSettingsRow;
+  defaults: UserSettingsRow | UserSettingsRowSchemaV1;
 };
 
 export type UserSettingsSchemaMigrationErrorCode =

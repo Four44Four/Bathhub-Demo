@@ -39,7 +39,8 @@ export function createDefaultUserSettingsDbSnapshotReader(db: SqliteDb) {
         `SELECT
           globe_movement_smooth,
           camera_init_surface_offset_m,
-          find_nearest_bathroom_max_dist_m
+          find_nearest_bathroom_max_dist_m,
+          find_nearest_bathroom_min_rating
         FROM ${USER_SETTINGS_TABLE_NAME}
         WHERE id = 1`,
       );
@@ -52,6 +53,9 @@ export function createDefaultUserSettingsDbSnapshotReader(db: SqliteDb) {
         camera_init_surface_offset_m: Number(row.camera_init_surface_offset_m),
         find_nearest_bathroom_max_dist_m: Number(
           row.find_nearest_bathroom_max_dist_m,
+        ),
+        find_nearest_bathroom_min_rating: Number(
+          row.find_nearest_bathroom_min_rating,
         ),
       };
     },

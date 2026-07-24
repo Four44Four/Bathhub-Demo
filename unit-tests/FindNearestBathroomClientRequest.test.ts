@@ -4,7 +4,7 @@ import { FIND_NEAREST_BATHROOM_API_PATH } from "../app/_shared/find-nearest-bath
 describe("requestFindNearestBathroom", () => {
   const body = {
     location: { latitude: 40.7, longitude: -74 },
-    constraints: { maxDistanceM: 5_000 },
+    constraints: { maxDistanceM: 5_000, minRating: 0 },
   };
 
   function mockFetch(response: Response) {

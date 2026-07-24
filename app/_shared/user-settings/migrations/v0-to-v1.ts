@@ -2,12 +2,12 @@ import {
   USER_SETTINGS_META_TABLE_NAME,
   USER_SETTINGS_SCHEMA_VERSION_META_KEY,
   USER_SETTINGS_TABLE_NAME,
-  type UserSettingsRow,
+  type UserSettingsRowSchemaV1,
 } from "../UserSettingsSchema";
 import type { UserSettingsSchemaMigrationScripts } from "../UserSettingsSchemaMigration";
 
 /** Defaults snapshotted for schema version 1 (target of the 0→1 migration). */
-export const USER_SETTINGS_MIGRATION_V0_TO_V1_DEFAULTS: UserSettingsRow = {
+export const USER_SETTINGS_MIGRATION_V0_TO_V1_DEFAULTS: UserSettingsRowSchemaV1 = {
   globe_movement_smooth: true,
   camera_init_surface_offset_m: 1500,
   find_nearest_bathroom_max_dist_m: 5000,
@@ -55,7 +55,3 @@ VALUES ('${USER_SETTINGS_SCHEMA_VERSION_META_KEY}', '1');`,
   ],
 };
 
-/** Indexed by the version being migrated **from** (0 → scripts for 0→1). */
-export const USER_SETTINGS_SCHEMA_MIGRATIONS: ReadonlyArray<
-  UserSettingsSchemaMigrationScripts | undefined
-> = [USER_SETTINGS_MIGRATION_V0_TO_V1];

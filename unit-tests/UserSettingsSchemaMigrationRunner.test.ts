@@ -142,6 +142,7 @@ describe("UserSettingsSchemaMigrationRunner", () => {
         globe_movement_smooth: false,
         camera_init_surface_offset_m: 1234,
         find_nearest_bathroom_max_dist_m: 567,
+        find_nearest_bathroom_min_rating: 2,
       })),
     });
 
@@ -157,9 +158,10 @@ describe("UserSettingsSchemaMigrationRunner", () => {
       globe_movement_smooth: false,
       camera_init_surface_offset_m: 1234,
       find_nearest_bathroom_max_dist_m: 567,
+      find_nearest_bathroom_min_rating: 2,
     };
     const db = createMockDb({
-      getPersistentSchemaVersion: jest.fn(async () => 1),
+      getPersistentSchemaVersion: jest.fn(async () => 2),
       readSettingsFromDb: jest.fn(async () => customSettings),
     });
 
@@ -169,7 +171,7 @@ describe("UserSettingsSchemaMigrationRunner", () => {
 
   test("saveActiveUserSettingsToPersistentDb writes pending values to SQLite and memory only when saved", async () => {
     const db = createMockDb({
-      getPersistentSchemaVersion: jest.fn(async () => 1),
+      getPersistentSchemaVersion: jest.fn(async () => 2),
     });
     const pending: UserSettingsRow = {
       ...USER_SETTINGS_DEFAULTS,
@@ -194,7 +196,7 @@ describe("attemptUserSettingsSchemaBootstrap", () => {
 
   test("finishes ready without migrating when schema versions already match", async () => {
     const db = createMockDb({
-      getPersistentSchemaVersion: jest.fn(async () => 1),
+      getPersistentSchemaVersion: jest.fn(async () => 2),
     });
     const finishReady = jest.fn(async () => {});
 

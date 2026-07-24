@@ -5,5 +5,6 @@ export function cloneUserSettingsRow(row: UserSettingsRow): UserSettingsRow {
     globe_movement_smooth: row.globe_movement_smooth,
     camera_init_surface_offset_m: row.camera_init_surface_offset_m,
     find_nearest_bathroom_max_dist_m: row.find_nearest_bathroom_max_dist_m,
+    find_nearest_bathroom_min_rating: row.find_nearest_bathroom_min_rating,
   };
 }

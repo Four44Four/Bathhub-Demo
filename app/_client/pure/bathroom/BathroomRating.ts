@@ -134,3 +134,24 @@ export function starRatingFillFraction(
 ): number {
   return Math.max(0, Math.min(1, rating - starIndex));
 }
+
+/** Filled share of a rating-count bar. */
+export function bathroomRatingBarFillRatio(
+  ratingCount: number,
+  ratingTotalCount: number,
+): number {
+  return ratingTotalCount > 0 ? ratingCount / ratingTotalCount : 0;
+}
+
+/** Resolves a valid 1–5 star submission, or null when posting is not allowed. */
+export function bathroomPostRatingStars(
+  draftRating: number,
+  isPosting: boolean,
+): number | null {
+  if (isPosting || !Number.isFinite(draftRating) || draftRating <= 0) {
+    return null;
+  }
+
+  const stars = Math.round(draftRating);
+  return stars >= 1 && stars <= 5 ? stars : null;
+}

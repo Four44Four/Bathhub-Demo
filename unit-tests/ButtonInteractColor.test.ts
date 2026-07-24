@@ -5,6 +5,7 @@ import {
   invertSvgMarkupHexBrightness,
   lerpHexBrightnessInvert,
   multiplyHexColorBrightness,
+  svgMarkupToDataUrl,
   viewportButtonBrightnessInteractColors,
   viewportButtonDarkenInteractColorsAtProgress,
   viewportButtonInteractColors,
@@ -12,6 +13,18 @@ import {
   viewportButtonInteractColorsForBehavior,
   viewportButtonInteractContentCssFilter,
 } from "../app/_client/pure/viewport2d/ButtonInteractColor";
+
+describe("svgMarkupToDataUrl", () => {
+  test("encodes SVG markup as an image data URL", () => {
+    const markup = '<svg><path fill="#000000" /></svg>';
+    const url = svgMarkupToDataUrl(markup);
+
+    expect(url.startsWith("data:image/svg+xml,")).toBe(true);
+    expect(decodeURIComponent(url.slice("data:image/svg+xml,".length))).toBe(
+      markup,
+    );
+  });
+});
 
 describe("multiplyHexColorBrightness", () => {
   test("returns the same color when factor is 1", () => {

@@ -61,15 +61,12 @@ export function bathroomPageDropdownLayout(menuWidthPx: number): {
   };
 }
 
-/**
- * True when the swipe-up menu just transitioned from collapsed to open
- * (see specifications/swipe_up_menu/bathroom_page.md).
- */
-export function swipeMenuJustReopenedAboveCollapsed(
+/** True when the swipe-up menu just transitioned into collapsed mode. */
+export function swipeMenuJustCollapsed(
   previousMenuWasOpenAboveCollapsed: boolean,
   currentMenuIsOpenAboveCollapsed: boolean,
 ): boolean {
-  return !previousMenuWasOpenAboveCollapsed && currentMenuIsOpenAboveCollapsed;
+  return previousMenuWasOpenAboveCollapsed && !currentMenuIsOpenAboveCollapsed;
 }
 
 /** Draft star rating after a swipe-up menu open/close transition. */
@@ -79,7 +76,7 @@ export function bathroomPageDraftRatingAfterSwipeMenuTransition(
   currentDraftRating: number,
 ): number {
   if (
-    swipeMenuJustReopenedAboveCollapsed(
+    swipeMenuJustCollapsed(
       previousMenuWasOpenAboveCollapsed,
       currentMenuIsOpenAboveCollapsed,
     )

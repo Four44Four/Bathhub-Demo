@@ -1,21 +1,25 @@
 import {
+  bathroomPageContentMinHeightPx,
   bathroomPageDraftRatingAfterSwipeMenuTransition,
+  bathroomPageDropdownExpandedPanelHeightPx,
+  bathroomPageDropdownLayout,
+  bathroomPageDropdownToggleHeightPx,
   bathroomPageLoadingSpinnerCenterPx,
-  swipeMenuJustReopenedAboveCollapsed,
+  swipeMenuJustCollapsed,
 } from "../app/_client/pure/swipeup/BathroomPageLayout";
 
-describe("swipeMenuJustReopenedAboveCollapsed", () => {
-  test("is true only when the menu transitions from collapsed to open", () => {
-    expect(swipeMenuJustReopenedAboveCollapsed(false, false)).toBe(false);
-    expect(swipeMenuJustReopenedAboveCollapsed(true, true)).toBe(false);
-    expect(swipeMenuJustReopenedAboveCollapsed(true, false)).toBe(false);
-    expect(swipeMenuJustReopenedAboveCollapsed(false, true)).toBe(true);
+describe("swipeMenuJustCollapsed", () => {
+  test("is true only when the menu transitions from open to collapsed", () => {
+    expect(swipeMenuJustCollapsed(false, false)).toBe(false);
+    expect(swipeMenuJustCollapsed(true, true)).toBe(false);
+    expect(swipeMenuJustCollapsed(false, true)).toBe(false);
+    expect(swipeMenuJustCollapsed(true, false)).toBe(true);
   });
 });
 
 describe("bathroomPageDraftRatingAfterSwipeMenuTransition", () => {
-  test("clears the draft rating when the swipe-up menu reopens", () => {
-    expect(bathroomPageDraftRatingAfterSwipeMenuTransition(false, true, 4)).toBe(
+  test("clears the draft rating when the swipe-up menu collapses", () => {
+    expect(bathroomPageDraftRatingAfterSwipeMenuTransition(true, false, 4)).toBe(
       0,
     );
   });
@@ -27,7 +31,7 @@ describe("bathroomPageDraftRatingAfterSwipeMenuTransition", () => {
     expect(bathroomPageDraftRatingAfterSwipeMenuTransition(false, false, 3)).toBe(
       3,
     );
-    expect(bathroomPageDraftRatingAfterSwipeMenuTransition(true, false, 3)).toBe(
+    expect(bathroomPageDraftRatingAfterSwipeMenuTransition(false, true, 3)).toBe(
       3,
     );
   });
@@ -39,5 +43,17 @@ describe("bathroomPageLoadingSpinnerCenterPx", () => {
       x: 200,
       y: 340,
     });
+  });
+});
+
+describe("bathroom page content layout", () => {
+  test("derives dropdown and minimum content dimensions from spec constants", () => {
+    expect(bathroomPageDropdownToggleHeightPx()).toBe(44);
+    expect(bathroomPageDropdownExpandedPanelHeightPx()).toBe(182);
+    expect(bathroomPageDropdownLayout(400)).toEqual({
+      x: 210,
+      widthPx: 180,
+    });
+    expect(bathroomPageContentMinHeightPx(400)).toBe(246);
   });
 });

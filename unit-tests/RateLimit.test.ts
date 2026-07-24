@@ -52,6 +52,24 @@ describe("ClientIp", () => {
     ).toBe("198.51.100.4");
   });
 
+  test("getClientIpFromForwardedHeaders supports true-client-ip", () => {
+    expect(
+      getClientIpFromForwardedHeaders((name) =>
+        name === "true-client-ip" ? "198.51.100.5" : null,
+      ),
+    ).toBe("198.51.100.5");
+  });
+
+  test("getClientIpFromForwardedHeaders supports x-vercel-forwarded-for", () => {
+    expect(
+      getClientIpFromForwardedHeaders((name) =>
+        name === "x-vercel-forwarded-for"
+          ? "198.51.100.6, 10.0.0.2"
+          : null,
+      ),
+    ).toBe("198.51.100.6");
+  });
+
   test("getClientIpFromForwardedHeaders parses RFC 7239 forwarded headers", () => {
     expect(
       getClientIpFromForwardedHeaders((name) =>
@@ -120,6 +138,9 @@ describe("RateLimit pure logic", () => {
     expect(formatRateLimitScopeLabel("bathroom-read-sync")).toBe(
       "bathroom reading and viewport sync",
     );
+    expect(formatRateLimitScopeLabel("bathroom-read-by-id")).toBe(
+      "bathroom reading by id",
+    );
     expect(formatRateLimitScopeLabel("bathroom-find-nearest")).toBe(
       "nearest bathroom lookup",
     );
@@ -146,6 +167,10 @@ describe("RateLimit pure logic", () => {
       windowSeconds: 86_400,
     });
     expect(SERVER_RATE_LIMITS.bathroomReadSync.per30Seconds).toEqual({
+      maxRequests: 100,
+      windowSeconds: 30,
+    });
+    expect(SERVER_RATE_LIMITS.bathroomReadById.per30Seconds).toEqual({
       maxRequests: 100,
       windowSeconds: 30,
     });

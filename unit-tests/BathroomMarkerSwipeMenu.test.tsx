@@ -43,7 +43,10 @@ function BathroomMarkerClickBridge({
 }) {
   const { expandToPage, pageId } = useSwipeMenuPage();
   const expandToPageRef = useRef(expandToPage);
-  expandToPageRef.current = expandToPage;
+
+  useEffect(() => {
+    expandToPageRef.current = expandToPage;
+  }, [expandToPage]);
 
   useEffect(() => {
     onReady(() => {

@@ -306,7 +306,7 @@ export const Menus = {
     /** Milliseconds to fade the globe backdrop when a menu is toggled. */
     BACKDROP_INTERP_TOGGLE_MS: 100,
     /** Globe dim overlay color while the swipe-up menu is open (CSS rgba). */
-    BACKDROP_COLOR: "rgba(12, 13, 18, 0.62)",
+    BACKDROP_COLOR: "rgba(0, 0, 0, 0.62)",
 } as const;
 
 export const SchemaLoadingScreen = {
@@ -396,7 +396,8 @@ export const BathroomMapMarker = {
     DEBUG_CACH_LOADED_MARKER: true,
     /** Max camera height (m above ellipsoid) to query and render bathroom markers. */
     MAX_QUERY_CAMERA_HEIGHT_M: 150_000,
-    DESTROY_DISTANCE_FROM_VIEWPORT_CENTER: 5000,
+    /** Surface distance from viewport center beyond which pooled markers are destroyed. */
+    DESTROY_DISTANCE_FROM_VIEWPORT_CENTER: 150_000,
 } as const;
 
 export const BathroomLocalDB = {

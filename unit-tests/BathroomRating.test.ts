@@ -4,7 +4,10 @@ import {
   bathroomAverageRatingLabel,
   bathroomAverageRatingRounded,
   bathroomIncrementRatingCount,
+  bathroomPostRatingStars,
+  bathroomRatingBarFillRatio,
   bathroomRatingCountSpacePx,
+  bathroomRatingCountsFromFullRow,
   bathroomRatingCountsDescending,
   bathroomTotalRatingCount,
   starRatingFillFraction,
@@ -21,6 +24,26 @@ describe("bathroomTotalRatingCount", () => {
         rating_5_count: 5,
       }),
     ).toBe(15);
+  });
+});
+
+describe("bathroomRatingCountsFromFullRow", () => {
+  test("selects only the five rating count columns", () => {
+    expect(
+      bathroomRatingCountsFromFullRow({
+        rating_1_count: 1,
+        rating_2_count: 2,
+        rating_3_count: 3,
+        rating_4_count: 4,
+        rating_5_count: 5,
+      }),
+    ).toEqual({
+      rating_1_count: 1,
+      rating_2_count: 2,
+      rating_3_count: 3,
+      rating_4_count: 4,
+      rating_5_count: 5,
+    });
   });
 });
 
@@ -154,5 +177,26 @@ describe("starRatingFillFraction", () => {
     expect(starRatingFillFraction(3.5, 2)).toBe(1);
     expect(starRatingFillFraction(3.5, 3)).toBe(0.5);
     expect(starRatingFillFraction(3.5, 4)).toBe(0);
+  });
+});
+
+describe("bathroomRatingBarFillRatio", () => {
+  test("uses the rating count's share of the total", () => {
+    expect(bathroomRatingBarFillRatio(6, 18)).toBeCloseTo(1 / 3);
+    expect(bathroomRatingBarFillRatio(0, 18)).toBe(0);
+    expect(bathroomRatingBarFillRatio(6, 0)).toBe(0);
+  });
+});
+
+describe("bathroomPostRatingStars", () => {
+  test("rounds a valid draft rating to a 1–5 star submission", () => {
+    expect(bathroomPostRatingStars(3.6, false)).toBe(4);
+  });
+
+  test("rejects cleared, invalid, out-of-range, or already-posting drafts", () => {
+    expect(bathroomPostRatingStars(0, false)).toBeNull();
+    expect(bathroomPostRatingStars(Number.NaN, false)).toBeNull();
+    expect(bathroomPostRatingStars(6, false)).toBeNull();
+    expect(bathroomPostRatingStars(4, true)).toBeNull();
   });
 });

@@ -1,5 +1,6 @@
 import {
   monoIconBakedBillboardTint,
+  monoIconTintBillboardTint,
   resolveMonoIconBillboardImage,
 } from "../app/_client/pure/svg/ResolveMonoIconBillboardImage";
 
@@ -53,6 +54,13 @@ describe("monoIconBakedBillboardTint", () => {
     expect(monoIconBakedBillboardTint(0.8)).toEqual({
       color: "#FFFFFF",
       opacity: 0.8,
+    });
+  });
+
+  test("tint mode preserves the requested color and opacity", () => {
+    expect(monoIconTintBillboardTint("#FF0000", 0.6)).toEqual({
+      color: "#FF0000",
+      opacity: 0.6,
     });
   });
 });

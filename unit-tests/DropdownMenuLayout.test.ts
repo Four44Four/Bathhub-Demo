@@ -9,6 +9,7 @@ import {
 describe("dropdownMenuQuadraticEase", () => {
   test("returns 0 at start and 1 at end", () => {
     expect(dropdownMenuQuadraticEase(0)).toBe(0);
+    expect(dropdownMenuQuadraticEase(0.5)).toBe(0.5);
     expect(dropdownMenuQuadraticEase(1)).toBe(1);
   });
 });
@@ -16,6 +17,7 @@ describe("dropdownMenuQuadraticEase", () => {
 describe("dropdownMenuArrowRotationDeg", () => {
   test("points right when collapsed and down when expanded", () => {
     expect(dropdownMenuArrowRotationDeg(0)).toBe(0);
+    expect(dropdownMenuArrowRotationDeg(0.5)).toBe(45);
     expect(dropdownMenuArrowRotationDeg(1)).toBe(90);
   });
 });

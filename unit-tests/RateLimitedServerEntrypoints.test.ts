@@ -7,6 +7,8 @@ const mockUpdateVerifyStatus = jest.fn();
 const mockIncrementRatingCount = jest.fn();
 const mockGetInBounds = jest.fn();
 const mockGetById = jest.fn();
+const mockSyncInBounds = jest.fn();
+const mockFindNearestCore = jest.fn();
 const mockFetchRoutePathGeoJson = jest.fn();
 
 jest.mock("../app/_server/rate-limit/enforceRateLimit", () => {
@@ -41,6 +43,8 @@ jest.mock("../app/_server/database/bathroom-data-primary/CrudCore", () => ({
   incrementRatingCount: (...args: unknown[]) => mockIncrementRatingCount(...args),
   getInBounds: (...args: unknown[]) => mockGetInBounds(...args),
   getById: (...args: unknown[]) => mockGetById(...args),
+  syncInBounds: (...args: unknown[]) => mockSyncInBounds(...args),
+  findNearest: (...args: unknown[]) => mockFindNearestCore(...args),
 }));
 
 jest.mock("../app/_server/ors/ORSPathfind", () => ({
@@ -55,9 +59,11 @@ import { POST as findNearestPost } from "../app/api/find-nearest-bathroom/route"
 import { GET as userSettingsDefaultDbGet } from "../app/api/user-settings/default-db/route";
 import {
   bathroomDbCreate,
+  bathroomDbFindNearest,
   bathroomDbIncrementRating,
   bathroomDbReadById,
   bathroomDbReadInBounds,
+  bathroomDbSyncInBounds,
   bathroomDbUpdateVerifyStatus,
 } from "../app/_server/database/bathroom-data-primary/Crud";
 import { getPathBetweenPoints } from "../app/_server/Pathfind";
@@ -76,6 +82,8 @@ describe("rate-limited server entrypoints", () => {
     mockIncrementRatingCount.mockReset();
     mockGetInBounds.mockReset();
     mockGetById.mockReset();
+    mockSyncInBounds.mockReset();
+    mockFindNearestCore.mockReset();
     mockFetchRoutePathGeoJson.mockReset();
   });
 
@@ -216,6 +224,45 @@ describe("rate-limited server entrypoints", () => {
       "bathroom-read-by-id",
     );
     expect(mockGetById).not.toHaveBeenCalled();
+  });
+
+  test("bathroom sync action enforces bathroom-read-sync scope before DB work", async () => {
+    const message =
+      "Rate limit exceeded: bathroom reading and viewport sync is limited to 100 requests per 30 seconds.";
+    mockTryEnforceServerRateLimit.mockResolvedValue({
+      allowed: false,
+      message,
+    });
+    const bounds: ViewportBounds = {
+      lowerLeft: { latitude: 0, longitude: 0 },
+      upperRight: { latitude: 1, longitude: 1 },
+    };
+
+    await expect(bathroomDbSyncInBounds(bounds, [])).rejects.toThrow(message);
+    expect(mockTryEnforceServerRateLimit).toHaveBeenCalledWith(
+      "bathroom-read-sync",
+    );
+    expect(mockSyncInBounds).not.toHaveBeenCalled();
+  });
+
+  test("bathroom nearest action enforces bathroom-find-nearest scope before DB work", async () => {
+    const message =
+      "Rate limit exceeded: nearest bathroom lookup is limited to 20 requests per minute.";
+    mockTryEnforceServerRateLimit.mockResolvedValue({
+      allowed: false,
+      message,
+    });
+
+    await expect(
+      bathroomDbFindNearest(
+        { latitude: 1, longitude: 2 },
+        { maxDistanceM: 1000 },
+      ),
+    ).rejects.toThrow(message);
+    expect(mockTryEnforceServerRateLimit).toHaveBeenCalledWith(
+      "bathroom-find-nearest",
+    );
+    expect(mockFindNearestCore).not.toHaveBeenCalled();
   });
 
   test("ORS path action enforces ors-path scope before route fetch", async () => {

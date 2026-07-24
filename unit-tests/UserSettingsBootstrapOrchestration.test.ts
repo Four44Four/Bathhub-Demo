@@ -32,6 +32,6 @@ describe("UserSettingsBootstrapOrchestration", () => {
   });
 
   test("exports a retry interval for schema update polling", () => {
-    expect(UserSettings.SCHEMA_RETRY_INTERVAL_MS).toBeGreaterThan(0);
+    expect(UserSettings.SCHEMA_RETRY_INTERVAL_MS).toBe(5_000);
   });
 });

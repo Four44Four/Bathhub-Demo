@@ -1,6 +1,11 @@
-import { runAbortableTimeout } from "../app/_client/pure/AbortableTimeout";
+import {
+  runAbortableTimeout,
+  type AbortableTimeoutSchedule,
+} from "../app/_client/pure/AbortableTimeout";
 
-function createManualSchedule() {
+function createManualSchedule(): AbortableTimeoutSchedule & {
+  elapse: () => void;
+} {
   let callback: (() => void) | null = null;
   return {
     setTimeout: (cb: () => void, _timeoutMs: number) => {

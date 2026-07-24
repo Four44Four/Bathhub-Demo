@@ -3,18 +3,16 @@ import {
   swipeMenuShouldOpenMainMenuOnHandleDragMove,
   swipeMenuShouldOpenMainMenuOnSnapToExpanded,
 } from "../app/_client/pure/swipeup/SwipeMenuPage";
-import { bathroomPageContentMinHeightPx } from "../app/_client/pure/swipeup/BathroomPageLayout";
-import { swipeUpMainMenuGridHeightPx } from "../app/_client/pure/swipeup/MainMenuLayout";
 
 describe("SwipeMenuPage", () => {
   const viewportWidthPx = 400;
 
-  test("swipeMenuPageContentMinHeightPx resolves per page", () => {
+  test("swipeMenuPageContentMinHeightPx resolves spec-derived page heights", () => {
     expect(swipeMenuPageContentMinHeightPx("mainMenu", viewportWidthPx)).toBe(
-      swipeUpMainMenuGridHeightPx(viewportWidthPx),
+      118.5,
     );
     expect(swipeMenuPageContentMinHeightPx("bathroom", viewportWidthPx)).toBe(
-      bathroomPageContentMinHeightPx(viewportWidthPx),
+      246,
     );
   });
 

@@ -179,7 +179,7 @@ describe("PositionalAlertAnchor", () => {
     const raf = { tick: null as (() => void) | null };
 
     const parent = { parentElement: null } as HTMLElement;
-    let attached = true;
+    const attached = true;
     const anchor = {
       parentElement: parent,
       get isConnected() {

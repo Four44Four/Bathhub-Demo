@@ -3,6 +3,7 @@
 import type { CSSProperties } from "react";
 
 import { BathroomPage as BathroomPageConsts } from "../ComponentConstants";
+import { bathroomRatingBarFillRatio } from "../pure/bathroom/BathroomRating";
 import { TextWeight } from "../Utils";
 
 export type RatingBarProps = {
@@ -22,8 +23,10 @@ export function RatingBar({
   unfilledColor = BathroomPageConsts.STAR_RATING_UNFILL_COLOR,
   barHeightPx = BathroomPageConsts.RATING_BAR_HEIGHT_PX,
 }: RatingBarProps) {
-  const fillRatio =
-    ratingTotalCount > 0 ? ratingCount / ratingTotalCount : 0;
+  const fillRatio = bathroomRatingBarFillRatio(
+    ratingCount,
+    ratingTotalCount,
+  );
 
   const rowStyle: CSSProperties = {
     display: "flex",

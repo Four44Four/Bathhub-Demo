@@ -18,6 +18,7 @@ const RATE_LIMIT_SCOPE_LABEL_TO_BAND_TASK: Readonly<Record<string, string>> = {
   "bathroom creation": RATE_LIMIT_BAND_TASK_NAMES["bathroom-create"],
   "bathroom reading and viewport sync":
     RATE_LIMIT_BAND_TASK_NAMES["bathroom-read-sync"],
+  "bathroom reading by id": RATE_LIMIT_BAND_TASK_NAMES["bathroom-read-sync"],
   "nearest bathroom lookup":
     RATE_LIMIT_BAND_TASK_NAMES["bathroom-find-nearest"],
   "bathroom updates": RATE_LIMIT_BAND_TASK_NAMES["bathroom-update"],

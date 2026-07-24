@@ -41,12 +41,16 @@ describe("blackMonoIconCssFilter", () => {
     let firstLoad = "";
     jest.isolateModules(() => {
       const { blackMonoIconCssFilter: compute } =
-        require("../app/_client/pure/svg/BlackMonoIconCssFilter") as typeof import("../app/_client/pure/svg/BlackMonoIconCssFilter");
+        jest.requireActual<
+          typeof import("../app/_client/pure/svg/BlackMonoIconCssFilter")
+        >("../app/_client/pure/svg/BlackMonoIconCssFilter");
       firstLoad = compute("#E4E4FF");
     });
     jest.isolateModules(() => {
       const { blackMonoIconCssFilter: compute } =
-        require("../app/_client/pure/svg/BlackMonoIconCssFilter") as typeof import("../app/_client/pure/svg/BlackMonoIconCssFilter");
+        jest.requireActual<
+          typeof import("../app/_client/pure/svg/BlackMonoIconCssFilter")
+        >("../app/_client/pure/svg/BlackMonoIconCssFilter");
       expect(compute("#E4E4FF")).toBe(firstLoad);
     });
   });

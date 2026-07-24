@@ -52,6 +52,11 @@ describe("RateLimitBandAlert", () => {
     ).toBe("Violated rate limit for retrieving bathrooms");
     expect(
       resolveRateLimitViolationBandMessage(
+        "Rate limit exceeded: bathroom reading by id is limited to 100 requests per 30 seconds.",
+      ),
+    ).toBe("Violated rate limit for retrieving bathrooms");
+    expect(
+      resolveRateLimitViolationBandMessage(
         "Rate limit exceeded: nearest bathroom lookup is limited to 20 requests per minute.",
       ),
     ).toBe("Violated rate limit for finding nearest bathroom");
@@ -60,6 +65,11 @@ describe("RateLimitBandAlert", () => {
         "Rate limit exceeded: route path generation is limited to 10 requests per minute.",
       ),
     ).toBe("Violated rate limit for path data generation");
+    expect(
+      resolveRateLimitViolationBandMessage(
+        "Rate limit exceeded: bathroom updates is limited to 20 requests per minute.",
+      ),
+    ).toBe("Violated rate limit for updating bathrooms");
     expect(
       resolveRateLimitViolationBandMessage(
         "Rate limit exceeded: default user settings database download is limited to 5 requests per minute.",

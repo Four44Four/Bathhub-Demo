@@ -61,6 +61,7 @@ describe("H3BoundsCache", () => {
       (cell) => cell !== canonicalCell,
     );
     expect(neighborCell).toBeDefined();
+    expect(neighborCell).not.toBe(canonicalCell);
 
     expect(
       filterBathroomH3CellRpcRowsByCanonicalCell(

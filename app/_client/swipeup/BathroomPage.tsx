@@ -15,6 +15,7 @@ import {
 import {
   bathroomAverageRating,
   bathroomAverageRatingLabel,
+  bathroomPostRatingStars,
   bathroomRatingCountSpacePx,
   bathroomRatingCountsDescending,
   bathroomRatingCountsFromFullRow,
@@ -32,8 +33,8 @@ import {
   resolveBathroomPageFetchResult,
 } from "../pure/swipeup/BathroomPageFetchState";
 import {
+  bathroomPageDraftRatingAfterSwipeMenuTransition,
   bathroomPageLoadingSpinnerCenterPx,
-  swipeMenuJustReopenedAboveCollapsed,
 } from "../pure/swipeup/BathroomPageLayout";
 import { swipeMenuIsOpenAboveCollapsed } from "../pure/swipeup/SwipeMenu";
 import { useReportRateLimitViolation } from "../pure/rate-limit/useReportRateLimitViolation";
@@ -174,14 +175,13 @@ export function BathroomPage() {
   useEffect(() => {
     const previousMenuWasOpenAboveCollapsed =
       wasMenuOpenAboveCollapsedRef.current;
-    if (
-      swipeMenuJustReopenedAboveCollapsed(
+    setDraftRating((currentDraftRating) =>
+      bathroomPageDraftRatingAfterSwipeMenuTransition(
         previousMenuWasOpenAboveCollapsed,
         isMenuOpenAboveCollapsed,
-      )
-    ) {
-      setDraftRating(0);
-    }
+        currentDraftRating,
+      ),
+    );
     wasMenuOpenAboveCollapsedRef.current = isMenuOpenAboveCollapsed;
   }, [isMenuOpenAboveCollapsed]);
 
@@ -329,12 +329,8 @@ export function BathroomPage() {
       isPosting={isPostingRating}
       disabled={draftRating <= 0}
       onClick={() => {
-        if (draftRating <= 0 || isPostingRating) {
-          return;
-        }
-
-        const stars = Math.round(draftRating);
-        if (stars < 1 || stars > 5) {
+        const stars = bathroomPostRatingStars(draftRating, isPostingRating);
+        if (stars == null) {
           return;
         }
 

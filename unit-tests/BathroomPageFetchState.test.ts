@@ -30,6 +30,8 @@ describe("resolveBathroomPageFetchResult", () => {
           latitude: 0,
           longitude: 0,
           verify_status: "verified",
+          temp_data: "",
+          created_at: "2026-01-01T00:00:00Z",
           version: 1,
           rating_1_count: 0,
           rating_2_count: 0,

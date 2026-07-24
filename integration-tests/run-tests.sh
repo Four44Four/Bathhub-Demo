@@ -3,6 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WORKSPACE_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+INTEGRATION_JEST_CONFIG="$WORKSPACE_DIR/jest.integration.config.js"
 
 setup_supabase_project() {
   cp "$SCRIPT_DIR/supabase/config.toml" "$WORKSPACE_DIR/supabase/config.toml"
@@ -73,12 +74,21 @@ export_supabase_env() {
   fi
 
   export SERVICE_ROLE_KEY
+  export SUPABASE_DB_URL="${DB_URL:-postgresql://postgres:postgres@127.0.0.1:54322/postgres}"
 
   case "$SUPABASE_URL" in
     http://127.0.0.1:*|http://localhost:*|https://127.0.0.1:*|https://localhost:*)
       ;;
     *)
       echo "run-tests: SUPABASE_URL must point at local Supabase, got $SUPABASE_URL" >&2
+      exit 1
+      ;;
+  esac
+  case "$SUPABASE_DB_URL" in
+    postgresql://*@127.0.0.1:*/*|postgresql://*@localhost:*/*)
+      ;;
+    *)
+      echo "run-tests: SUPABASE_DB_URL must point at local Postgres" >&2
       exit 1
       ;;
   esac
@@ -142,36 +152,39 @@ export_supabase_env
 
 start_redis
 
+echo "run-tests: running repeatable server PostgreSQL migration checks..."
+npx jest --config "$INTEGRATION_JEST_CONFIG" --runInBand --verbose "$SCRIPT_DIR/ServerDbMigrations.integration.test.ts"
+
 echo "run-tests: running bathroom_data_primary CRUD integration checks..."
-npx jest --runInBand --verbose "$SCRIPT_DIR/Crud.integration.test.ts"
+npx jest --config "$INTEGRATION_JEST_CONFIG" --runInBand --verbose "$SCRIPT_DIR/Crud.integration.test.ts"
 
 echo "run-tests: running bathroom H3 cell RPC integration checks..."
-npx jest --runInBand --verbose "$SCRIPT_DIR/H3CellRpc.integration.test.ts"
+npx jest --config "$INTEGRATION_JEST_CONFIG" --runInBand --verbose "$SCRIPT_DIR/H3CellRpc.integration.test.ts"
 
 echo "run-tests: running Redis read cache integration checks..."
-npx jest --runInBand --verbose "$SCRIPT_DIR/ReadCache.integration.test.ts"
+npx jest --config "$INTEGRATION_JEST_CONFIG" --runInBand --verbose "$SCRIPT_DIR/ReadCache.integration.test.ts"
 
 echo "run-tests: running find nearest bathroom integration checks..."
-npx jest --runInBand --verbose "$SCRIPT_DIR/FindNearestBathroom.integration.test.ts"
+npx jest --config "$INTEGRATION_JEST_CONFIG" --runInBand --verbose "$SCRIPT_DIR/FindNearestBathroom.integration.test.ts"
 
 echo "run-tests: running Redis rate limit integration checks..."
-npx jest --runInBand --verbose "$SCRIPT_DIR/RateLimit.integration.test.ts"
+npx jest --config "$INTEGRATION_JEST_CONFIG" --runInBand --verbose "$SCRIPT_DIR/RateLimit.integration.test.ts"
 
 echo "run-tests: running local cache integration checks against seeded locations.json rows..."
 # sqlite-wasm loads through Node dynamic import; Jest needs VM module support.
 NODE_OPTIONS="${NODE_OPTIONS:+$NODE_OPTIONS }--experimental-vm-modules" \
-  npx jest --runInBand --verbose "$SCRIPT_DIR/LocalCache.integration.test.ts"
+  npx jest --config "$INTEGRATION_JEST_CONFIG" --runInBand --verbose "$SCRIPT_DIR/LocalCache.integration.test.ts"
 
 echo "run-tests: running Globe viewport Cesium orbit integration checks..."
 NODE_OPTIONS="${NODE_OPTIONS:+$NODE_OPTIONS }--experimental-vm-modules" \
-  npx jest --runInBand --verbose "$SCRIPT_DIR/GlobeViewport.integration.test.ts"
+  npx jest --config "$INTEGRATION_JEST_CONFIG" --runInBand --verbose "$SCRIPT_DIR/GlobeViewport.integration.test.ts"
 
 echo "run-tests: running user settings SQLite persistence and migration checks..."
 NODE_OPTIONS="${NODE_OPTIONS:+$NODE_OPTIONS }--experimental-vm-modules" \
-  npx jest --runInBand --verbose "$SCRIPT_DIR/UserSettingsDbSqlite.integration.test.ts"
+  npx jest --config "$INTEGRATION_JEST_CONFIG" --runInBand --verbose "$SCRIPT_DIR/UserSettingsDbSqlite.integration.test.ts"
 
 echo "run-tests: running default user settings DB snapshot checks..."
 NODE_OPTIONS="${NODE_OPTIONS:+$NODE_OPTIONS }--experimental-vm-modules" \
-  npx jest --runInBand --verbose "$SCRIPT_DIR/DefaultUserSettingsDbSnapshot.integration.test.ts"
+  npx jest --config "$INTEGRATION_JEST_CONFIG" --runInBand --verbose "$SCRIPT_DIR/DefaultUserSettingsDbSnapshot.integration.test.ts"
 
 echo "run-tests: SUCCESS"

@@ -58,9 +58,7 @@ export function createDefaultUserSettingsDbSnapshotReader(db: SqliteDb) {
   };
 }
 
-export async function buildDefaultUserSettingsDbSnapshotFile(
-  workspaceRoot: string = path.resolve(__dirname, ".."),
-): Promise<Uint8Array> {
+export async function buildDefaultUserSettingsDbSnapshotBytes(): Promise<Uint8Array> {
   const sqlite3 = await loadSqliteWasmModule();
   const db = new sqlite3.oo1.DB(":memory:");
   const validation = buildAndValidateDefaultUserSettingsDbSnapshot(
@@ -72,7 +70,13 @@ export async function buildDefaultUserSettingsDbSnapshotFile(
     );
   }
 
-  const bytes = sqlite3.capi.sqlite3_js_db_export(db);
+  return sqlite3.capi.sqlite3_js_db_export(db);
+}
+
+export async function buildDefaultUserSettingsDbSnapshotFile(
+  workspaceRoot: string = path.resolve(__dirname, ".."),
+): Promise<Uint8Array> {
+  const bytes = await buildDefaultUserSettingsDbSnapshotBytes();
   const snapshotDir = path.join(workspaceRoot, DEFAULT_USER_SETTINGS_DB_SNAPSHOT_DIR);
   await mkdir(snapshotDir, { recursive: true });
   await writeFile(

@@ -11,6 +11,26 @@ export type LocalSupabaseEnv = {
   key: string;
 };
 
+export type LocalSupabaseAdminEnv = LocalSupabaseEnv & {
+  serviceRoleKey: string;
+};
+
+function readJwtRole(jwt: string): string | null {
+  const payload = jwt.split(".")[1];
+  if (payload === undefined) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(
+      Buffer.from(payload, "base64url").toString("utf8"),
+    ) as { role?: unknown };
+    return typeof parsed.role === "string" ? parsed.role : null;
+  } catch {
+    return null;
+  }
+}
+
 export function requireLocalSupabaseEnv(): LocalSupabaseEnv {
   const url = getSupabaseUrl();
   const key = getSupabaseKey();
@@ -29,4 +49,20 @@ export function requireLocalSupabaseEnv(): LocalSupabaseEnv {
   }
 
   return { url, key };
+}
+
+export function requireLocalSupabaseAdminEnv(): LocalSupabaseAdminEnv {
+  const env = requireLocalSupabaseEnv();
+  const serviceRoleKey = process.env.SERVICE_ROLE_KEY;
+  if (serviceRoleKey === undefined || serviceRoleKey.length === 0) {
+    throw new Error("SERVICE_ROLE_KEY is required for local Supabase fixture mutation");
+  }
+  if (serviceRoleKey === env.key) {
+    throw new Error("SERVICE_ROLE_KEY must not be the local Supabase anonymous key");
+  }
+  if (readJwtRole(serviceRoleKey) !== "service_role") {
+    throw new Error("SERVICE_ROLE_KEY must be a JWT with role=service_role");
+  }
+
+  return { ...env, serviceRoleKey };
 }

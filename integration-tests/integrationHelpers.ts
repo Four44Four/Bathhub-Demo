@@ -30,7 +30,7 @@ import {
 import { BathroomRemoteDB } from "../app/_client/ComponentConstants";
 import { syncInBounds } from "../app/_server/database/bathroom-data-primary/CrudCore";
 import { type InputCoordinate } from "./formatCrudReport";
-import { requireLocalSupabaseEnv } from "./requireLocalSupabase";
+import { requireLocalSupabaseAdminEnv } from "./requireLocalSupabase";
 
 export const COORD_EPSILON = 1e-5;
 
@@ -89,15 +89,8 @@ export async function setBathroomVersion(
   id: number,
   version: number,
 ): Promise<void> {
-  const env = requireLocalSupabaseEnv();
-  const serviceRoleKey = process.env.SERVICE_ROLE_KEY;
-  if (serviceRoleKey === undefined || serviceRoleKey.length === 0) {
-    throw new Error(
-      "SERVICE_ROLE_KEY is required to bump bathroom version in integration tests",
-    );
-  }
-
-  const admin = createClient(env.url, serviceRoleKey);
+  const { url, serviceRoleKey } = requireLocalSupabaseAdminEnv();
+  const admin = createClient(url, serviceRoleKey);
   const { error } = await admin
     .from("bathroom_data_primary")
     .update({ version })

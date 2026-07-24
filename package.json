@@ -8,7 +8,7 @@
     "build:user-settings-db": "node integration-tests/run-build-default-user-settings-db.mjs",
     "start": "node --experimental-strip-types scripts/validate-required-env.mts && next start",
     "lint": "eslint",
-    "unit-tests": "jest --verbose ./unit-tests",
+    "unit-tests": "jest --config jest.config.js --verbose",
     "integration-tests": "node integration-tests/run-docker.mjs"
   },
   "dependencies": {

@@ -9,6 +9,8 @@ const result = spawnSync(
   "npx",
   [
     "jest",
+    "--config",
+    "jest.snapshot-build.config.js",
     "--runInBand",
     "--verbose",
     "integration-tests/buildDefaultUserSettingsDbSnapshot.test.ts",

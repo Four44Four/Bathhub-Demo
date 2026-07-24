@@ -98,6 +98,9 @@ const SEQUENTIAL_MIGRATION_PAIRS = Array.from(
   { length: USER_SETTINGS_MAX_SCHEMA_VERSION },
   (_, fromVersion) => [fromVersion, fromVersion + 1] as const,
 );
+const DATA_PRESERVATION_MIGRATION_PAIRS = SEQUENTIAL_MIGRATION_PAIRS.filter(
+  ([fromVersion]) => fromVersion > 0,
+);
 
 /** Non-default values used to detect data loss during schema-altering migrations. */
 const CUSTOM_SETTINGS_FOR_MIGRATION_TEST: UserSettingsRow = {
@@ -248,33 +251,31 @@ describe("UserSettingsDbSqlite — real sqlite-wasm layer (user_settings spec §
       }
     });
 
-    test.each(SEQUENTIAL_MIGRATION_PAIRS)(
-      "forward migration %i→%i preserves existing user setting data through schema changes",
-      async (fromVersion) => {
-        if (fromVersion === 0) {
-          return;
-        }
-
-        const migration = requireSequentialMigration(fromVersion);
-        const db = await initDbAtSchemaVersion(fromVersion);
-        await db.saveSettingsToDb(CUSTOM_SETTINGS_FOR_MIGRATION_TEST);
-        await expectUserSettingsTableContains(
-          db,
-          CUSTOM_SETTINGS_FOR_MIGRATION_TEST,
-        );
-
-        await runSequentialMigrationStep(db, fromVersion);
-
-        await expectUserSettingsTableContains(
-          db,
-          expectedSettingsAfterForwardMigration(
-            fromVersion,
-            migration,
+    if (DATA_PRESERVATION_MIGRATION_PAIRS.length > 0) {
+      test.each(DATA_PRESERVATION_MIGRATION_PAIRS)(
+        "forward migration %i→%i preserves existing user setting data through schema changes",
+        async (fromVersion) => {
+          const migration = requireSequentialMigration(fromVersion);
+          const db = await initDbAtSchemaVersion(fromVersion);
+          await db.saveSettingsToDb(CUSTOM_SETTINGS_FOR_MIGRATION_TEST);
+          await expectUserSettingsTableContains(
+            db,
             CUSTOM_SETTINGS_FOR_MIGRATION_TEST,
-          ),
-        );
-      },
-    );
+          );
+
+          await runSequentialMigrationStep(db, fromVersion);
+
+          await expectUserSettingsTableContains(
+            db,
+            expectedSettingsAfterForwardMigration(
+              fromVersion,
+              migration,
+              CUSTOM_SETTINGS_FOR_MIGRATION_TEST,
+            ),
+          );
+        },
+      );
+    }
   });
 
   describe("v0→v1 migration", () => {

@@ -279,7 +279,7 @@ describe("bathroom_data_primary CRUD against local Supabase", () => {
   });
 
   test("bathroomDbReadById returns the full primary row including rating counts", async () => {
-    const target = created[0]?.row;
+    const target = created[1]?.row;
     expect(target).toBeDefined();
     if (target === undefined) {
       return;
@@ -304,7 +304,7 @@ describe("bathroom_data_primary CRUD against local Supabase", () => {
   });
 
   test("bathroomDbIncrementRating increments the matching rating column and version", async () => {
-    const target = created[0]?.row;
+    const target = created[2]?.row;
     expect(target).toBeDefined();
     if (target === undefined) {
       return;

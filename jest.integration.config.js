@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 const nextJest = require("next/jest");
 
 const createJestConfig = nextJest({ dir: "./" });
@@ -6,10 +7,8 @@ const createJestConfig = nextJest({ dir: "./" });
 const customJestConfig = {
   testEnvironment: "node",
   modulePathIgnorePatterns: ["<rootDir>/.next/"],
-  testMatch: [
-    "<rootDir>/unit-tests/**/*.test.ts",
-    "<rootDir>/unit-tests/**/*.test.tsx",
-  ],
+  setupFilesAfterEnv: ["<rootDir>/integration-tests/jest.integration.setup.ts"],
+  testMatch: ["<rootDir>/integration-tests/**/*.integration.test.ts"],
 };
 
 module.exports = createJestConfig(customJestConfig);

@@ -1,7 +1,9 @@
 import {
+  createAt as bathroomDbCreate,
   getInBounds as bathroomDbReadInBounds,
   syncInBounds as bathroomDbSyncInBounds,
 } from "../app/_server/database/bathroom-data-primary/CrudCore";
+import { getReadCache } from "../app/_server/redis/ReadCache";
 import {
   BATHROOM_LOCAL_CACHE_TABLE_NAME,
   type BathroomClientCacheEntry,
@@ -38,6 +40,7 @@ import {
   expectViewportEntryMatchesRow,
   findSeededRow,
   idleRemoteGate,
+  nearlyEqual,
   runViewportCacheSync,
   runViewportLocalCacheSync,
   runViewportRemoteCacheSync,
@@ -46,7 +49,10 @@ import {
   WORLD_BOUNDS,
 } from "./integrationHelpers";
 import { loadLocations } from "./loadLocations";
-import { requireLocalSupabaseEnv } from "./requireLocalSupabase";
+import {
+  requireLocalSupabaseAdminEnv,
+  type LocalSupabaseAdminEnv,
+} from "./requireLocalSupabase";
 
 const { loadSqliteWasmModule } = require("./sqliteWasmLoader.cjs") as {
   loadSqliteWasmModule: () => Promise<import("../app/_client/local-db/web/LocalDbSqlite").SqliteWasm>;
@@ -188,16 +194,59 @@ function createBathroomMarkerHarness() {
 
 describe("bathroom local SQLite cache sync against local Supabase", () => {
   const locations = loadLocations();
+  const createdFixtureIds: number[] = [];
+  const originalVersions = new Map<number, number>();
   let seededRows: BathroomDataPrimaryRow[] = [];
+  let adminEnv: LocalSupabaseAdminEnv | null = null;
 
   beforeAll(async () => {
-    requireLocalSupabaseEnv();
+    adminEnv = requireLocalSupabaseAdminEnv();
     seededRows = await bathroomDbReadInBounds(WORLD_BOUNDS);
 
-    if (seededRows.length !== locations.length) {
-      throw new Error(
-        `Expected ${locations.length} rows seeded from locations.json before local cache tests, got ${seededRows.length}. Run Crud.integration.test.ts first.`,
+    for (const location of locations) {
+      const existing = seededRows.find(
+        (row) =>
+          nearlyEqual(row.latitude, location.latitude) &&
+          nearlyEqual(row.longitude, location.longitude),
       );
+      if (existing !== undefined) {
+        continue;
+      }
+
+      const created = await bathroomDbCreate(
+        location.latitude,
+        location.longitude,
+      );
+      createdFixtureIds.push(created.id);
+      seededRows.push(created);
+    }
+  });
+
+  afterAll(async () => {
+    for (const [id, version] of originalVersions) {
+      if (!createdFixtureIds.includes(id)) {
+        await setBathroomVersion(id, version);
+      }
+    }
+
+    const affectedIds = new Set([
+      ...createdFixtureIds,
+      ...originalVersions.keys(),
+    ]);
+    const readCache = getReadCache();
+    await Promise.all(
+      Array.from(affectedIds, (id) => readCache.removeBathroom(id)),
+    );
+
+    if (createdFixtureIds.length > 0 && adminEnv !== null) {
+      const admin = createClient(adminEnv.url, adminEnv.serviceRoleKey);
+      const { error } = await admin
+        .from("bathroom_data_primary")
+        .delete()
+        .in("id", createdFixtureIds);
+      if (error !== null) {
+        throw new Error(`Failed to clean local cache fixtures: ${error.message}`);
+      }
     }
   });
 
@@ -335,6 +384,7 @@ describe("bathroom local SQLite cache sync against local Supabase", () => {
     const localDb = createTestLocalDb();
 
     await runViewportCacheSync(localDb, bounds);
+    originalVersions.set(row.id, row.version);
     await setBathroomVersion(row.id, 3);
 
     const refreshed = await runViewportCacheSync(localDb, bounds);

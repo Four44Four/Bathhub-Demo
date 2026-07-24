@@ -84,6 +84,69 @@ describe("Redis-backed serverside read cache", () => {
     expect(parsed?.longitude).toBeCloseTo(-11.2, 3);
   });
 
+  test("createAt invalidates a cached empty H3 cell and the next bounds read repopulates it", async () => {
+    const latitude = -6.18;
+    const longitude = -11.28;
+    const redis = getRedisPort();
+    const namespace = resolveReadCacheNamespace(process.env.NODE_ENV);
+    const h3Cell = bathroomLatLongToH3Cell(
+      { latitude, longitude },
+      H3_BATHROOM_CELL_RESOLUTION,
+    );
+    const h3Key = buildBathroomH3CellCacheKey(
+      namespace,
+      H3_BATHROOM_CELL_RESOLUTION,
+      h3Cell,
+    );
+    const readCache = createReadCache({
+      redis,
+      config: { namespace, ttlSecs: READ_CACHE_TTL_SECS },
+    });
+
+    await readCache.cacheBathroomH3Cell(
+      h3Cell,
+      [],
+      H3_BATHROOM_CELL_RESOLUTION,
+    );
+    expect(parseCachedBathroomH3CellRecord((await redis.getString(h3Key))!)?.rows)
+      .toEqual([]);
+
+    const row = await bathroomDbCreate(latitude, longitude);
+    createdBathroomIds.push(row.id);
+    expect(await redis.getString(h3Key)).toBeNull();
+
+    const rows = await bathroomDbReadInBounds(boundsAround(latitude, longitude));
+    expect(rows.map((entry) => entry.id)).toContain(row.id);
+    expect(
+      parseCachedBathroomH3CellRecord((await redis.getString(h3Key))!)?.rows.map(
+        (entry) => entry.id,
+      ),
+    ).toContain(row.id);
+  });
+
+  test("createReadCache entries expire in real Redis after the configured TTL", async () => {
+    const row = await bathroomDbCreate(-6.22, -11.32);
+    createdBathroomIds.push(row.id);
+
+    const redis = getRedisPort();
+    const namespace = resolveReadCacheNamespace(process.env.NODE_ENV);
+    const key = buildReadCacheKey(
+      namespace,
+      READ_CACHE_TABLE_BATHROOM_DATA_PRIMARY,
+      row.id,
+    );
+    const shortLivedCache = createReadCache({
+      redis,
+      config: { namespace, ttlSecs: 1 },
+    });
+
+    await shortLivedCache.cacheBathroomRow(row);
+    expect(await redis.getString(key)).not.toBeNull();
+
+    await new Promise((resolve) => setTimeout(resolve, 1_100));
+    expect(await redis.getString(key)).toBeNull();
+  });
+
   test("updateVerifyStatus invalidates cached bathroom entries", async () => {
     const row = await bathroomDbCreate(-6.25, -11.35);
     createdBathroomIds.push(row.id);

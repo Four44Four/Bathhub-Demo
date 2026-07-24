@@ -1,4 +1,7 @@
-import { buildRateLimitKey } from "../app/_server/pure/rate-limit/RateLimit";
+import {
+  buildRateLimitKey,
+  type RateLimitScope,
+} from "../app/_server/pure/rate-limit/RateLimit";
 import {
   enforceRateLimit,
   type EnforceRateLimitDependencies,
@@ -9,30 +12,28 @@ import { SERVER_RATE_LIMITS } from "../app/_server/ServerConstants";
 import { disconnectRedisTestGlobals } from "./disconnectRedisTestGlobals";
 import { requireLocalRedis } from "./requireLocalRedis";
 
+const generatedRateLimitKeys = new Set<string>();
+
 function redisRateLimitDeps(clientIp: string): EnforceRateLimitDependencies {
   const redis = getRedisPort();
   return {
     getClientIp: async () => clientIp,
-    incrementWithExpiry: (key, expirySeconds) =>
-      redis.incrementWithExpiry(key, expirySeconds),
+    incrementWithExpiry: (key, expirySeconds) => {
+      generatedRateLimitKeys.add(key);
+      return redis.incrementWithExpiry(key, expirySeconds);
+    },
   };
 }
 
 async function prefillWindowCount(
-  scope:
-    | "bathroom-create"
-    | "bathroom-read-sync"
-    | "bathroom-find-nearest"
-    | "bathroom-update"
-    | "ors-path"
-    | "user-settings-default-db"
-    | "user-settings-migration",
+  scope: RateLimitScope,
   clientIp: string,
   windowSeconds: number,
   count: number,
 ): Promise<void> {
   const redis = getRedisPort();
   const key = buildRateLimitKey(scope, clientIp, windowSeconds);
+  generatedRateLimitKeys.add(key);
   for (let i = 0; i < count; i++) {
     await redis.incrementWithExpiry(key, windowSeconds);
   }
@@ -41,6 +42,14 @@ async function prefillWindowCount(
 describe("Redis-backed server rate limits", () => {
   beforeAll(() => {
     requireLocalRedis();
+  });
+
+  afterEach(async () => {
+    const redis = getRedisPort();
+    await Promise.all(
+      Array.from(generatedRateLimitKeys, (key) => redis.deleteKey(key)),
+    );
+    generatedRateLimitKeys.clear();
   });
 
   afterAll(async () => {
@@ -57,6 +66,7 @@ describe("Redis-backed server rate limits", () => {
       const redis = getRedisPort();
       const key = `rl:test-expiry:${Date.now()}`;
       const windowSeconds = 1;
+      generatedRateLimitKeys.add(key);
 
       expect(await redis.incrementWithExpiry(key, windowSeconds)).toBe(1);
       expect(await redis.incrementWithExpiry(key, windowSeconds)).toBe(2);
@@ -166,6 +176,27 @@ describe("Redis-backed server rate limits", () => {
         name: "RateLimitExceededError",
         message:
           "Rate limit exceeded: bathroom reading and viewport sync is limited to 100 requests per 30 seconds.",
+      });
+    });
+  });
+
+  describe("bathroom-read-by-id", () => {
+    test("allows up to 100 requests per 30 seconds per IP", async () => {
+      const deps = redisRateLimitDeps("203.0.113.63");
+      const { maxRequests } = SERVER_RATE_LIMITS.bathroomReadById.per30Seconds;
+
+      for (let i = 0; i < maxRequests; i++) {
+        await expect(
+          enforceRateLimit("bathroom-read-by-id", deps),
+        ).resolves.toBeUndefined();
+      }
+
+      await expect(
+        enforceRateLimit("bathroom-read-by-id", deps),
+      ).rejects.toMatchObject({
+        name: "RateLimitExceededError",
+        message:
+          "Rate limit exceeded: bathroom reading by id is limited to 100 requests per 30 seconds.",
       });
     });
   });

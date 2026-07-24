@@ -10,7 +10,7 @@ import {
 import { USER_SETTINGS_MAX_SCHEMA_VERSION } from "../app/_shared/user-settings/UserSettingsSchema";
 import type { SqliteWasm } from "../app/_client/local-db/web/LocalDbSqlite";
 import {
-  buildDefaultUserSettingsDbSnapshotFile,
+  buildDefaultUserSettingsDbSnapshotBytes,
   createDefaultUserSettingsDbSnapshotReader,
 } from "./defaultUserSettingsDbSnapshotHelpers";
 
@@ -39,8 +39,10 @@ describe("Default user settings DB snapshot (user_settings spec §118–127)", (
   });
 
   test("checked-in server snapshot matches cumulative migration output", async () => {
-    await buildDefaultUserSettingsDbSnapshotFile();
+    const generatedBytes = await buildDefaultUserSettingsDbSnapshotBytes();
     const snapshotBytes = await readDefaultUserSettingsDbSnapshotBytes();
+    expect(Buffer.from(snapshotBytes)).toEqual(Buffer.from(generatedBytes));
+
     const sqlite3 = await loadSqliteWasmModule();
     const db = new sqlite3.oo1.DB(":memory:");
     loadUserSettingsBytesIntoMemoryDb(sqlite3, db, snapshotBytes);

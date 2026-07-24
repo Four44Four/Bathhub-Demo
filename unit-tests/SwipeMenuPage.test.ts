@@ -1,32 +1,20 @@
 import {
-  testingBathroomPageContentMinHeightPx,
   swipeMenuPageContentMinHeightPx,
   swipeMenuShouldOpenMainMenuOnHandleDragMove,
+  swipeMenuShouldOpenMainMenuOnSnapToExpanded,
 } from "../app/_client/pure/swipeup/SwipeMenuPage";
+import { bathroomPageContentMinHeightPx } from "../app/_client/pure/swipeup/BathroomPageLayout";
 import { swipeUpMainMenuGridHeightPx } from "../app/_client/pure/swipeup/MainMenuLayout";
-import {
-  showTestingBathroomMenuButtonLeftPx,
-  showTestingBathroomMenuButtonTopPx,
-} from "../app/_client/viewport2d/buttons/ShowTestingBathroomMenu";
-import {
-  showSwipeUpMenuButtonLeftPx,
-  showSwipeUpMenuButtonOuterSidePx,
-  showSwipeUpMenuButtonTopPx,
-} from "../app/_client/viewport2d/buttons/ShowSwipeUpMenu";
 
 describe("SwipeMenuPage", () => {
   const viewportWidthPx = 400;
-
-  test("testingBathroomPageContentMinHeightPx includes top offset and text line height", () => {
-    expect(testingBathroomPageContentMinHeightPx(30, 50, 1.2)).toBe(86);
-  });
 
   test("swipeMenuPageContentMinHeightPx resolves per page", () => {
     expect(swipeMenuPageContentMinHeightPx("mainMenu", viewportWidthPx)).toBe(
       swipeUpMainMenuGridHeightPx(viewportWidthPx),
     );
-    expect(swipeMenuPageContentMinHeightPx("testingBathroom", viewportWidthPx)).toBe(
-      testingBathroomPageContentMinHeightPx(),
+    expect(swipeMenuPageContentMinHeightPx("bathroom", viewportWidthPx)).toBe(
+      bathroomPageContentMinHeightPx(viewportWidthPx),
     );
   });
 
@@ -45,22 +33,28 @@ describe("SwipeMenuPage", () => {
       swipeMenuShouldOpenMainMenuOnHandleDragMove(true, 200, 120, inactive),
     ).toBe(false);
   });
-});
 
-describe("ShowTestingBathroomMenu", () => {
-  test("showTestingBathroomMenuButtonTopPx stacks below the hamburger button", () => {
-    const topInsetPx = 16;
-    const leftInsetPx = 16;
-    const showSwipeUpMenuTop = showSwipeUpMenuButtonTopPx(topInsetPx);
-    const showSwipeUpMenuOuterSide = showSwipeUpMenuButtonOuterSidePx();
+  test("swipeMenuShouldOpenMainMenuOnSnapToExpanded opens only when snapping up from below max", () => {
+    const inactive = 20;
+    const max = 400;
     expect(
-      showTestingBathroomMenuButtonTopPx(
-        showSwipeUpMenuTop,
-        showSwipeUpMenuOuterSide,
+      swipeMenuShouldOpenMainMenuOnSnapToExpanded(
+        inactive,
+        "expanded",
+        inactive,
+        max,
       ),
-    ).toBe(showSwipeUpMenuTop + showSwipeUpMenuOuterSide);
-    expect(showTestingBathroomMenuButtonLeftPx(leftInsetPx)).toBe(
-      showSwipeUpMenuButtonLeftPx(leftInsetPx),
-    );
+    ).toBe(true);
+    expect(
+      swipeMenuShouldOpenMainMenuOnSnapToExpanded(max, "expanded", inactive, max),
+    ).toBe(false);
+    expect(
+      swipeMenuShouldOpenMainMenuOnSnapToExpanded(
+        200,
+        "collapsed",
+        inactive,
+        max,
+      ),
+    ).toBe(false);
   });
 });

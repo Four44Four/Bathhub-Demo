@@ -11,7 +11,6 @@ import { Recenter } from "./_client/viewport2d/buttons/Recenter";
 import { FindNearestBathroom } from "./_client/viewport2d/buttons/FindNearestBathroom";
 import { ExitFindBathroom } from "./_client/viewport2d/buttons/ExitFindBathroom";
 import { ShowSwipeUpMenu } from "./_client/viewport2d/buttons/ShowSwipeUpMenu";
-import { ShowTestingBathroomMenu } from "./_client/viewport2d/buttons/ShowTestingBathroomMenu";
 import {
   GlobeViewport,
   type GlobeViewportHandle,
@@ -23,6 +22,7 @@ import { SwipeMenuBackdrop } from "./_client/swipeup/SwipeMenuBackdrop";
 import { SwipeMenuTopShadow } from "./_client/swipeup/SwipeMenuTopShadow";
 import { SwipeMenuExpansionProvider } from "./_client/swipeup/SwipeMenuExpansion";
 import { SwipeMenuPageProvider, useSwipeMenuPage } from "./_client/swipeup/SwipeMenuPageContext";
+import { SelectedBathroomProvider, useSelectedBathroom } from "./_client/swipeup/SelectedBathroomContext";
 import { SwipeMenuPageContent } from "./_client/swipeup/SwipeMenuPageContent";
 import {
   SwipeMenuInteractionContext,
@@ -174,6 +174,7 @@ function HomeContent({
   const { seedUserPosition, registerGlobeGeoHandlers } = useUserGeolocation();
   const { beginFindNearestBathroom } = useFindNearestBathroomFlow({ globeRef });
   const { expandToPage } = useSwipeMenuPage();
+  const { selectBathroom } = useSelectedBathroom();
   /** SSR-safe on first render; sessionStorage geo is merged in `useLayoutEffect` before Cesium init. */
   const [globeInit, setGlobeInit] = useState<FrozenGlobeInit>(DEFAULT_GLOBE_INIT);
   const [zoomIndicator, setZoomIndicator] = useState<{ x: number; y: number; pulse: number }>({
@@ -327,8 +328,9 @@ function HomeContent({
               setZoomIndicator((z) => ({ x, y, pulse: z.pulse + 1 }));
             }}
             onMapMarkerUserLatLonChange={syncMapMarkerFallbackCoords}
-            onBathroomMarkerClick={() => {
-              expandToPage("testingBathroom");
+            onBathroomMarkerClick={(bathroomId) => {
+              selectBathroom(bathroomId);
+              expandToPage("bathroom");
             }}
           />
           <BathroomViewportSync globeRef={globeRef} />
@@ -355,12 +357,7 @@ function HomeContent({
           </div>
         </div>
         <SwipeMenuTopShadow />
-        {!viewportChromeHidden ? (
-          <>
-            <ShowSwipeUpMenu />
-            <ShowTestingBathroomMenu />
-          </>
-        ) : null}
+        {!viewportChromeHidden ? <ShowSwipeUpMenu /> : null}
         {!viewportChromeHidden && showRecenterButton ? (
           <Recenter
             globeRef={globeRef}
@@ -413,7 +410,9 @@ export default function Home() {
               <UserSettingsBootstrapGate>
               <SwipeMenuExpansionProvider>
               <SwipeMenuPageProvider>
+              <SelectedBathroomProvider>
                 <HomeContent phoneFrameRef={phoneFrameRef} />
+              </SelectedBathroomProvider>
               </SwipeMenuPageProvider>
               </SwipeMenuExpansionProvider>
               </UserSettingsBootstrapGate>

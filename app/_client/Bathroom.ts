@@ -5,6 +5,7 @@ import { type RefObject } from "react";
 import { type Errorable } from "../_shared/Utils";
 import {
   type BathroomClientCacheEntry,
+  type BathroomDataPrimaryFullRow,
   type BathroomDataPrimaryRow,
   type BathroomSyncResponse,
   type BathroomViewportEntry,
@@ -78,10 +79,23 @@ export async function updateBathroomVerifyStatus(
   return BathroomCrud.bathroomDbUpdateVerifyStatus(id, verifyStatus);
 }
 
+export async function incrementBathroomRating(
+  id: number,
+  stars: number,
+): Promise<Errorable<BathroomDataPrimaryFullRow>> {
+  return BathroomCrud.bathroomDbIncrementRating(id, stars);
+}
+
 export async function readBathroomsInBounds(
   bounds: ViewportBounds,
 ): Promise<Errorable<BathroomDataPrimaryRow[]>> {
   return toErrorable(() => BathroomCrud.bathroomDbReadInBounds(bounds));
+}
+
+export async function readBathroomById(
+  id: number,
+): Promise<Errorable<BathroomDataPrimaryFullRow>> {
+  return BathroomCrud.bathroomDbReadById(id);
 }
 
 export async function syncBathroomsInBounds(

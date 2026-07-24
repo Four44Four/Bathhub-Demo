@@ -1,7 +1,11 @@
-import { TestingBathroomPage as TestingBathroomPageConsts } from "../../ComponentConstants";
+import { bathroomPageContentMinHeightPx } from "./BathroomPageLayout";
 import { swipeUpMainMenuGridHeightPx } from "./MainMenuLayout";
+import {
+  swipeMenuIsFullyExpanded,
+  type SwipeMenuSnapTarget,
+} from "./SwipeMenu";
 
-export type SwipeMenuPageId = "mainMenu" | "testingBathroom";
+export type SwipeMenuPageId = "mainMenu" | "bathroom";
 
 export const SWIPE_MENU_DEFAULT_PAGE_ID: SwipeMenuPageId = "mainMenu";
 
@@ -22,13 +26,24 @@ export function swipeMenuShouldOpenMainMenuOnHandleDragMove(
   );
 }
 
-/** Minimum swipe-up menu content height for the testing bathroom page. */
-export function testingBathroomPageContentMinHeightPx(
-  fontSizePx: number = TestingBathroomPageConsts.TEXT_FONT_SIZE_PX,
-  topOffsetPx: number = TestingBathroomPageConsts.TEXT_TOP_OFFSET_PX,
-  lineHeightRatio: number = TestingBathroomPageConsts.TEXT_LINE_HEIGHT,
-): number {
-  return topOffsetPx + fontSizePx * lineHeightRatio;
+/**
+ * True when a drag release snaps the menu into expanded mode from below fully
+ * expanded (avoids re-opening the main menu on taps while already expanded).
+ */
+export function swipeMenuShouldOpenMainMenuOnSnapToExpanded(
+  gestureStartHeightPx: number,
+  snapTarget: SwipeMenuSnapTarget,
+  inactiveHeightPx: number,
+  maxHeightPx: number,
+): boolean {
+  return (
+    snapTarget === "expanded" &&
+    !swipeMenuIsFullyExpanded(
+      gestureStartHeightPx,
+      inactiveHeightPx,
+      maxHeightPx,
+    )
+  );
 }
 
 /** Resolved minimum content height for the active swipe-up menu page. */
@@ -39,8 +54,8 @@ export function swipeMenuPageContentMinHeightPx(
   switch (pageId) {
     case "mainMenu":
       return swipeUpMainMenuGridHeightPx(viewportWidthPx);
-    case "testingBathroom":
-      return testingBathroomPageContentMinHeightPx();
+    case "bathroom":
+      return bathroomPageContentMinHeightPx(viewportWidthPx);
     default: {
       const _exhaustive: never = pageId;
       return _exhaustive;

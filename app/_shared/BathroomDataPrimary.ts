@@ -20,6 +20,15 @@ export type BathroomDataPrimaryRow = {
   version: number;
 };
 
+/** Full bathroom_data_primary row including per-star rating counts. */
+export type BathroomDataPrimaryFullRow = BathroomDataPrimaryRow & {
+  rating_1_count: number;
+  rating_2_count: number;
+  rating_3_count: number;
+  rating_4_count: number;
+  rating_5_count: number;
+};
+
 /** Client cache entry sent with viewport sync requests. */
 export type BathroomClientCacheEntry = {
   id: number;

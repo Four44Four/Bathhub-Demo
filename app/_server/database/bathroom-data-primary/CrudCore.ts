@@ -3,7 +3,11 @@ import "server-only";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 import {
+  type BathroomClientCacheEntry,
+  type BathroomDataPrimaryFullRow,
   type BathroomDataPrimaryRow,
+  type BathroomSyncResponse,
+  type LatLong,
   type VerifyStatus,
   type ViewportBounds,
 } from "../../../_shared/BathroomDataPrimary";
@@ -13,10 +17,6 @@ import {
   type CreateBathroomRpc,
 } from "../../pure/bathroom-data-primary/CreateBathroom";
 import { formatSupabaseError } from "../../pure/formatSupabaseError";
-import {
-  type BathroomClientCacheEntry,
-  type BathroomSyncResponse,
-} from "../../../_shared/BathroomDataPrimary";
 import {
   SYNC_BATHROOM_ERROR_CONTEXT,
   SYNC_BATHROOM_RPC_NAME,
@@ -40,11 +40,20 @@ import {
   type FindNearestBathroomRpcRow,
 } from "../../pure/bathroom-data-primary/FindNearestBathroom";
 import {
+  READ_BATHROOM_BY_ID_RPC_NAME,
+  readBathroomById,
+  type ReadBathroomByIdRpc,
+} from "../../pure/bathroom-data-primary/ReadBathroomById";
+import {
+  INCREMENT_BATHROOM_RATING_RPC_NAME,
+  incrementBathroomRating,
+  type IncrementBathroomRatingRpc,
+} from "../../pure/bathroom-data-primary/IncrementBathroomRating";
+import {
   UPDATE_BATHROOM_VERIFY_STATUS_RPC_NAME,
   updateBathroomVerifyStatus,
   type UpdateBathroomVerifyStatusRpc,
 } from "../../pure/bathroom-data-primary/UpdateBathroom";
-import { type LatLong } from "../../../_shared/BathroomDataPrimary";
 import {
   H3_BATHROOM_CELL_RESOLUTION,
   H3_BATHROOM_MAX_BOUNDS_CACHE_CELLS,
@@ -118,6 +127,35 @@ export async function createAt(
   });
 }
 
+export async function incrementRatingCount(
+  id: number,
+  stars: number,
+): Promise<BathroomDataPrimaryFullRow> {
+  const client = getSupabaseClient();
+  const rpc: IncrementBathroomRatingRpc = async (params) => {
+    const { data, error } = await client
+      .rpc(INCREMENT_BATHROOM_RATING_RPC_NAME, params)
+      .maybeSingle();
+    return {
+      data: data as BathroomDataPrimaryFullRow | null,
+      error,
+    };
+  };
+
+  return incrementBathroomRating(id, stars, rpc).then(async (row) => {
+    await runReadCacheSideEffect(async () => {
+      const readCache = getReadCache();
+      await readCache.invalidateBathroom(id);
+      await readCache.cacheBathroomFullRow(row);
+      await readCache.invalidateBathroomH3Cell(
+        bathroomRowToH3Cell(row),
+        H3_BATHROOM_CELL_RESOLUTION,
+      );
+    });
+    return row;
+  });
+}
+
 export async function updateVerifyStatus(
   id: number,
   verifyStatus: VerifyStatus,
@@ -154,6 +192,38 @@ export async function getInBounds(
   );
   await runReadCacheSideEffect(() => getReadCache().cacheBathroomRows(rows));
   return rows;
+}
+
+export async function getById(
+  id: number,
+): Promise<BathroomDataPrimaryFullRow | null> {
+  const cached = await getReadCache().getBathroom(id);
+  if (cached !== null) {
+    return cached;
+  }
+
+  const row = await fetchBathroomRowByIdFromDatabase(id);
+  if (row !== null) {
+    await runReadCacheSideEffect(() => getReadCache().cacheBathroomFullRow(row));
+  }
+  return row;
+}
+
+async function fetchBathroomRowByIdFromDatabase(
+  id: number,
+): Promise<BathroomDataPrimaryFullRow | null> {
+  const client = getSupabaseClient();
+  const rpc: ReadBathroomByIdRpc = async (params) => {
+    const { data, error } = await client
+      .rpc(READ_BATHROOM_BY_ID_RPC_NAME, params)
+      .maybeSingle();
+    return {
+      data: data as BathroomDataPrimaryFullRow | null,
+      error,
+    };
+  };
+
+  return readBathroomById(id, rpc);
 }
 
 async function fetchBathroomRowsInBoundsFromDatabase(

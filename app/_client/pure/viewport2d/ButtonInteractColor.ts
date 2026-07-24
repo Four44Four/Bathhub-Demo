@@ -1,5 +1,5 @@
 import { clamp01, hexToRgb, hslToRgb, rgbToHex, rgbToHsl } from "../../Utils";
-import { lerpHex } from "../HexColor";
+import { lerp, lerpHex } from "../HexColor";
 
 export type Viewport2dButtonHoverInteractBehavior = "invert" | "darken";
 
@@ -105,6 +105,25 @@ export function viewportButtonDarkenInteractColorsAtProgress(
       t,
     ),
   };
+}
+
+/**
+ * CSS `filter` for animating arbitrary toggle display content (ReactNode trees).
+ * Darken matches per-channel RGB multiply; invert uses a full `invert()` crossfade layer.
+ */
+export function viewportButtonInteractContentCssFilter(
+  progress: number,
+  behavior: Viewport2dButtonHoverInteractBehavior,
+  darkenFactor: number,
+): string | undefined {
+  const t = clamp01(progress);
+  if (t <= 0) {
+    return undefined;
+  }
+  if (behavior === "darken") {
+    return `brightness(${lerp(1, darkenFactor, t)})`;
+  }
+  return undefined;
 }
 
 export function viewportButtonInteractColorsForBehavior(

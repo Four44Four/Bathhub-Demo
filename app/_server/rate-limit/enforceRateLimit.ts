@@ -32,6 +32,7 @@ const RATE_LIMIT_WINDOWS_BY_SCOPE: Record<
     SERVER_RATE_LIMITS.bathroomCreate.perDay,
   ],
   "bathroom-read-sync": [SERVER_RATE_LIMITS.bathroomReadSync.per30Seconds],
+  "bathroom-read-by-id": [SERVER_RATE_LIMITS.bathroomReadById.per30Seconds],
   "bathroom-find-nearest": [
     SERVER_RATE_LIMITS.bathroomFindNearest.perMinute,
   ],

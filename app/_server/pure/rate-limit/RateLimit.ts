@@ -3,6 +3,7 @@ import { REDIS_RATE_LIMIT_KEY_PREFIX } from "../redis/RedisConstants";
 export type RateLimitScope =
   | "bathroom-create"
   | "bathroom-read-sync"
+  | "bathroom-read-by-id"
   | "bathroom-find-nearest"
   | "bathroom-update"
   | "ors-path"
@@ -59,6 +60,8 @@ export function formatRateLimitScopeLabel(scope: RateLimitScope): string {
       return "bathroom creation";
     case "bathroom-read-sync":
       return "bathroom reading and viewport sync";
+    case "bathroom-read-by-id":
+      return "bathroom reading by id";
     case "bathroom-find-nearest":
       return "nearest bathroom lookup";
     case "bathroom-update":

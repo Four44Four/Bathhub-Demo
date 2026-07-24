@@ -80,7 +80,7 @@
        - The width of the rectangular dropdown ([expanded](#expanded-mode) or [hidden](#hidden-mode)) will be as wide as the [toggle button label element](#toggle-button-label-element) + [arrow icon size](#arrow-icon-pixel-size) needs it to be (plus any addition [padding](#padding-pixel-size))
     - Else:
        - The CSS width of the rectangular dropdown is set to the [width override property](#width-override)
-       - [The toggle button label element](#toggle-button-label-element) will be clipped if it overlaps with the [arrow icon's bounds + padding](#arrow-icon-pixel-size) or past the edges of the rectangular dropdown menu
+       - [The toggle button label element](#toggle-button-label-element) will be clipped if it overlaps with the [arrow icon's bounds](#arrow-icon-pixel-size) or past the edges of the rectangular dropdown menu
  - If [the anchor element property](#anchor-element) is `null`:
     - This dropdown menu is displayed on the [viewport2d](../viewport2d.md) at absolute position [x](#x-position) and [y](#y-position) relative to the [viewport2d's](../viewport2d.md) top left corner
     - This dropdown menu is z layered above the [GlobeViewport](../GlobeViewport.md) but below the [swipe-up menu](../swipe_up_menu/swipe_up_menu.md)
@@ -116,15 +116,16 @@
  - Has the following components with [this size](#padding-pixel-size) of internal button padding:
     - The [toggle button label element](#toggle-button-label-element) left aligned
     - [Arrow icon](../resources.md#arrow-icon) right aligned that is a square with each side being [this many pixels long](#arrow-icon-pixel-size) of [this color](#arrow-icon-color)
- - When hovered or interacted with:
+ - When hovered or interacted with (**only** apply the following effects to the [toggle button](#toggle-button), not the [subcomponents panel](#subcomponents-panel)):
     - If the [hover interaction behavior property](#hover-interact-behavior) is "invert":
-       - Invert the brightness of all the colors (fill, text, outline, and images) linearly over [this duration](#animation-duration)
+       - Invert the brightness of all the colors (fill, display content, outline, and images) linearly over [this duration](#animation-duration)
        - Uninvert them back when hovering or interaction is done over the [same duration](#animation-duration)
     - Elseif the [hover interaction behavior property](#hover-interact-behavior) is "darken":
-       - Multiply the brightness value of all the colors (fill, text, outline, and images) linearly over [this duration](#animation-duration) by [this factor](#hover-interact-darkening-mult-factor)
+       - Multiply the brightness value of all the colors (fill, diplay content, outline, and images) linearly over [this duration](#animation-duration) by [this factor](#hover-interact-darkening-mult-factor)
        - Restore their original brightness values when hovering or interaction is done over the [same duration](#animation-duration)
  - When interacted with:
     - Toggle the state of the dropdown menu between [expanded mode](#expanded-mode) and [hidden mode](#hidden-mode) and play their toggle transition animations smoothly over [this duration](#animation-duration) with quadratic easing
+       - Animate both the [subcomponents panel](#subcomponents-panel) height and [arrow icon](../resources.md#arrow-icon) rotation with the [same duration](#animation-duration)
 
 # Subcomponents panel
  - Has [this size](#padding-pixel-size) of internal panel padding

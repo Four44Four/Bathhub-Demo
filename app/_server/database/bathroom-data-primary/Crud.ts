@@ -2,6 +2,7 @@
 
 import {
   type BathroomClientCacheEntry,
+  type BathroomDataPrimaryFullRow,
   type BathroomDataPrimaryRow,
   type BathroomSyncResponse,
   type LatLong,
@@ -28,6 +29,25 @@ export async function bathroomDbCreate(
 
   try {
     return { val: await Core.createAt(latitude, longitude) };
+  } catch (error: unknown) {
+    return {
+      val: null,
+      errorMsg: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
+export async function bathroomDbIncrementRating(
+  id: number,
+  stars: number,
+): Promise<Errorable<BathroomDataPrimaryFullRow>> {
+  const rateLimit = await tryEnforceServerRateLimit("bathroom-update");
+  if (!rateLimit.allowed) {
+    return { val: null, errorMsg: rateLimit.message };
+  }
+
+  try {
+    return { val: await Core.incrementRatingCount(id, stars) };
   } catch (error: unknown) {
     return {
       val: null,
@@ -64,6 +84,28 @@ export async function bathroomDbReadInBounds(
   }
 
   return Core.getInBounds(bounds);
+}
+
+export async function bathroomDbReadById(
+  id: number,
+): Promise<Errorable<BathroomDataPrimaryFullRow>> {
+  const rateLimit = await tryEnforceServerRateLimit("bathroom-read-by-id");
+  if (!rateLimit.allowed) {
+    return { val: null, errorMsg: rateLimit.message };
+  }
+
+  try {
+    const row = await Core.getById(id);
+    if (row === null) {
+      return { val: null, errorMsg: "bathroom not found" };
+    }
+    return { val: row };
+  } catch (error: unknown) {
+    return {
+      val: null,
+      errorMsg: error instanceof Error ? error.message : String(error),
+    };
+  }
 }
 
 export async function bathroomDbSyncInBounds(

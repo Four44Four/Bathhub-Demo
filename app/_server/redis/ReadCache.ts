@@ -1,13 +1,16 @@
 import "server-only";
 
 import {
+  type BathroomDataPrimaryFullRow,
   type BathroomDataPrimaryRow,
   type BathroomSyncUpsert,
 } from "../../_shared/BathroomDataPrimary";
 import { READ_CACHE_TTL_SECS } from "../ServerConstants";
 import {
+  bathroomFullRowToCachedRecord,
   bathroomRowToCachedRecord,
   bathroomSyncUpsertToCachedRecord,
+  cachedBathroomRecordToFullRow,
   nearestBathroomLocationToCachedRecord,
   parseCachedBathroomRecord,
   serializeCachedBathroomRecord,
@@ -29,6 +32,7 @@ import { getRedisPort } from "./getRedisPort";
 import { type RedisPort } from "./RedisPort";
 
 export type ReadCachePort = {
+  getBathroom(id: number): Promise<BathroomDataPrimaryFullRow | null>;
   getBathroomH3Cell(
     cell: string,
     resolution: number,
@@ -39,6 +43,7 @@ export type ReadCachePort = {
     resolution: number,
   ): Promise<void>;
   cacheBathroomRow(row: BathroomDataPrimaryRow): Promise<void>;
+  cacheBathroomFullRow(row: BathroomDataPrimaryFullRow): Promise<void>;
   cacheBathroomRows(rows: readonly BathroomDataPrimaryRow[]): Promise<void>;
   cacheBathroomSyncUpserts(rows: readonly BathroomSyncUpsert[]): Promise<void>;
   cacheNearestBathroomLocation(row: {
@@ -128,7 +133,31 @@ export function createReadCache(deps: ReadCacheDependencies): ReadCachePort {
     );
   }
 
+  async function cacheBathroomFullRow(
+    row: BathroomDataPrimaryFullRow,
+  ): Promise<void> {
+    await writeBathroomCacheEntry(
+      deps,
+      row.id,
+      serializeCachedBathroomRecord(bathroomFullRowToCachedRecord(row)),
+    );
+  }
+
   return {
+    async getBathroom(id: number) {
+      const raw = await deps.redis.getString(bathroomCacheKey(deps.config, id));
+      if (raw === null) {
+        return null;
+      }
+
+      const record = parseCachedBathroomRecord(raw);
+      if (record === null) {
+        await deps.redis.deleteKey(bathroomCacheKey(deps.config, id));
+        return null;
+      }
+
+      return cachedBathroomRecordToFullRow(record);
+    },
     async getBathroomH3Cell(cell: string, resolution: number) {
       const key = bathroomH3CellCacheKey(deps.config, cell, resolution);
       const raw = await deps.redis.getString(key);
@@ -163,6 +192,7 @@ export function createReadCache(deps: ReadCacheDependencies): ReadCachePort {
       );
     },
     cacheBathroomRow,
+    cacheBathroomFullRow,
     async cacheBathroomRows(rows: readonly BathroomDataPrimaryRow[]) {
       await Promise.all(rows.map((row) => cacheBathroomRow(row)));
     },

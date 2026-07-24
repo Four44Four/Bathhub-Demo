@@ -57,6 +57,10 @@
  - "public/hamburger_icon.svg"
  - Is mono-colored
 
+# Star icon
+ - "public/star.svg"
+ - Is mono-colored
+
 # Regular font
  - "fonts/NotoSans-Regular.ttf"
 

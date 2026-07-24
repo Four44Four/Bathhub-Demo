@@ -13,8 +13,6 @@ import {
   type ReactNode,
   type RefObject,
 } from "react";
-
-import { useAnimatedOpacity } from "../useAnimatedOpacity";
 import { addBathroomModeSwipeMenuRestoreTarget } from "../pure/viewport2d/AddBathroomModeState";
 import { viewport2dChromeHidden } from "../pure/viewport2d/FindNearestBathroomState";
 
@@ -39,7 +37,11 @@ import {
 
 import { subscribeOnTap, TAP_MAX_MOVEMENT_PX } from "../NonDragTapDetector";
 import { SwipeMenu as SwipeMenuConsts } from "../ComponentConstants";
-import { swipeMenuPageContentMinHeightPx, swipeMenuShouldOpenMainMenuOnHandleDragMove } from "../pure/swipeup/SwipeMenuPage";
+import {
+  swipeMenuPageContentMinHeightPx,
+  swipeMenuShouldOpenMainMenuOnHandleDragMove,
+  swipeMenuShouldOpenMainMenuOnSnapToExpanded,
+} from "../pure/swipeup/SwipeMenuPage";
 import {
   swipeMenuIsFullyExpanded,
   type SwipeMenuSnapTarget,
@@ -52,6 +54,8 @@ import { useRegisterSwipeMenuExpandHandler } from "./SwipeMenuExpansion";
 import { useSwipeMenuPage } from "./SwipeMenuPageContext";
 import { useAddBathroomMode } from "../viewport2d/add-bathroom-mode";
 import { useBathroomNavigationMode } from "../viewport2d/bathroom-navigation-mode";
+import { useAnimatedOpacity } from "../useAnimatedOpacity";
+import { SwipeMenuContentAnchorContext } from "./SwipeMenuContentAnchor";
 
 export type SwipeMenuViewport = {
   widthPx: number;
@@ -107,6 +111,7 @@ export function SwipeMenuShell({
   const heightPxRef = useRef(inactiveHeightPx);
   const heightAnimFrameRef = useRef<number | null>(null);
   const outsideDismissRef = useRef<HTMLDivElement>(null);
+  const contentAnchorRef = useRef<HTMLDivElement>(null);
 
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
   const [heightPx, setHeightPx] = useState(inactiveHeightPx);
@@ -403,7 +408,14 @@ export function SwipeMenuShell({
       dragMaxHeightPx,
       SwipeMenuConsts.EXPAND_SNAP_THRESHOLD_RATIO,
     );
-    if (target === "expanded") {
+    if (
+      swipeMenuShouldOpenMainMenuOnSnapToExpanded(
+        drag.startHeightPx,
+        target,
+        inactiveHeightPx,
+        dragMaxHeightPx,
+      )
+    ) {
       navigateToPage("mainMenu");
     }
     const snapped = swipeMenuSnapHeightPx(
@@ -501,7 +513,9 @@ export function SwipeMenuShell({
         <SwipeMenuViewportContext.Provider
           value={{ widthPx: viewportSize.width, heightPx: viewportSize.height }}
         >
+        <SwipeMenuContentAnchorContext.Provider value={contentAnchorRef}>
         <div
+          ref={contentAnchorRef}
           aria-hidden={!menuContentVisible}
           style={{
             height: contentHeightPx,
@@ -519,6 +533,7 @@ export function SwipeMenuShell({
         >
           {children}
         </div>
+        </SwipeMenuContentAnchorContext.Provider>
         </SwipeMenuViewportContext.Provider>
       ) : null}
     </div>

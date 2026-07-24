@@ -47,7 +47,7 @@ function BathroomMarkerClickBridge({
 
   useEffect(() => {
     onReady(() => {
-      expandToPageRef.current("testingBathroom");
+      expandToPageRef.current("bathroom");
     });
   }, [onReady]);
 
@@ -76,7 +76,7 @@ describe("bathroom marker swipe menu integration", () => {
     container.remove();
   });
 
-  test("marker callback expandToPage opens testingBathroom and expands swipe menu", () => {
+  test("marker callback expandToPage opens bathroom page and expands swipe menu", () => {
     const expandRequests: Array<string | undefined> = [];
     let onBathroomMarkerClick: (() => void) | null = null;
 
@@ -105,10 +105,10 @@ describe("bathroom marker swipe menu integration", () => {
       onBathroomMarkerClick?.();
     });
 
-    expect(expandRequests).toEqual(["testingBathroom"]);
+    expect(expandRequests).toEqual(["bathroom"]);
     expect(
       container.querySelector('[data-testid="swipe-menu-page-id"]')?.textContent,
-    ).toBe("testingBathroom");
+    ).toBe("bathroom");
   });
 
   test("useSwipeMenuPage throws when rendered outside SwipeMenuPageProvider", () => {

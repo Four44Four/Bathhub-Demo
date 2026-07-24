@@ -1,6 +1,8 @@
 import {
   createAt as bathroomDbCreate,
+  getById as bathroomDbReadById,
   getInBounds as bathroomDbReadInBounds,
+  incrementRatingCount as bathroomDbIncrementRating,
   updateVerifyStatus as bathroomDbUpdateVerifyStatus,
 } from "../app/_server/database/bathroom-data-primary/CrudCore";
 import {
@@ -274,6 +276,54 @@ describe("bathroom_data_primary CRUD against local Supabase", () => {
   test("bathroomDbReadInBounds returns empty for an out-of-bounds viewport", async () => {
     const rows = await bathroomDbReadInBounds(EMPTY_OCEAN_BOUNDS);
     expect(rows).toEqual([]);
+  });
+
+  test("bathroomDbReadById returns the full primary row including rating counts", async () => {
+    const target = created[0]?.row;
+    expect(target).toBeDefined();
+    if (target === undefined) {
+      return;
+    }
+
+    const row = await bathroomDbReadById(target.id);
+    expect(row).not.toBeNull();
+    expect(row?.id).toBe(target.id);
+    expect(row?.latitude).toBeCloseTo(target.latitude, 5);
+    expect(row?.longitude).toBeCloseTo(target.longitude, 5);
+    expect(row?.verify_status).toBe(target.verify_status);
+    expect(row?.rating_1_count).toBe(0);
+    expect(row?.rating_2_count).toBe(0);
+    expect(row?.rating_3_count).toBe(0);
+    expect(row?.rating_4_count).toBe(0);
+    expect(row?.rating_5_count).toBe(0);
+  });
+
+  test("bathroomDbReadById returns null for a missing bathroom", async () => {
+    const row = await bathroomDbReadById(9_999_999_999);
+    expect(row).toBeNull();
+  });
+
+  test("bathroomDbIncrementRating increments the matching rating column and version", async () => {
+    const target = created[0]?.row;
+    expect(target).toBeDefined();
+    if (target === undefined) {
+      return;
+    }
+
+    const updated = await bathroomDbIncrementRating(target.id, 4);
+
+    expect(updated).toMatchObject({
+      id: target.id,
+      rating_4_count: 1,
+      version: target.version + 1,
+    });
+
+    const row = await bathroomDbReadById(target.id);
+    expect(row).toMatchObject({
+      id: target.id,
+      rating_4_count: 1,
+      version: target.version + 1,
+    });
   });
 
   describe("error paths", () => {

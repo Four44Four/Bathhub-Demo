@@ -10,6 +10,7 @@ import {
   viewportButtonInteractColors,
   viewportButtonInteractColorsAtProgress,
   viewportButtonInteractColorsForBehavior,
+  viewportButtonInteractContentCssFilter,
 } from "../app/_client/pure/viewport2d/ButtonInteractColor";
 
 describe("multiplyHexColorBrightness", () => {
@@ -233,6 +234,29 @@ describe("viewportButtonInteractColors", () => {
       outlineColor: "#000000",
       textColor: "#7f7f7f",
     });
+  });
+});
+
+describe("viewportButtonInteractContentCssFilter", () => {
+  test("returns undefined at progress 0", () => {
+    expect(
+      viewportButtonInteractContentCssFilter(0, "darken", 0.7),
+    ).toBeUndefined();
+  });
+
+  test("returns brightness filter for darken behavior", () => {
+    expect(
+      viewportButtonInteractContentCssFilter(1, "darken", 0.7),
+    ).toBe("brightness(0.7)");
+    expect(
+      viewportButtonInteractContentCssFilter(0.5, "darken", 0.7),
+    ).toBe("brightness(0.85)");
+  });
+
+  test("returns undefined for invert behavior", () => {
+    expect(
+      viewportButtonInteractContentCssFilter(1, "invert", 0.7),
+    ).toBeUndefined();
   });
 });
 

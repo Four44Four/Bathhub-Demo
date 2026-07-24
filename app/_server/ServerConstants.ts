@@ -25,6 +25,9 @@ export const SERVER_RATE_LIMITS = {
   bathroomReadSync: {
     per30Seconds: { maxRequests: 100, windowSeconds: 30 },
   },
+  bathroomReadById: {
+    per30Seconds: { maxRequests: 100, windowSeconds: 30 },
+  },
   bathroomFindNearest: {
     perMinute: { maxRequests: 20, windowSeconds: 60 },
   },

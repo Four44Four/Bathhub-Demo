@@ -239,12 +239,53 @@ export const SwipeUpMainMenu = {
     MARGIN_SIDE_PX: 10,
 } as const;
 
-/** Swipe-up testing bathroom page (viewport2d testing button). */
-export const TestingBathroomPage = {
-    TEXT: "THIS IS A TESTING PAGE",
-    TEXT_FONT_SIZE_PX: 30,
-    TEXT_TOP_OFFSET_PX: 50,
-    TEXT_LINE_HEIGHT: 1.2,
+/** Dropdown menu (see specifications/components/dropdown_menu.md). */
+export const DropdownMenu = {
+    ANIMATION_DURATION_MS: 250,
+    HOVER_INTERACT_DARKENING_MULT_FACTOR: 0.7,
+    ARROW_ICON_PIXEL_SIZE: 24,
+    PADDING_PIXEL_SIZE: 10,
+    ARROW_ICON_COLOR: "#B5B5C4",
+    FILL_COLOR: "#ffffff",
+    CORNER_RADIUS: 8,
+    OUTLINE_COLOR: "#E4E4FF",
+    OUTLINE_THICKNESS: 1,
+    WIDTH_OVERRIDE: null,
+    DROP_SHADOW: null,
+    HOVER_INTERACT_BEHAVIOR: "darken",
+    ANCHOR_ELEMENT: null,
+    SUBCOMPONENTS_LIST: null,
+    ARROW_ICON_PATH: "/arrow.svg",
+} as const;
+
+/** Bathroom swipe-up page (see specifications/swipe_up_menu/bathroom_page.md). */
+export const BathroomPage = {
+    NON_VERIFIED_COLOR: "#DCA36E",
+    VERIFIED_COLOR: "#6EDCB9",
+    COMPONENTS_GAP_PX: 10,
+    RATINGS_PANEL_AVERAGE_AND_STARS_GAP_PX: 5,
+    TEXT_COLOR: "#B5B5C4",
+    BUTTON_FILL_COLOR: "#ffffff",
+    STAR_RATING_5_FILL_COLOR: "#F0E1A0",
+    STAR_RATING_4_FILL_COLOR: "#F0CFA0",
+    STAR_RATING_3_FILL_COLOR: "#F0C2A0",
+    STAR_RATING_2_FILL_COLOR: "#F0AFA0",
+    STAR_RATING_1_FILL_COLOR: "#F0A0A0",
+    STAR_RATING_UNFILL_COLOR: "#E4E4FF",
+    STAR_ICON_PATH: "/star.svg",
+    STAR_ICON_SIZE_PX: 18,
+    STAR_ICON_GAP_PX: 2,
+    RATINGS_PANEL_BUFFER_HEIGHT_PX: 10,
+    DROPDOWN_TOP_OFFSET_PX: 8,
+    RATING_COUNT_DIGIT_WIDTH_PX: 8,
+    RATING_COUNT_PADDING_PX: 4,
+    RATING_BAR_HEIGHT_PX: 12,
+    RATING_BAR_GAP_PX: 6,
+    DROP_SHADOW: SWIPE_MENU_DROP_SHADOW,
+    LOADING_SPINNER_ACCENT_COLOR: "#B5B5C4",
+    LOADING_SPINNER_BASE_COLOR: "rgba(181, 181, 196, 0.35)",
+    LOADING_SPINNER_RADIUS_PX: 20,
+    BUTTON_LOADING_SPINNER_RADIUS_PX: 9,
 } as const;
 
 export const Alerts = {

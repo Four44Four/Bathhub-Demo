@@ -30,16 +30,23 @@ type MarkerRecord = BathroomMarkerPoolRecordWithTint & {
   handle: GlobeImageHandle;
 };
 
+/** Map marker image path for a bathroom verify status. */
+export function markerImageForStatus(
+  verifyStatus: RenderedBathroomEntry["verify_status"],
+): string {
+  if (verifyStatus === "pending-deletion") {
+    return BathroomMapMarkerConsts.PENDING_DELETION_IMAGE;
+  }
+  return verifyStatus === "verified"
+    ? BathroomMapMarkerConsts.VERIFIED_IMAGE
+    : BathroomMapMarkerConsts.PENDING_IMAGE;
+}
+
 export function installBathroomMarkers(
   Cesium: typeof CesiumTypes,
   viewer: CesiumTypes.Viewer,
 ): BathroomMarkersHandle {
   const markers = new Map<number, MarkerRecord>();
-
-  const markerImageForStatus = (verifyStatus: RenderedBathroomEntry["verify_status"]) =>
-    verifyStatus === "verified"
-      ? BathroomMapMarkerConsts.VERIFIED_IMAGE
-      : BathroomMapMarkerConsts.PENDING_IMAGE;
 
   const poolSnapshot = (): Map<number, BathroomMarkerPoolRecordWithTint> =>
     new Map(

@@ -18,6 +18,11 @@ export {
   BATHROOM_EXISTENCE_VALUE_DAILY_DECAY_CRON_SCHEDULE_UTC,
   BATHROOM_EXISTENCE_VALUE_DAILY_DECAY_FACTOR,
 } from "./pure/bathroom-data-primary/DecayBathroomExistenceValue";
+export {
+  BATHROOM_DELETION_TIME_AFTER_DELETION_START_DAYS,
+  BATHROOM_EXISTENCE_VALUE_DELETION_START_THRESHOLD,
+  DELETE_EXPIRED_PENDING_DELETION_BATHROOMS_CRON_SCHEDULE_UTC,
+} from "./pure/bathroom-data-primary/DeleteExpiredPendingDeletionBathrooms";
 
 export type { RateLimitWindowConfig };
 

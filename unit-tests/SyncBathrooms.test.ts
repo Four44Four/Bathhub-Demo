@@ -12,6 +12,7 @@ describe("SyncBathrooms pure logic", () => {
       latitude: 10,
       longitude: 20,
       existence_value: 0,
+      deletion_wait_started_timestamp: null,
     },
     {
       id: 2,
@@ -19,6 +20,7 @@ describe("SyncBathrooms pure logic", () => {
       latitude: 11,
       longitude: 21,
       existence_value: 2,
+      deletion_wait_started_timestamp: null,
     },
   ];
 
@@ -35,6 +37,7 @@ describe("SyncBathrooms pure logic", () => {
           latitude: 11,
           longitude: 21,
           existence_value: 2,
+          deletion_wait_started_timestamp: null,
           version: 0,
         },
       ],
@@ -52,6 +55,7 @@ describe("SyncBathrooms pure logic", () => {
           latitude: 10,
           longitude: 20,
           existence_value: 0,
+          deletion_wait_started_timestamp: null,
           version: 2,
         },
         {
@@ -59,6 +63,7 @@ describe("SyncBathrooms pure logic", () => {
           latitude: 11,
           longitude: 21,
           existence_value: 2,
+          deletion_wait_started_timestamp: null,
           version: 0,
         },
       ],
@@ -93,6 +98,7 @@ describe("SyncBathrooms pure logic", () => {
             latitude: 1.5,
             longitude: 2.5,
             existence_value: 0,
+            deletion_wait_started_timestamp: "2026-01-01T00:00:00.000Z",
             version: 3,
           },
         ],
@@ -105,6 +111,7 @@ describe("SyncBathrooms pure logic", () => {
           latitude: 1.5,
           longitude: 2.5,
           existence_value: 0,
+          deletion_wait_started_timestamp: "2026-01-01T00:00:00.000Z",
           version: 3,
         },
       ],

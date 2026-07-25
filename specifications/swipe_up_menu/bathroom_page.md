@@ -3,6 +3,8 @@
  - #DCA36E
 ## Verified color
  - #6EDCB9
+## Pending deletion color
+ - #DB6F81
 ## Components gap pixel size
  - 10px
 ## Text color
@@ -76,12 +78,16 @@
 ## Bathroom information panel
  - Rectangular panel on the [left side of the swipe-up menu](./swipe_up_menu.md) with corner radius of [this size](#bathroom-information-panel-corner-radius) with [this background fill color](#bathroom-information-panel-background-fill-color)
  - Rectangular panel's height should be enough to fit its contents (taller if expanded) and the internal padding of the rectangular panel
- - If <bathroom-id>'s [`existence_value` column is greater than 0.0](../bathroom_db.md#table-schema):
-    - Display the [bathroom icon](../resources.md#bathroom-icon) in the horizontal center of the rectangle anchored to the top end that is expanded to fill the button's width while still maintaining aspect ratio
-    - [Bathroom icon](../resources.md#bathroom-icon) has [this color](#verified-color)
+ - If <bathroom-id>'s [`deletion_wait_started_timestamp` column] is not `NULL`:
+    - Display the [pending deletion bathroom icon](../resources.md#bathroom-icon-pending-deletion) in the horizontal center of the rectangle anchored to the top end that is expanded to fill the button's width while still maintaining aspect ratio
+    - [Bathroom icon](../resources.md#bathroom-icon) has [this color](#pending-deletion-color)
  - Else:
-    - Display the [non-verified bathroom icon](../resources.md#bathroom-icon-non-verified) in the horizontal center of the rectangle anchored to the top end that is expanded to fill the button's width while still maintaining aspect ratio
-    - [Non-verified bathroom icon](../resources.md#bathroom-icon-non-verified) has [this color](#non-verified-color)
+    - If <bathroom-id>'s [`existence_value` column](../bathroom_db.md#table-schema) is greater than 0.0:
+       - Display the [bathroom icon](../resources.md#bathroom-icon) in the horizontal center of the rectangle anchored to the top end that is expanded to fill the button's width while still maintaining aspect ratio
+       - [Bathroom icon](../resources.md#bathroom-icon) has [this color](#verified-color)
+    - Else:
+       - Display the [non-verified bathroom icon](../resources.md#bathroom-icon-non-verified) in the horizontal center of the rectangle anchored to the top end that is expanded to fill the button's width while still maintaining aspect ratio
+       - [Non-verified bathroom icon](../resources.md#bathroom-icon-non-verified) has [this color](#non-verified-color)
  - Has a vertical margin buffer under the [bathroom icon](../resources.md#bathroom-icon) of [this size](#bathroom-information-panel-icon-buffer-pixel-size)
  - At the bottom of the rectangular panel is a row of [this height](#bathroom-information-panel-arrow-row-height) which ignores the padding of the rectangular panel with a horizontally centered [arrow icon](../resources.md#arrow-icon) with the following properties:
     - Is a square of [this size](#bathroom-information-panel-arrow-icon-size)

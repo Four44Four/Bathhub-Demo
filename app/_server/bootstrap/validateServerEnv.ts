@@ -1,6 +1,8 @@
 import {
   formatEnvVarUsabilityIssuesMessage,
+  formatEnvVarUsabilityWarningsMessage,
   issuesFromMissingEnvVarNames,
+  partitionEnvVarUsabilityIssues,
 } from "../pure/EnvVarUsability.ts";
 import {
   getMissingRequiredEnvVars,
@@ -15,6 +17,7 @@ import {
 } from "./serverEnvEndpointCheckers.ts";
 
 const ANSI_RED = "\x1b[31m";
+const ANSI_ORANGE = "\x1b[38;5;208m";
 const ANSI_RESET = "\x1b[0m";
 
 export async function collectServerEnvUsabilityIssues(
@@ -65,11 +68,18 @@ export async function assertServerEnvValid(
   checkers: ServerEnvEndpointCheckers = defaultServerEnvEndpointCheckers,
 ): Promise<void> {
   const issues = await collectServerEnvUsabilityIssues(env, checkers);
-  if (issues.length === 0) {
+  const { blocking, warnings } = partitionEnvVarUsabilityIssues(issues);
+
+  if (warnings.length > 0) {
+    const warningMessage = formatEnvVarUsabilityWarningsMessage(warnings);
+    console.warn(`${ANSI_ORANGE}${warningMessage}${ANSI_RESET}`);
+  }
+
+  if (blocking.length === 0) {
     return;
   }
 
-  const message = formatEnvVarUsabilityIssuesMessage(issues);
+  const message = formatEnvVarUsabilityIssuesMessage(blocking);
   console.error(`${ANSI_RED}${message}${ANSI_RESET}`);
   throw new Error("Server environment validation failed");
 }

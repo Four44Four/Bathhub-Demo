@@ -22,19 +22,23 @@ describe("bathroomInformationLabel", () => {
 });
 
 describe("bathroomInformationPanelIconColor", () => {
-  test("uses verified and non-verified colors from the spec", () => {
+  test("uses verified, non-verified, and pending-deletion colors from the spec", () => {
     expect(bathroomInformationPanelIconColor("verified")).toBe("#6EDCB9");
     expect(bathroomInformationPanelIconColor("pending")).toBe("#DCA36E");
+    expect(bathroomInformationPanelIconColor("pending-deletion")).toBe("#DB6F81");
   });
 });
 
 describe("bathroomInformationPanelIconPath", () => {
-  test("uses verified and non-verified bathroom icons from the spec", () => {
+  test("uses verified, non-verified, and pending-deletion bathroom icons from the spec", () => {
     expect(bathroomInformationPanelIconPath("verified")).toBe(
       "/bathhub_bathroom.svg",
     );
     expect(bathroomInformationPanelIconPath("pending")).toBe(
       "/bathhub_bathroom_non_verified.svg",
+    );
+    expect(bathroomInformationPanelIconPath("pending-deletion")).toBe(
+      "/bathhub_bathroom_pending_deletion.svg",
     );
   });
 });

@@ -262,6 +262,7 @@ export const DropdownMenu = {
 export const BathroomPage = {
     NON_VERIFIED_COLOR: "#DCA36E",
     VERIFIED_COLOR: "#6EDCB9",
+    PENDING_DELETION_COLOR: "#DB6F81",
     COMPONENTS_GAP_PX: 10,
     RATINGS_PANEL_AVERAGE_AND_STARS_GAP_PX: 5,
     TEXT_COLOR: "#B5B5C4",
@@ -300,6 +301,7 @@ export const BathroomPage = {
     BATHROOM_EXISTENCE_VALUE_DELETION_START_THRESHOLD: -10.0,
     BATHROOM_ICON_PATH: "/bathhub_bathroom.svg",
     BATHROOM_NON_VERIFIED_ICON_PATH: "/bathhub_bathroom_non_verified.svg",
+    BATHROOM_PENDING_DELETION_ICON_PATH: "/bathhub_bathroom_pending_deletion.svg",
 } as const;
 
 export const Alerts = {
@@ -400,6 +402,7 @@ export const BathroomRemoteDB = {
 export const BathroomMapMarker = {
     SIZE: 50,
     PENDING_IMAGE: "/bathhub_pending_verify_bathroom_map_marker.svg",
+    PENDING_DELETION_IMAGE: "/bathhub_pending_deletion_bathroom_map_marker.svg",
     VERIFIED_IMAGE: "/bathhub_verified_bathroom_map_marker.svg",
     COLOR: "#FFF",
     OPACITY: 1.0,

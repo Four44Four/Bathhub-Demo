@@ -30,6 +30,7 @@ describe("resolveBathroomPageFetchResult", () => {
           latitude: 0,
           longitude: 0,
           existence_value: 2,
+          deletion_wait_started_timestamp: null,
           temp_data: "",
           created_at: "2026-01-01T00:00:00Z",
           version: 1,

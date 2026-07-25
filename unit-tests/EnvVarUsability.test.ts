@@ -2,10 +2,20 @@ import { classifyEndpointFailure, isHttpAuthFailureStatus } from "../app/_server
 import {
   formatEnvVarUsabilityIssueLine,
   formatEnvVarUsabilityIssuesMessage,
+  formatEnvVarUsabilityWarningsMessage,
+  isBlockingEnvVarUsabilityIssue,
   issuesFromMissingEnvVarNames,
+  partitionEnvVarUsabilityIssues,
 } from "../app/_server/pure/EnvVarUsability";
-import { REDIS_URL_ENV, SUPABASE_KEY_ENV } from "../app/_server/pure/RequiredEnvVars";
-import { collectServerEnvUsabilityIssues } from "../app/_server/bootstrap/validateServerEnv";
+import {
+  OPEN_ROUTE_SERVICE_API_KEY_ENV,
+  REDIS_URL_ENV,
+  SUPABASE_KEY_ENV,
+} from "../app/_server/pure/RequiredEnvVars";
+import {
+  assertServerEnvValid,
+  collectServerEnvUsabilityIssues,
+} from "../app/_server/bootstrap/validateServerEnv";
 import { type ServerEnvEndpointCheckers } from "../app/_server/bootstrap/serverEnvEndpointCheckers";
 
 describe("EnvVarUsability", () => {
@@ -33,6 +43,70 @@ describe("EnvVarUsability", () => {
         kind: "missing",
       }),
     ).toBe("  - SUPABASE_KEY: missing");
+  });
+
+  test("isBlockingEnvVarUsabilityIssue treats ORS unreachable as non-blocking", () => {
+    expect(
+      isBlockingEnvVarUsabilityIssue({
+        name: OPEN_ROUTE_SERVICE_API_KEY_ENV,
+        kind: "unreachable",
+        detail: "timed out",
+      }),
+    ).toBe(false);
+    expect(
+      isBlockingEnvVarUsabilityIssue({
+        name: OPEN_ROUTE_SERVICE_API_KEY_ENV,
+        kind: "unauthenticated",
+        detail: "HTTP 401",
+      }),
+    ).toBe(true);
+    expect(
+      isBlockingEnvVarUsabilityIssue({
+        name: OPEN_ROUTE_SERVICE_API_KEY_ENV,
+        kind: "missing",
+      }),
+    ).toBe(true);
+    expect(
+      isBlockingEnvVarUsabilityIssue({
+        name: REDIS_URL_ENV,
+        kind: "unreachable",
+        detail: "econnrefused",
+      }),
+    ).toBe(true);
+  });
+
+  test("partitionEnvVarUsabilityIssues separates blocking issues from warnings", () => {
+    const orsUnreachable = {
+      name: OPEN_ROUTE_SERVICE_API_KEY_ENV,
+      kind: "unreachable" as const,
+      detail: "timed out",
+    };
+    const redisUnreachable = {
+      name: REDIS_URL_ENV,
+      kind: "unreachable" as const,
+      detail: "econnrefused",
+    };
+
+    expect(
+      partitionEnvVarUsabilityIssues([orsUnreachable, redisUnreachable]),
+    ).toEqual({
+      blocking: [redisUnreachable],
+      warnings: [orsUnreachable],
+    });
+  });
+
+  test("formatEnvVarUsabilityWarningsMessage notes that startup will continue", () => {
+    expect(
+      formatEnvVarUsabilityWarningsMessage([
+        {
+          name: OPEN_ROUTE_SERVICE_API_KEY_ENV,
+          kind: "unreachable",
+          detail: "timed out",
+        },
+      ]),
+    ).toBe(
+      "Unreachable environment variables (startup will continue):\n  - OPEN_ROUTE_SERVICE_API_KEY: unreachable (timed out)",
+    );
   });
 });
 
@@ -152,5 +226,67 @@ describe("collectServerEnvUsabilityIssues", () => {
     );
 
     expect(issues).toEqual([]);
+  });
+});
+
+describe("assertServerEnvValid", () => {
+  const validEnv = {
+    OPEN_ROUTE_SERVICE_API_KEY: "ors-key",
+    SUPABASE_URL: "http://127.0.0.1:54331",
+    SUPABASE_KEY: "supabase-key",
+    REDIS_URL: "redis://127.0.0.1:6380",
+  };
+
+  test("allows startup when only ORS is unreachable", async () => {
+    const warnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
+    const errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+
+    const checkers: ServerEnvEndpointCheckers = {
+      checkOpenRouteServiceApiKey: async () => ({
+        name: OPEN_ROUTE_SERVICE_API_KEY_ENV,
+        kind: "unreachable",
+        detail: "timed out",
+      }),
+      checkSupabaseEndpoint: async () => null,
+      checkRedisEndpoint: async () => null,
+    };
+
+    await expect(assertServerEnvValid(validEnv, checkers)).resolves.toBeUndefined();
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining("Unreachable environment variables (startup will continue)"),
+    );
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining("OPEN_ROUTE_SERVICE_API_KEY: unreachable (timed out)"),
+    );
+    expect(errorSpy).not.toHaveBeenCalled();
+
+    warnSpy.mockRestore();
+    errorSpy.mockRestore();
+  });
+
+  test("still blocks startup when ORS is unauthenticated", async () => {
+    const warnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
+    const errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+
+    const checkers: ServerEnvEndpointCheckers = {
+      checkOpenRouteServiceApiKey: async () => ({
+        name: OPEN_ROUTE_SERVICE_API_KEY_ENV,
+        kind: "unauthenticated",
+        detail: "HTTP 401",
+      }),
+      checkSupabaseEndpoint: async () => null,
+      checkRedisEndpoint: async () => null,
+    };
+
+    await expect(assertServerEnvValid(validEnv, checkers)).rejects.toThrow(
+      "Server environment validation failed",
+    );
+
+    expect(warnSpy).not.toHaveBeenCalled();
+    expect(errorSpy).toHaveBeenCalled();
+
+    warnSpy.mockRestore();
+    errorSpy.mockRestore();
   });
 });

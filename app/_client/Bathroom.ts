@@ -81,6 +81,7 @@ export async function applyBathroomViewportUpsert(
     | "latitude"
     | "longitude"
     | "existence_value"
+    | "deletion_wait_started_timestamp"
     | "version"
   >,
 ): Promise<void> {

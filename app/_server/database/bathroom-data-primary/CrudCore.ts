@@ -59,6 +59,10 @@ import {
   decayAllBathroomExistenceValues,
 } from "../../pure/bathroom-data-primary/DecayBathroomExistenceValue";
 import {
+  DELETE_EXPIRED_PENDING_DELETION_BATHROOMS_RPC_NAME,
+  deleteExpiredPendingDeletionBathrooms,
+} from "../../pure/bathroom-data-primary/DeleteExpiredPendingDeletionBathrooms";
+import {
   H3_BATHROOM_CELL_RESOLUTION,
   H3_BATHROOM_MAX_BOUNDS_CACHE_CELLS,
 } from "../../ServerConstants";
@@ -136,6 +140,16 @@ export async function decayAllExistenceValues(): Promise<number> {
   return decayAllBathroomExistenceValues(async () => {
     const { data, error } = await client.rpc(
       DECAY_BATHROOM_EXISTENCE_VALUE_RPC_NAME,
+    );
+    return { data: data as number | null, error };
+  });
+}
+
+export async function deleteExpiredPendingDeletionBathroomsFromDatabase(): Promise<number> {
+  const client = getSupabaseClient();
+  return deleteExpiredPendingDeletionBathrooms(async () => {
+    const { data, error } = await client.rpc(
+      DELETE_EXPIRED_PENDING_DELETION_BATHROOMS_RPC_NAME,
     );
     return { data: data as number | null, error };
   });

@@ -28,6 +28,7 @@ const row = (
   latitude,
   longitude,
   existence_value: 0,
+  deletion_wait_started_timestamp: null,
   temp_data: `temp-${id}`,
   created_at: "2026-01-01T00:00:00.000Z",
   version,
@@ -50,6 +51,17 @@ describe("H3BoundsCache", () => {
         { cell: "bad", id: "nope" },
       ]),
     ).toEqual([{ cell: "abc", ...row(1) }]);
+  });
+
+  test("parseBathroomH3CellRpcRows preserves a non-null deletion_wait_started_timestamp", () => {
+    const pendingDeletion = {
+      ...row(7),
+      existence_value: -10,
+      deletion_wait_started_timestamp: "2026-01-01T00:00:00.000Z",
+    };
+    expect(
+      parseBathroomH3CellRpcRows([{ cell: "abc", ...pendingDeletion }]),
+    ).toEqual([{ cell: "abc", ...pendingDeletion }]);
   });
 
   test("filterBathroomH3CellRpcRowsByCanonicalCell drops ST_Intersects mismatches", () => {
@@ -137,6 +149,7 @@ describe("H3BoundsCache", () => {
           latitude: 37.36156,
           longitude: -122.05532,
           existence_value: 0,
+          deletion_wait_started_timestamp: null,
           version: 2,
         },
         {
@@ -144,6 +157,7 @@ describe("H3BoundsCache", () => {
           latitude: 37.36156,
           longitude: -122.05532,
           existence_value: 0,
+          deletion_wait_started_timestamp: null,
           version: 0,
         },
       ],

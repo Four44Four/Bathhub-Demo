@@ -34,6 +34,9 @@
 # Pending verify bathroom marker image
  - "public/bathhub_pending_verify_bathroom_map_marker.svg"
 
+# Pending deletion bathroom marker image
+ - "public/bathhub_pending_deletion_bathroom_map_marker.svg"
+
 # User location marker image
  - "public/bathhub_map_marker.svg"
  - Is mono-colored
@@ -67,6 +70,10 @@
 
 # Bathroom icon non-verified
  - "public/bathhub_bathroom_non_verified.svg"
+ - Is mono-colored
+
+# Bathroom icon pending deletion
+ - "public/bathhub_bathroom_pending_deletion.svg"
  - Is mono-colored
 
 # Regular font

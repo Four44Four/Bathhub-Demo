@@ -6,6 +6,8 @@
  - `location` as type `GEOGRAPHY`
  - `existence_value` as type `REAL NOT NULL`
      - Default value: 0.0
+ - `deletion_wait_started_timestamp` as type `TIMESTAMP`
+     - Default value: `NULL`
  - `temp_data` as type `TEXT` with restrictions -> length of exactly 64
  - `created_at` as type `TIMESTAMP`
  - `version` as type `BIGINT NOT NULL`

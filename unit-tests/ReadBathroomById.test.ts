@@ -12,6 +12,7 @@ const validRow = {
   latitude: 37.7,
   longitude: -122.4,
   existence_value: 2,
+  deletion_wait_started_timestamp: null,
   temp_data: "a".repeat(64),
   created_at: "2026-01-01T00:00:00.000Z",
   version: 2,

@@ -63,10 +63,13 @@
 # Bathroom marker
  - A 3D billboard map marker that is located on the location of a bathroom record
     - Bottom middle edge is on the point of the Globe where the bathroom is located
- - If the bathroom is verified (its `existence_value` column is greater than 0.0):
-    - It's image is the [verified bathroom marker image](./resources.md#verified-bathroom-marker-image)
+ - If the bathroom is pending deletion (its [`deletion_wait_started_timestamp` column](./bathroom_db.md#table-schema) is not `NULL`):
+    - Its image is the [pending deletion bathroom marker image](./resources.md#pending-deletion-bathroom-marker-image)
  - Else:
-    - It's image is the [pending verify bathroom marker image](./resources.md#pending-verify-bathroom-marker-image)
+    - If the bathroom is verified (its [`existence_value` column](./bathroom_db.md#table-schema) is greater than 0.0):
+       - Its image is the [verified bathroom marker image](./resources.md#verified-bathroom-marker-image)
+    - Else:
+       - Its image is the [pending verify bathroom marker image](./resources.md#pending-verify-bathroom-marker-image)
  - If the user clicks or taps on the Globe AND [the zoom level is low enough to render bathroom markers](#maximum-display-bathroom-map-markers-height) AND the user clicks or taps on the image of a [Bathroom map marker](#bathroom-marker):
     - Open that [bathroom map marker](#bathroom-marker)'s [bathroom page](./swipe_up_menu/bathroom_page.md)
 

@@ -18,6 +18,7 @@ const sampleRow = (
   latitude,
   longitude,
   existence_value: 0,
+  deletion_wait_started_timestamp: null,
   temp_data: "x",
   created_at: "2026-01-01T00:00:00.000Z",
   version: 0,

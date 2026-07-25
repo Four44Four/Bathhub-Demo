@@ -1,6 +1,7 @@
 import {
   bathroomDataPrimaryRowToViewportEntry,
   bathroomSyncUpsertToViewportEntry,
+  deriveVerifyStatusFromBathroomFields,
   deriveVerifyStatusFromExistenceValue,
 } from "../app/_shared/BathroomDataPrimary";
 
@@ -11,6 +12,14 @@ describe("BathroomDataPrimary shared helpers", () => {
     expect(deriveVerifyStatusFromExistenceValue(-1)).toBe("pending");
   });
 
+  test("deriveVerifyStatusFromBathroomFields marks pending deletion first", () => {
+    expect(
+      deriveVerifyStatusFromBathroomFields(-5, "2026-01-01T00:00:00.000Z"),
+    ).toBe("pending-deletion");
+    expect(deriveVerifyStatusFromBathroomFields(2, null)).toBe("verified");
+    expect(deriveVerifyStatusFromBathroomFields(-1, null)).toBe("pending");
+  });
+
   test("bathroomSyncUpsertToViewportEntry derives verify_status from existence_value", () => {
     expect(
       bathroomSyncUpsertToViewportEntry({
@@ -18,6 +27,7 @@ describe("BathroomDataPrimary shared helpers", () => {
         latitude: 0,
         longitude: 0,
         existence_value: 2,
+        deletion_wait_started_timestamp: null,
         version: 1,
       }),
     ).toEqual({
@@ -25,9 +35,23 @@ describe("BathroomDataPrimary shared helpers", () => {
       latitude: 0,
       longitude: 0,
       existence_value: 2,
+      deletion_wait_started_timestamp: null,
       version: 1,
       verify_status: "verified",
     });
+  });
+
+  test("bathroomSyncUpsertToViewportEntry marks pending-deletion when timestamp is set", () => {
+    expect(
+      bathroomSyncUpsertToViewportEntry({
+        id: 1,
+        latitude: 0,
+        longitude: 0,
+        existence_value: 2,
+        deletion_wait_started_timestamp: "2026-01-01T00:00:00.000Z",
+        version: 1,
+      }).verify_status,
+    ).toBe("pending-deletion");
   });
 
   test("bathroomDataPrimaryRowToViewportEntry maps row fields to viewport entry", () => {
@@ -37,6 +61,7 @@ describe("BathroomDataPrimary shared helpers", () => {
         latitude: 47.6,
         longitude: -122.3,
         existence_value: 1,
+        deletion_wait_started_timestamp: null,
         version: 4,
       }),
     ).toEqual({
@@ -44,6 +69,7 @@ describe("BathroomDataPrimary shared helpers", () => {
       latitude: 47.6,
       longitude: -122.3,
       existence_value: 1,
+      deletion_wait_started_timestamp: null,
       version: 4,
       verify_status: "verified",
     });

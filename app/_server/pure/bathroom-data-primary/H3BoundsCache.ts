@@ -92,6 +92,13 @@ export function parseBathroomH3CellRpcRows(
       latitude: row.latitude,
       longitude: row.longitude,
       existence_value: row.existence_value,
+      deletion_wait_started_timestamp:
+        row.deletion_wait_started_timestamp === undefined ||
+        row.deletion_wait_started_timestamp === null
+          ? null
+          : typeof row.deletion_wait_started_timestamp === "string"
+            ? row.deletion_wait_started_timestamp
+            : null,
       temp_data: row.temp_data,
       created_at: row.created_at,
       version: row.version,
@@ -192,6 +199,7 @@ function h3CellRpcRowToBathroomRow(
     latitude: row.latitude,
     longitude: row.longitude,
     existence_value: row.existence_value,
+    deletion_wait_started_timestamp: row.deletion_wait_started_timestamp,
     temp_data: row.temp_data,
     created_at: row.created_at,
     version: row.version,

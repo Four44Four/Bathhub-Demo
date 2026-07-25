@@ -9,7 +9,7 @@ import {
   incrementBathroomRating,
   readBathroomById,
 } from "../Bathroom";
-import { deriveVerifyStatusFromExistenceValue } from "../../_shared/BathroomDataPrimary";
+import { deriveVerifyStatusFromBathroomFields } from "../../_shared/BathroomDataPrimary";
 import {
   BathroomPage as BathroomPageConsts,
   BathroomRemoteDB,
@@ -179,6 +179,8 @@ export function BathroomPage() {
     null,
   );
   const [existenceValue, setExistenceValue] = useState<number | null>(null);
+  const [deletionWaitStartedTimestamp, setDeletionWaitStartedTimestamp] =
+    useState<string | null>(null);
   const [draftRating, setDraftRating] = useState(0);
   const [isPostingRating, setIsPostingRating] = useState(false);
   const [votingSide, setVotingSide] = useState<BathroomExistenceVoteSide | null>(
@@ -203,6 +205,7 @@ export function BathroomPage() {
       setLoadState({ status: "idle" });
       setRatingCounts(null);
       setExistenceValue(null);
+      setDeletionWaitStartedTimestamp(null);
       setDraftRating(0);
       setIsPostingRating(false);
       setVotingSide(null);
@@ -234,6 +237,7 @@ export function BathroomPage() {
         setLoadState({ status: "loaded", row: result.val });
         setRatingCounts(bathroomRatingCountsFromFullRow(result.val));
         setExistenceValue(bathroomExistenceValueFromRow(result.val));
+        setDeletionWaitStartedTimestamp(result.val.deletion_wait_started_timestamp);
         return;
       }
 
@@ -262,7 +266,10 @@ export function BathroomPage() {
   const verifyStatus =
     existenceValue === null
       ? "pending"
-      : deriveVerifyStatusFromExistenceValue(existenceValue);
+      : deriveVerifyStatusFromBathroomFields(
+          existenceValue,
+          deletionWaitStartedTimestamp,
+        );
 
   const sideMarginPx = SwipeUpMainMenuConsts.MARGIN_SIDE_PX;
   const dropdownWidthPx = bathroomPageDropdownWidthPx(widthPx, sideMarginPx);
@@ -428,6 +435,9 @@ export function BathroomPage() {
             }
 
             setExistenceValue(bathroomExistenceValueFromRow(result.val));
+            setDeletionWaitStartedTimestamp(
+              result.val.deletion_wait_started_timestamp,
+            );
             await applyBathroomViewportUpsert(result.val);
             setVotingSide(null);
           })();

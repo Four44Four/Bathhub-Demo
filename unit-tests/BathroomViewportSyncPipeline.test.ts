@@ -9,6 +9,7 @@ import {
   type BathroomSyncResponse,
   type BathroomSyncUpsert,
   type BathroomViewportEntry,
+  deriveVerifyStatusFromBathroomFields,
   deriveVerifyStatusFromExistenceValue,
 } from "../app/_shared/BathroomDataPrimary";
 
@@ -16,12 +17,18 @@ function viewportEntry(
   overrides: Partial<BathroomViewportEntry> & Pick<BathroomViewportEntry, "id">,
 ): BathroomViewportEntry {
   const existence_value = overrides.existence_value ?? 0;
+  const deletion_wait_started_timestamp =
+    overrides.deletion_wait_started_timestamp ?? null;
   return {
     latitude: 0,
     longitude: 0,
     version: 0,
     existence_value,
-    verify_status: deriveVerifyStatusFromExistenceValue(existence_value),
+    deletion_wait_started_timestamp,
+    verify_status: deriveVerifyStatusFromBathroomFields(
+      existence_value,
+      deletion_wait_started_timestamp,
+    ),
     ...overrides,
   };
 }
@@ -34,6 +41,7 @@ function syncUpsert(
     longitude: 0,
     version: 0,
     existence_value: 0,
+    deletion_wait_started_timestamp: null,
     ...overrides,
   };
 }

@@ -49,6 +49,15 @@ function isRatingCount(value: unknown): value is number {
   return isNonNegativeCount(value);
 }
 
+function parseDeletionWaitStartedTimestamp(
+  value: unknown,
+): string | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+  return typeof value === "string" ? value : null;
+}
+
 /** Parses a full bathroom row returned by {@link READ_BATHROOM_BY_ID_RPC_NAME}. */
 export function parseBathroomDataPrimaryFullRow(
   value: unknown,
@@ -80,6 +89,9 @@ export function parseBathroomDataPrimaryFullRow(
     latitude: candidate.latitude,
     longitude: candidate.longitude,
     existence_value: candidate.existence_value,
+    deletion_wait_started_timestamp: parseDeletionWaitStartedTimestamp(
+      candidate.deletion_wait_started_timestamp,
+    ),
     temp_data: candidate.temp_data,
     created_at: candidate.created_at,
     version: candidate.version,

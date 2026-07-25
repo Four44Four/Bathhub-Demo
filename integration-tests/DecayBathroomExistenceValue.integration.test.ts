@@ -159,10 +159,10 @@ describe("bathroom existence value daily decay against local Supabase", () => {
     return current;
   }
 
-  test("decay RPC multiplies every bathroom existence_value by 0.995", async () => {
+  test("decay RPC multiplies active bathroom existence_value by 0.995", async () => {
     const positive = await createFixture(-41.1, 174.2, 100);
     const zero = await createFixture(-41.2, 174.3, 0);
-    const negative = await createFixture(-41.3, 174.4, -10);
+    const pendingDeletion = await createFixture(-41.3, 174.4, -10);
 
     const existenceValuesBefore = readAllExistenceValuesFromDatabase();
     const bathroomIds = Object.keys(existenceValuesBefore).map(Number);
@@ -170,16 +170,21 @@ describe("bathroom existence value daily decay against local Supabase", () => {
     expect(bathroomIds.length).toBeGreaterThanOrEqual(3);
     expect(existenceValuesBefore[positive.id]).toBe(100);
     expect(existenceValuesBefore[zero.id]).toBe(0);
-    expect(existenceValuesBefore[negative.id]).toBe(-10);
+    expect(existenceValuesBefore[pendingDeletion.id]).toBe(-10);
 
     const updatedCount = await bathroomDbDecayAllExistenceValues();
 
-    expect(updatedCount).toBe(bathroomIds.length);
+    expect(updatedCount).toBeGreaterThanOrEqual(2);
 
     const existenceValuesAfter = readAllExistenceValuesFromDatabase();
     expect(Object.keys(existenceValuesAfter).length).toBe(bathroomIds.length);
 
     for (const id of bathroomIds) {
+      if (id === pendingDeletion.id) {
+        expect(existenceValuesAfter[id]).toBe(-10);
+        continue;
+      }
+
       expect(existenceValuesAfter[id]).toBeCloseTo(
         decayBathroomExistenceValue(existenceValuesBefore[id]),
         5,

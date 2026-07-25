@@ -17,6 +17,7 @@ export type BathroomRemoteRowSummary = {
   latitude: number;
   longitude: number;
   existence_value: number;
+  deletion_wait_started_timestamp: string | null;
 };
 
 export type SyncBathroomRpcParams = {
@@ -56,6 +57,13 @@ function isExistenceValue(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);
 }
 
+function parseDeletionWaitStartedTimestamp(value: unknown): string | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+  return typeof value === "string" ? value : null;
+}
+
 function parseSyncUpsert(item: unknown): BathroomSyncUpsert | null {
   if (item === null || typeof item !== "object") {
     return null;
@@ -77,6 +85,9 @@ function parseSyncUpsert(item: unknown): BathroomSyncUpsert | null {
     latitude: row.latitude,
     longitude: row.longitude,
     existence_value: row.existence_value,
+    deletion_wait_started_timestamp: parseDeletionWaitStartedTimestamp(
+      row.deletion_wait_started_timestamp,
+    ),
     version: row.version,
   };
 }
@@ -100,6 +111,7 @@ export function computeBathroomSyncDiff(
         latitude: row.latitude,
         longitude: row.longitude,
         existence_value: row.existence_value,
+        deletion_wait_started_timestamp: row.deletion_wait_started_timestamp,
         version: row.version,
       });
     }

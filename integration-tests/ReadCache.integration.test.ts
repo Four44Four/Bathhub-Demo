@@ -264,8 +264,52 @@ describe("Redis-backed serverside read cache", () => {
       existence_value: row.existence_value + 1,
       version: row.version + 1,
       verify_status: "verified",
+      deletion_wait_started_timestamp: null,
     });
     expect(await redis.getString(h3Key)).toBeNull();
+  });
+
+  test("getById preserves a non-null deletion_wait_started_timestamp across a Redis round trip", async () => {
+    const row = await bathroomDbCreate(-6.288, -11.388);
+    createdBathroomIds.push(row.id);
+
+    let current = row;
+    for (let vote = 0; vote < 10; vote += 1) {
+      current = await bathroomDbIncrementExistenceVote(current.id, "not_exists");
+    }
+    expect(current.existence_value).toBe(-10);
+    expect(current.deletion_wait_started_timestamp).not.toBeNull();
+
+    const redis = getRedisPort();
+    const bathroomKey = buildReadCacheKey(
+      resolveReadCacheNamespace(process.env.NODE_ENV),
+      READ_CACHE_TABLE_BATHROOM_DATA_PRIMARY,
+      row.id,
+    );
+    const cached = parseCachedBathroomRecord((await redis.getString(bathroomKey))!);
+    expect(cached).toMatchObject({
+      id: row.id,
+      existence_value: -10,
+      verify_status: "pending-deletion",
+      deletion_wait_started_timestamp: current.deletion_wait_started_timestamp,
+    });
+
+    const { url, serviceRoleKey } = requireLocalSupabaseAdminEnv();
+    const { error } = await createClient(url, serviceRoleKey)
+      .from("bathroom_data_primary")
+      .delete()
+      .eq("id", row.id);
+    if (error !== null) {
+      throw new Error(`Failed to delete pending-deletion fixture: ${error.message}`);
+    }
+    untrackCreatedBathroom(row.id);
+
+    const fromCache = await bathroomDbReadById(row.id);
+    expect(fromCache).toMatchObject({
+      id: row.id,
+      existence_value: -10,
+      deletion_wait_started_timestamp: current.deletion_wait_started_timestamp,
+    });
   });
 
   test("removeBathroom deletes cached entries and invalidates H3 cell entries", async () => {

@@ -1,5 +1,7 @@
 import {
+  bathroomFullRowToCachedRecord,
   bathroomRowToCachedRecord,
+  cachedBathroomRecordToFullRow,
   nearestBathroomLocationToCachedRecord,
   parseCachedBathroomRecord,
   serializeCachedBathroomRecord,
@@ -70,6 +72,7 @@ describe("CachedBathroomRecord", () => {
     latitude: 40.7,
     longitude: -74.0,
     existence_value: 2,
+    deletion_wait_started_timestamp: null,
     temp_data: "x",
     created_at: "2026-01-01T00:00:00Z",
     version: 2,
@@ -82,6 +85,52 @@ describe("CachedBathroomRecord", () => {
     expect(parseCachedBathroomRecord(serialized)).toEqual(
       bathroomRowToCachedRecord(sampleRow),
     );
+  });
+
+  test("round-trips a non-null deletion_wait_started_timestamp through Redis cache records", () => {
+    const pendingDeletionRow = {
+      ...sampleRow,
+      existence_value: -10,
+      deletion_wait_started_timestamp: "2026-01-01T00:00:00.000Z",
+      rating_1_count: 0,
+      rating_2_count: 0,
+      rating_3_count: 0,
+      rating_4_count: 0,
+      rating_5_count: 0,
+    };
+    const cached = bathroomFullRowToCachedRecord(pendingDeletionRow);
+    expect(cached.verify_status).toBe("pending-deletion");
+    expect(cached.deletion_wait_started_timestamp).toBe(
+      "2026-01-01T00:00:00.000Z",
+    );
+
+    const roundTripped = cachedBathroomRecordToFullRow(
+      parseCachedBathroomRecord(serializeCachedBathroomRecord(cached))!,
+    );
+    expect(roundTripped).toEqual(pendingDeletionRow);
+  });
+
+  test("treats a missing deletion_wait_started_timestamp field as null", () => {
+    const legacyPayload = JSON.stringify({
+      id: 9,
+      latitude: 40.7,
+      longitude: -74.0,
+      verify_status: "verified",
+      version: 2,
+      temp_data: "x",
+      created_at: "2026-01-01T00:00:00Z",
+      existence_value: 2,
+      rating_1_count: 0,
+      rating_2_count: 0,
+      rating_3_count: 0,
+      rating_4_count: 0,
+      rating_5_count: 0,
+    });
+    const parsed = parseCachedBathroomRecord(legacyPayload);
+    expect(parsed?.deletion_wait_started_timestamp).toBeNull();
+    expect(cachedBathroomRecordToFullRow(parsed!)).toMatchObject({
+      deletion_wait_started_timestamp: null,
+    });
   });
 
   test("parseCachedBathroomRecord rejects malformed payloads", () => {
@@ -105,6 +154,7 @@ describe("CachedBathroomRecord", () => {
       temp_data: "",
       created_at: "",
       existence_value: 0,
+      deletion_wait_started_timestamp: null,
     });
   });
 });
@@ -115,6 +165,7 @@ describe("CachedBathroomH3CellRecord", () => {
     latitude: 40.7,
     longitude: -74.0,
     existence_value: 2,
+    deletion_wait_started_timestamp: null,
     temp_data: "x",
     created_at: "2026-01-01T00:00:00Z",
     version: 2,
@@ -213,6 +264,7 @@ describe("createReadCache", () => {
     latitude: 40.7,
     longitude: -74,
     existence_value: 2,
+    deletion_wait_started_timestamp: null,
     temp_data: "",
     created_at: "2026-01-01T00:00:00Z",
     version: 2,

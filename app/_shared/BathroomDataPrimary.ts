@@ -1,4 +1,4 @@
-export type VerifyStatus = "pending" | "verified";
+export type VerifyStatus = "pending" | "verified" | "pending-deletion";
 
 export type LatLong = {
   latitude: number;
@@ -15,6 +15,7 @@ export type BathroomDataPrimaryRow = {
   latitude: number;
   longitude: number;
   existence_value: number;
+  deletion_wait_started_timestamp: string | null;
   temp_data: string;
   created_at: string;
   version: number;
@@ -41,6 +42,7 @@ export type BathroomSyncUpsert = {
   latitude: number;
   longitude: number;
   existence_value: number;
+  deletion_wait_started_timestamp: string | null;
   version: number;
 };
 
@@ -58,6 +60,13 @@ export type BathroomViewportEntry = BathroomSyncUpsert & {
 export const BATHROOM_LOCAL_CACHE_TABLE_NAME =
   "bathroom_data_primary_cache" as const;
 
+/** Whether a bathroom is in the pending-deletion wait period. */
+export function isBathroomPendingDeletion(
+  deletionWaitStartedTimestamp: string | null | undefined,
+): boolean {
+  return deletionWaitStartedTimestamp != null;
+}
+
 /** Derives marker/cache verify status from existence_value. */
 export function deriveVerifyStatusFromExistenceValue(
   existenceValue: number,
@@ -65,12 +74,26 @@ export function deriveVerifyStatusFromExistenceValue(
   return existenceValue > 0.0 ? "verified" : "pending";
 }
 
+/** Derives marker/panel status from existence_value and deletion wait timestamp. */
+export function deriveVerifyStatusFromBathroomFields(
+  existenceValue: number,
+  deletionWaitStartedTimestamp?: string | null,
+): VerifyStatus {
+  if (isBathroomPendingDeletion(deletionWaitStartedTimestamp)) {
+    return "pending-deletion";
+  }
+  return deriveVerifyStatusFromExistenceValue(existenceValue);
+}
+
 export function bathroomSyncUpsertToViewportEntry(
   upsert: BathroomSyncUpsert,
 ): BathroomViewportEntry {
   return {
     ...upsert,
-    verify_status: deriveVerifyStatusFromExistenceValue(upsert.existence_value),
+    verify_status: deriveVerifyStatusFromBathroomFields(
+      upsert.existence_value,
+      upsert.deletion_wait_started_timestamp,
+    ),
   };
 }
 
@@ -78,7 +101,12 @@ export function bathroomSyncUpsertToViewportEntry(
 export function bathroomDataPrimaryRowToViewportEntry(
   row: Pick<
     BathroomDataPrimaryRow,
-    "id" | "latitude" | "longitude" | "existence_value" | "version"
+    | "id"
+    | "latitude"
+    | "longitude"
+    | "existence_value"
+    | "deletion_wait_started_timestamp"
+    | "version"
   >,
 ): BathroomViewportEntry {
   return bathroomSyncUpsertToViewportEntry({
@@ -86,6 +114,7 @@ export function bathroomDataPrimaryRowToViewportEntry(
     latitude: row.latitude,
     longitude: row.longitude,
     existence_value: row.existence_value,
+    deletion_wait_started_timestamp: row.deletion_wait_started_timestamp,
     version: row.version,
   });
 }

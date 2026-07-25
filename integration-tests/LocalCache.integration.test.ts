@@ -329,6 +329,77 @@ describe("bathroom local SQLite cache sync against local Supabase", () => {
     expect(isLocalCacheSchemaReady(tableNames, cacheColumns)).toBe(true);
   });
 
+  test("init upgrades a legacy cache DB that lacks deletion_wait_started_timestamp", async () => {
+    const sqlite3 = await loadSqliteWasmModule();
+    const legacyDb = new sqlite3.oo1.DB(":memory:");
+    legacyDb.exec(`
+      PRAGMA journal_mode=WAL;
+      CREATE TABLE gpkg_spatial_ref_sys (
+        srs_name TEXT NOT NULL,
+        srs_id INTEGER NOT NULL PRIMARY KEY,
+        organization TEXT NOT NULL,
+        organization_coordsys_id INTEGER NOT NULL,
+        definition TEXT NOT NULL,
+        description TEXT
+      );
+      CREATE TABLE gpkg_contents (
+        table_name TEXT NOT NULL PRIMARY KEY,
+        data_type TEXT NOT NULL,
+        identifier TEXT UNIQUE,
+        description TEXT DEFAULT '',
+        last_change DATETIME NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+        min_x DOUBLE,
+        min_y DOUBLE,
+        max_x DOUBLE,
+        max_y DOUBLE,
+        srs_id INTEGER
+      );
+      CREATE TABLE gpkg_geometry_columns (
+        table_name TEXT NOT NULL,
+        column_name TEXT NOT NULL,
+        geometry_type_name TEXT NOT NULL,
+        srs_id INTEGER NOT NULL,
+        z TINYINT NOT NULL,
+        m TINYINT NOT NULL,
+        CONSTRAINT pk_geom_cols PRIMARY KEY (table_name, column_name)
+      );
+      CREATE TABLE ${BATHROOM_LOCAL_CACHE_TABLE_NAME} (
+        remote_id INTEGER PRIMARY KEY NOT NULL,
+        location BLOB NOT NULL,
+        version INTEGER NOT NULL,
+        exists_value REAL NOT NULL,
+        updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+      );
+      CREATE VIRTUAL TABLE rtree_${BATHROOM_LOCAL_CACHE_TABLE_NAME}_location USING rtree (
+        remote_id,
+        min_x, max_x,
+        min_y, max_y
+      );
+    `);
+    const legacyColumns = legacyDb
+      .selectObjects(
+        `SELECT name FROM pragma_table_info('${BATHROOM_LOCAL_CACHE_TABLE_NAME}')`,
+      )
+      .map((row) => row.name);
+    expect(legacyColumns).not.toContain("deletion_wait_started_timestamp");
+
+    const legacyBytes = sqlite3.capi.sqlite3_js_db_export(legacyDb);
+    const upgradedDb = createBathroomLocalDbSqlite({
+      cacheExpirationSecs: BathroomLocalDB.CACHE_EXPIRATION_SECS,
+      initSqliteWasm: loadSqliteWasmModule,
+      hydrateFromBytes: async () => legacyBytes,
+    });
+    await upgradedDb.init();
+
+    const db = await upgradedDb.getSqliteDbForTests();
+    const upgradedColumns = db
+      .selectObjects(
+        `SELECT name FROM pragma_table_info('${BATHROOM_LOCAL_CACHE_TABLE_NAME}')`,
+      )
+      .map((row) => row.name);
+    expect(upgradedColumns).toContain("deletion_wait_started_timestamp");
+  });
+
   test("viewport sync hydrates empty SQLite cache from server upserts using seeded coords", async () => {
     const row = findSeededRow(
       seededRows,
@@ -791,6 +862,7 @@ describe("bathroom viewport sync runtime integration", () => {
                   latitude: cachedEntry.latitude,
                   longitude: cachedEntry.longitude,
                   existence_value: 2,
+                  deletion_wait_started_timestamp: null,
                   version: 2,
                 },
               ],
@@ -968,5 +1040,31 @@ describe("bathroom marker renderer integration", () => {
     markerHandle.clear();
     expect(harness.entities).toHaveLength(0);
     expect(harness.requestRender).toHaveBeenCalled();
+  });
+
+  test("installBathroomMarkers uses the pending-deletion marker image", () => {
+    const harness = createBathroomMarkerHarness();
+    const markerHandle = installBathroomMarkers(harness.Cesium, harness.viewer);
+
+    markerHandle.sync(
+      markerSyncContext([
+        {
+          ...viewportEntry({
+            id: 9,
+            latitude: 47.61,
+            longitude: -122.34,
+            existence_value: -10,
+            deletion_wait_started_timestamp: "2026-01-01T00:00:00.000Z",
+            version: 1,
+          }),
+          loadedFromCache: true,
+        },
+      ]),
+    );
+
+    expect(harness.entities).toHaveLength(1);
+    expect(harness.entities[0]?.billboard?.image).toBe(
+      BathroomMapMarker.PENDING_DELETION_IMAGE,
+    );
   });
 });

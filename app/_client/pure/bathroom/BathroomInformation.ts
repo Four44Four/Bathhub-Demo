@@ -116,6 +116,9 @@ export function bathroomInformationLabel(
 export function bathroomInformationPanelIconColor(
   verifyStatus: VerifyStatus,
 ): string {
+  if (verifyStatus === "pending-deletion") {
+    return BathroomPageConsts.PENDING_DELETION_COLOR;
+  }
   return verifyStatus === "verified"
     ? BathroomPageConsts.VERIFIED_COLOR
     : BathroomPageConsts.NON_VERIFIED_COLOR;
@@ -125,6 +128,9 @@ export function bathroomInformationPanelIconColor(
 export function bathroomInformationPanelIconPath(
   verifyStatus: VerifyStatus,
 ): string {
+  if (verifyStatus === "pending-deletion") {
+    return BathroomPageConsts.BATHROOM_PENDING_DELETION_ICON_PATH;
+  }
   return verifyStatus === "verified"
     ? BathroomPageConsts.BATHROOM_ICON_PATH
     : BathroomPageConsts.BATHROOM_NON_VERIFIED_ICON_PATH;

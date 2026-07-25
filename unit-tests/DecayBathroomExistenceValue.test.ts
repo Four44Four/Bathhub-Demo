@@ -67,7 +67,7 @@ describe("decayAllBathroomExistenceValues", () => {
   test("throws a formatted error for invalid RPC payloads", async () => {
     await expect(
       decayAllBathroomExistenceValues(async () => ({
-        data: "4",
+        data: "4" as unknown as number,
         error: null,
       })),
     ).rejects.toThrow(

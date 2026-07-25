@@ -3,7 +3,7 @@ import {
   type BathroomDataPrimaryRow,
   type BathroomSyncUpsert,
   type VerifyStatus,
-  deriveVerifyStatusFromExistenceValue,
+  deriveVerifyStatusFromBathroomFields,
 } from "../../../_shared/BathroomDataPrimary";
 
 export type CachedBathroomRecord = {
@@ -15,6 +15,7 @@ export type CachedBathroomRecord = {
   temp_data: string;
   created_at: string;
   existence_value?: number;
+  deletion_wait_started_timestamp?: string | null;
   rating_1_count?: number;
   rating_2_count?: number;
   rating_3_count?: number;
@@ -23,9 +24,15 @@ export type CachedBathroomRecord = {
 };
 
 function verifyStatusFromRow(
-  row: Pick<BathroomDataPrimaryRow, "existence_value">,
+  row: Pick<
+    BathroomDataPrimaryRow,
+    "existence_value" | "deletion_wait_started_timestamp"
+  >,
 ): VerifyStatus {
-  return deriveVerifyStatusFromExistenceValue(row.existence_value);
+  return deriveVerifyStatusFromBathroomFields(
+    row.existence_value,
+    row.deletion_wait_started_timestamp,
+  );
 }
 
 function isExistenceValue(value: unknown): value is number {
@@ -34,6 +41,15 @@ function isExistenceValue(value: unknown): value is number {
 
 function isNonNegativeCount(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value) && value >= 0;
+}
+
+function parseDeletionWaitStartedTimestamp(
+  value: unknown,
+): string | null {
+  if (value === undefined || value === null) {
+    return null;
+  }
+  return typeof value === "string" ? value : null;
 }
 
 export function parseBathroomDataPrimaryRowFromCache(
@@ -61,6 +77,9 @@ export function parseBathroomDataPrimaryRowFromCache(
     latitude: candidate.latitude,
     longitude: candidate.longitude,
     existence_value: candidate.existence_value,
+    deletion_wait_started_timestamp: parseDeletionWaitStartedTimestamp(
+      candidate.deletion_wait_started_timestamp,
+    ),
     temp_data: candidate.temp_data,
     created_at: candidate.created_at,
     version: candidate.version,
@@ -79,6 +98,7 @@ export function bathroomFullRowToCachedRecord(
     temp_data: row.temp_data,
     created_at: row.created_at,
     existence_value: row.existence_value,
+    deletion_wait_started_timestamp: row.deletion_wait_started_timestamp,
     rating_1_count: row.rating_1_count,
     rating_2_count: row.rating_2_count,
     rating_3_count: row.rating_3_count,
@@ -106,6 +126,9 @@ export function cachedBathroomRecordToFullRow(
     latitude: record.latitude,
     longitude: record.longitude,
     existence_value: record.existence_value,
+    deletion_wait_started_timestamp: parseDeletionWaitStartedTimestamp(
+      record.deletion_wait_started_timestamp,
+    ),
     temp_data: record.temp_data,
     created_at: record.created_at,
     version: record.version,
@@ -129,6 +152,7 @@ export function bathroomRowToCachedRecord(
     temp_data: row.temp_data,
     created_at: row.created_at,
     existence_value: row.existence_value,
+    deletion_wait_started_timestamp: row.deletion_wait_started_timestamp,
   };
 }
 
@@ -145,6 +169,7 @@ export function bathroomSyncUpsertToCachedRecord(
     temp_data: existing?.temp_data ?? "",
     created_at: existing?.created_at ?? "",
     existence_value: row.existence_value,
+    deletion_wait_started_timestamp: row.deletion_wait_started_timestamp,
   };
 }
 
@@ -162,6 +187,7 @@ export function nearestBathroomLocationToCachedRecord(row: {
     temp_data: "",
     created_at: "",
     existence_value: 0,
+    deletion_wait_started_timestamp: null,
   };
 }
 
@@ -191,7 +217,8 @@ export function parseCachedBathroomRecord(
     typeof candidate.latitude !== "number" ||
     typeof candidate.longitude !== "number" ||
     (candidate.verify_status !== "pending" &&
-      candidate.verify_status !== "verified") ||
+      candidate.verify_status !== "verified" &&
+      candidate.verify_status !== "pending-deletion") ||
     typeof candidate.version !== "number" ||
     typeof candidate.temp_data !== "string" ||
     typeof candidate.created_at !== "string"
@@ -202,6 +229,14 @@ export function parseCachedBathroomRecord(
   if (
     candidate.existence_value !== undefined &&
     !isExistenceValue(candidate.existence_value)
+  ) {
+    return null;
+  }
+
+  if (
+    candidate.deletion_wait_started_timestamp !== undefined &&
+    candidate.deletion_wait_started_timestamp !== null &&
+    typeof candidate.deletion_wait_started_timestamp !== "string"
   ) {
     return null;
   }
@@ -229,6 +264,9 @@ export function parseCachedBathroomRecord(
     temp_data: candidate.temp_data,
     created_at: candidate.created_at,
     existence_value: candidate.existence_value,
+    deletion_wait_started_timestamp: parseDeletionWaitStartedTimestamp(
+      candidate.deletion_wait_started_timestamp,
+    ),
     ...optionalRatingCounts,
   };
 }

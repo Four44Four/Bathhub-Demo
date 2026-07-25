@@ -14,15 +14,16 @@ const NON_RERUNNABLE_MIGRATION_FILENAMES = new Set([
   "20260717000000_bathroom_data_primary_existence_votes.sql",
   "20260718000000_bathroom_data_primary_increment_existence_vote_rpc.sql",
 ]);
-const EXPECTED_LATEST_SCHEMA_VERSION = 17;
+const EXPECTED_LATEST_SCHEMA_VERSION = 22;
 const EXPECTED_RATING_COLUMNS = 5;
-const EXPECTED_RPC_COUNT = 9;
+const EXPECTED_RPC_COUNT = 10;
 
 type ServerSchemaState = {
   schemaVersionRows: number;
   schemaVersion: number;
   ratingColumnCount: number;
   existenceVoteColumnCount: number;
+  deletionWaitColumnCount: number;
   verifyStatusColumnCount: number;
   rpcCount: number;
 };
@@ -99,6 +100,14 @@ function readServerSchemaState(databaseUrl: string): ServerSchemaState {
             AND table_name = 'bathroom_data_primary'
             AND column_name = 'existence_value'
         ),
+      'deletionWaitColumnCount',
+        (
+          SELECT COUNT(*)
+          FROM information_schema.columns
+          WHERE table_schema = 'public'
+            AND table_name = 'bathroom_data_primary'
+            AND column_name = 'deletion_wait_started_timestamp'
+        ),
       'verifyStatusColumnCount',
         (
           SELECT COUNT(*)
@@ -123,7 +132,8 @@ function readServerSchemaState(databaseUrl: string): ServerSchemaState {
               'get_bathroom_data_primary_by_id',
               'increment_bathroom_data_primary_rating_count',
               'increment_bathroom_data_primary_existence_vote_count',
-              'decay_bathroom_data_primary_existence_value'
+              'decay_bathroom_data_primary_existence_value',
+              'delete_expired_pending_deletion_bathrooms'
             )
         )
     )::text;
@@ -156,6 +166,11 @@ describe("server PostgreSQL migration reruns", () => {
       "20260716000000_bathroom_nearest_rpc_min_rating.sql",
       "20260725000000_bathroom_data_primary_existence_value.sql",
       "20260726000000_bathroom_data_primary_existence_value_decay.sql",
+      "20260726500000_bathroom_data_primary_deletion_wait_started_timestamp.sql",
+      "20260727000000_bathroom_data_primary_deletion_wait.sql",
+      "20260728000000_bathroom_data_primary_pending_deletion_reading.sql",
+      "20260729000000_bathroom_data_primary_read_rpcs_deletion_wait.sql",
+      "20260730000000_bathroom_data_primary_vote_against_deletion_wait_noop.sql",
     ]);
 
     const before = readServerSchemaState(databaseUrl);
@@ -164,6 +179,7 @@ describe("server PostgreSQL migration reruns", () => {
       schemaVersion: EXPECTED_LATEST_SCHEMA_VERSION,
       ratingColumnCount: EXPECTED_RATING_COLUMNS,
       existenceVoteColumnCount: 1,
+      deletionWaitColumnCount: 1,
       verifyStatusColumnCount: 0,
       rpcCount: EXPECTED_RPC_COUNT,
     });
@@ -172,5 +188,58 @@ describe("server PostgreSQL migration reruns", () => {
     rerunMigrations(databaseUrl, migrationPaths);
 
     expect(readServerSchemaState(databaseUrl)).toEqual(before);
+  });
+
+  test("read and create RPCs expose deletion_wait_started_timestamp", () => {
+    const databaseUrl = requireLocalPostgresUrl();
+    const tableReturningRpcs = [
+      "create_bathroom_data_primary_at",
+      "get_bathroom_data_primary_in_bbox",
+      "get_bathroom_data_primary_in_h3_cell_polygons",
+      "get_bathroom_data_primary_by_id",
+    ] as const;
+
+    const resultSignaturesRaw = runPsql(databaseUrl, [
+      "--tuples-only",
+      "--no-align",
+      "--command",
+      `
+        SELECT COALESCE(
+          json_object_agg(proname, pg_get_function_result(procedure.oid)),
+          '{}'::json
+        )::text
+        FROM pg_proc AS procedure
+        JOIN pg_namespace AS namespace
+          ON namespace.oid = procedure.pronamespace
+        WHERE namespace.nspname = 'public'
+          AND procedure.proname IN (
+            ${tableReturningRpcs.map((name) => `'${name}'`).join(", ")}
+          );
+      `,
+    ]).trim();
+    const resultSignatures = JSON.parse(resultSignaturesRaw) as Record<
+      string,
+      string
+    >;
+
+    expect(Object.keys(resultSignatures).sort()).toEqual([...tableReturningRpcs].sort());
+    for (const resultSignature of Object.values(resultSignatures)) {
+      expect(resultSignature).toContain("deletion_wait_started_timestamp");
+    }
+
+    const syncDefinition = runPsql(databaseUrl, [
+      "--tuples-only",
+      "--no-align",
+      "--command",
+      `
+        SELECT pg_get_functiondef(procedure.oid)
+        FROM pg_proc AS procedure
+        JOIN pg_namespace AS namespace
+          ON namespace.oid = procedure.pronamespace
+        WHERE namespace.nspname = 'public'
+          AND procedure.proname = 'sync_bathroom_data_primary_in_bbox';
+      `,
+    ]);
+    expect(syncDefinition).toContain("deletion_wait_started_timestamp");
   });
 });

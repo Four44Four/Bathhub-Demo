@@ -15,6 +15,7 @@ const sampleRow: BathroomDataPrimaryRow = {
   latitude: 45.5,
   longitude: -73.6,
   existence_value: 0,
+  deletion_wait_started_timestamp: null,
   temp_data: "abc123",
   created_at: "2026-06-09T00:00:00.000Z",
   version: 0,

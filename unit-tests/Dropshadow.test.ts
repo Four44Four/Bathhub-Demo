@@ -1,6 +1,7 @@
 import {
   DROPSHADOW_DEFAULT_COLOR,
   dropshadowToBoxShadowCss,
+  dropshadowVisibleOverflowPaddingPx,
   SWIPE_MENU_DROP_SHADOW,
 } from "../app/_client/pure/Dropshadow";
 
@@ -27,5 +28,22 @@ describe("dropshadowToBoxShadowCss", () => {
         color: "rgba(1, 2, 3, 0.5)",
       }),
     ).toBe("4px 6px 10px 2px rgba(1, 2, 3, 0.5)");
+  });
+});
+
+describe("dropshadowVisibleOverflowPaddingPx", () => {
+  test("reserves enough space for swipe-menu drop shadows", () => {
+    expect(dropshadowVisibleOverflowPaddingPx(SWIPE_MENU_DROP_SHADOW)).toBe(10);
+  });
+
+  test("uses the largest offset, blur, and spread contribution", () => {
+    expect(
+      dropshadowVisibleOverflowPaddingPx({
+        offsetX: 4,
+        offsetY: 6,
+        blurRadius: 10,
+        spreadRadius: 2,
+      }),
+    ).toBe(18);
   });
 });

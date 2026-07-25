@@ -61,6 +61,19 @@ export function bathroomPageDropdownLayout(menuWidthPx: number): {
   };
 }
 
+/** Width for the bathroom information panel on the left side of the swipe-up menu. */
+export function bathroomPageInformationPanelWidthPx(
+  menuWidthPx: number,
+  sideMarginPx: number,
+): number {
+  return bathroomPageDropdownWidthPx(menuWidthPx, sideMarginPx);
+}
+
+/** X offset for the bathroom information panel on the left side of the swipe-up menu. */
+export function bathroomPageInformationPanelXPx(sideMarginPx: number): number {
+  return sideMarginPx;
+}
+
 /** True when the swipe-up menu just transitioned into collapsed mode. */
 export function swipeMenuJustCollapsed(
   previousMenuWasOpenAboveCollapsed: boolean,

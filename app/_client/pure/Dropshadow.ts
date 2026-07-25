@@ -30,3 +30,14 @@ export function dropshadowToBoxShadowCss(descriptor: DropshadowDescriptor): stri
   const color = descriptor.color ?? DROPSHADOW_DEFAULT_COLOR;
   return `${offsetX}px ${offsetY}px ${blurRadius}px ${spreadRadius}px ${color}`;
 }
+
+/** Padding needed so a box-shadow is not clipped by overflow containers. */
+export function dropshadowVisibleOverflowPaddingPx(
+  descriptor: DropshadowDescriptor,
+): number {
+  const offsetX = Math.abs(descriptor.offsetX ?? DROPSHADOW_DEFAULT_OFFSET_X);
+  const offsetY = Math.abs(descriptor.offsetY ?? DROPSHADOW_DEFAULT_OFFSET_Y);
+  const blurRadius = descriptor.blurRadius ?? DROPSHADOW_DEFAULT_BLUR_RADIUS;
+  const spreadRadius = descriptor.spreadRadius ?? DROPSHADOW_DEFAULT_SPREAD_RADIUS;
+  return Math.ceil(Math.max(offsetX, offsetY) + blurRadius + spreadRadius);
+}

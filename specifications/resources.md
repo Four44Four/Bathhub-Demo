@@ -61,6 +61,14 @@
  - "public/star.svg"
  - Is mono-colored
 
+# Bathroom icon
+ - "public/bathhub_bathroom.svg"
+ - Is mono-colored
+
+# Bathroom icon non-verified
+ - "public/bathhub_bathroom_non_verified.svg"
+ - Is mono-colored
+
 # Regular font
  - "fonts/NotoSans-Regular.ttf"
 

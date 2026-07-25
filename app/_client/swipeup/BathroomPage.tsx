@@ -22,11 +22,7 @@ import {
   bathroomTotalRatingCount,
   type BathroomRatingCounts,
 } from "../pure/bathroom/BathroomRating";
-import { bathroomInformationLabel } from "../pure/bathroom/BathroomInformation";
-import {
-  bathroomPageDropdownWidthPx,
-  bathroomPageDropdownXPx,
-} from "../pure/dropdown-menu/DropdownMenuLayout";
+import { bathroomPageDropdownWidthPx, bathroomPageDropdownXPx } from "../pure/dropdown-menu/DropdownMenuLayout";
 import {
   bathroomPageFetchFailureAlertMessage,
   promiseWithTimeout,
@@ -34,6 +30,8 @@ import {
 } from "../pure/swipeup/BathroomPageFetchState";
 import {
   bathroomPageDraftRatingAfterSwipeMenuTransition,
+  bathroomPageInformationPanelWidthPx,
+  bathroomPageInformationPanelXPx,
   bathroomPageLoadingSpinnerCenterPx,
 } from "../pure/swipeup/BathroomPageLayout";
 import { swipeMenuIsOpenAboveCollapsed } from "../pure/swipeup/SwipeMenu";
@@ -51,6 +49,7 @@ import { DropdownMenu } from "../viewport2d/DropdownMenu";
 import { useAlertSystem } from "../viewport2d/AlertSystem";
 import { LoadingSpinner } from "../viewport2d/LoadingSpinner";
 import { RatingBar } from "./RatingBar";
+import { BathroomInformationPanel } from "./BathroomInformationPanel";
 import { useSelectedBathroom } from "./SelectedBathroomContext";
 import { useSwipeMenuContentAnchorElement } from "./SwipeMenuContentAnchor";
 import { useSwipeMenuHeightPx } from "./SwipeMenuInteraction";
@@ -242,10 +241,14 @@ export function BathroomPage() {
   const loadedRow = loadState.status === "loaded" ? loadState.row : null;
   const bathroomId = loadedRow?.id ?? selectedBathroomId ?? 0;
   const verifyStatus = loadedRow?.verify_status ?? "pending";
-  const bathroomInfoLabel = bathroomInformationLabel(bathroomId, verifyStatus);
 
   const sideMarginPx = SwipeUpMainMenuConsts.MARGIN_SIDE_PX;
   const dropdownWidthPx = bathroomPageDropdownWidthPx(widthPx, sideMarginPx);
+  const informationPanelWidthPx = bathroomPageInformationPanelWidthPx(
+    widthPx,
+    sideMarginPx,
+  );
+  const informationPanelX = bathroomPageInformationPanelXPx(sideMarginPx);
   const dropdownX = bathroomPageDropdownXPx(widthPx, sideMarginPx);
   const loadingSpinnerCenter = bathroomPageLoadingSpinnerCenterPx(
     widthPx,
@@ -364,24 +367,17 @@ export function BathroomPage() {
     <div
       style={{
         position: "absolute",
-        left: `${sideMarginPx}px`,
+        left: `${informationPanelX}px`,
         top: `${BathroomPageConsts.DROPDOWN_TOP_OFFSET_PX}px`,
         zIndex: infoZIndex,
-        width: `${dropdownWidthPx}px`,
-        textAlign: "left",
+        width: `${informationPanelWidthPx}px`,
         boxSizing: "border-box",
       }}
     >
-      <span
-        className={TextWeight.BOLD}
-        style={{
-          color: BathroomPageConsts.TEXT_COLOR,
-          fontSize: 14,
-          lineHeight: 1.2,
-        }}
-      >
-        {bathroomInfoLabel}
-      </span>
+      <BathroomInformationPanel
+        verifyStatus={verifyStatus}
+        widthPx={informationPanelWidthPx}
+      />
     </div>
   );
 

@@ -4,6 +4,8 @@ import {
   bathroomPageDropdownExpandedPanelHeightPx,
   bathroomPageDropdownLayout,
   bathroomPageDropdownToggleHeightPx,
+  bathroomPageInformationPanelWidthPx,
+  bathroomPageInformationPanelXPx,
   bathroomPageLoadingSpinnerCenterPx,
   swipeMenuJustCollapsed,
 } from "../app/_client/pure/swipeup/BathroomPageLayout";
@@ -55,5 +57,10 @@ describe("bathroom page content layout", () => {
       widthPx: 180,
     });
     expect(bathroomPageContentMinHeightPx(400)).toBe(246);
+  });
+
+  test("places the bathroom information panel on the left side", () => {
+    expect(bathroomPageInformationPanelXPx(10)).toBe(10);
+    expect(bathroomPageInformationPanelWidthPx(400, 10)).toBe(180);
   });
 });

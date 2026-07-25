@@ -24,7 +24,7 @@
 ## Ratings panel buffer height
  - 10px
 ## Loading spinner accent color
- -  #B5B5C4
+ - #B5B5C4
 ## Loading spinner base color
  - "rgba(181, 181, 196, 0.35)"
 ## Loading spinner radius
@@ -33,6 +33,26 @@
  - 9px
 ## Ratings panel average and stars gap pixel size
  - 5px
+## Bathroom information panel corner radius
+ - 8px
+## Bathroom information panel hover animation duration
+ - 250 milliseconds
+## Bathroom information panel hover interact darkening mult factor
+ - 0.7
+## Bathroom information panel background fill color
+ - #E4E4FF
+## Bathroom information panel icon buffer pixel size
+ - 5px
+## Bathroom information panel existence vote bar width
+ - 50% of the bathroom information panel width
+## Bathroom existence vote button text color brightness mult factor
+ - 0.5
+## Bathroom information panel existence vote bar text color brightness mult factor
+ - 0.75
+## Bathroom information panel arrow icon size
+ - 10px
+## Bathroom information panel arrow row height
+ - 15px
 
 # Description
  - Is page to be displayed on the [swipe-up menu](./swipe_up_menu.md)
@@ -55,12 +75,72 @@
 
 # Components
  - All elements have a gap of [this much](#components-gap-pixel-size) between each other
-## Bathroom information
- - Display text left aligned text specified by the [text discriptor](../text.md) with the following properties on the left side of the [swipe-up menu](./swipe_up_menu.md)
-    - [Content](../text.md#content) is <bathroom-id> concatentated with a space and whether or not this bathroom is verified
-       - EXAMPLE "0 verified" or "0 pending-verify"
-    - [Color](../text.md#color) is [this color](#text-color)
-    - [Weight](../text.md#weight) is [TextWeight.BOLD](../text_weight.md)
+## Bathroom information panel
+ - Rectangular panel on the [left side of the swipe-up menu](./swipe_up_menu.md) with corner radius of [this size](#bathroom-information-panel-corner-radius) with [this background fill color](#bathroom-information-panel-background-fill-color)
+ - Rectangular panel's height should be enough to fit its contents (taller if expanded) and the internal padding of the rectangular panel
+ - If <bathroom-id> is a verified bathroom:
+    - Display the [bathroom icon](../resources.md#bathroom-icon) in the horizontal center of the rectangle anchored to the top end that is expanded to fill the button's width while still maintaining aspect ratio
+    - [Bathroom icon](../resources.md#bathroom-icon) has [this color](#verified-color)
+ - Else:
+    - Display the [non-verified bathroom icon](../resources.md#bathroom-icon-non-verified) in the horizontal center of the rectangle anchored to the top end that is expanded to fill the button's width while still maintaining aspect ratio
+    - [Non-verified bathroom icon](../resources.md#bathroom-icon-non-verified) has [this color](#non-verified-color)
+ - Has a vertical margin buffer under the [bathroom icon](../resources.md#bathroom-icon) of [this size](#bathroom-information-panel-icon-buffer-pixel-size)
+ - At the bottom of the rectangular panel is a row of [this height](#bathroom-information-panel-arrow-row-height) which ignores the padding of the rectangular panel with a horizontally centered [arrow icon](../resources.md#arrow-icon) with the following properties:
+    - Is a square of [this size](#bathroom-information-panel-arrow-icon-size)
+    - Has [this color](#text-color)
+    - Is vertically centered in its row
+    - When the [bathroom information panel](#bathroom-information-panel) is in the collapsed state (initital state):
+       - The [arrow icon](../resources.md#arrow-icon) is rotated 90 degrees clockwise so that it is pointing down
+ - Has a dropshadow behind the rectangular panel of [this drop shadow descriptor](./dropshadow_descriptor.md)
+ - When the rectangular panel is hovered or interacted with (but not when hovering/interacting with the buttons displayed on it):
+    - Multiply the brightness value of the [bathroom icon](../resources.md#bathroom-icon) linearly over [this duration](#bathroom-information-panel-hover-animation-duration) by [this factor](#bathroom-information-panel-hover-interact-darkening-mult-factor)
+    - Restore its original brightness values when hovering or interaction is done over the [same duration](#bathroom-information-panel-hover-animation-duration)
+ - Rectangular panel starts in collapsed mode
+ - Transitions between collapsed and expanded mode will fade the expanded mode elements' opacity in/out linearly over [this duration](#bathroom-information-panel-hover-animation-duration)
+ - When the rectangular panel is interacted with:
+    - Rotate the [arrow icon](../resources.md#arrow-icon) at the bottom of the [bathroom information panel](#bathroom-information-panel) 180 degrees counter-clockwise so that it ends up pointing up over [this duration](#bathroom-information-panel-hover-animation-duration) with quadratic easing
+       - The [arrow icon](../resources.md#arrow-icon) will remain at the bottom of the rectangular panel with its dedicated row
+    - Expand the rectangular panel's height over [this duration] with quadratic easing to reveal the following elements, which are all clipped by the bounds of the rectangular panel, position starts from under the buffer under the bathroom icon where the "..." text used to be:
+       - A horizontally centered horizontal bar that is [this wide](#bathroom-information-panel-existence-vote-bar-width) representing [the amount of votes for or against the bathroom's existence](../bathroom_db.md#table-schema) (<TESTING:> if ../bathroom.db#table-schema has not added the columns for number of votes for or against the bathroom's existence yet, make the ratio of votes 50/50 for testing)
+          - The left side of the bar is [this color](#verified-color)
+          - The right side of the bar is [this color](#non-verified-color)
+          - Outside of the bar on the left side of the bar is a text with the following [text descriptor](../text.md) properties:
+             - [Content](../text.md#content) is the [number of votes for the bathroom's existence](../bathroom_db.md#table-schema)
+             - [Color](../text.md#color) is [this color](#verified-color) with its brightness value multipled by [this factor](#bathroom-information-panel-existence-vote-bar-text-color-brightness-mult-factor)
+          - Outside of the bar on the right side of the bar is a text with the following [text descriptor](../text.md) properties:
+             - [Content](../text.md#content) is the [number of votes against the bathroom's existence](../bathroom_db.md#table-schema)
+             - [Color](../text.md#color) is [this color](#non-verified-color) with its brightness value multipled by [this factor](#bathroom-information-panel-existence-vote-bar-text-color-brightness-mult-factor)
+       - 2 [buttons](../components/viewport2d_button.md) in the same row:
+          - Left [button](../components/viewport2d_button.md) has the following properties:
+             - Set [x position](../components/viewport2d_button.md#x-position) and [y position](../components/viewport2d_button.md#y-position) so that it is in the correct position
+             - Is [rectangular](../components/viewport2d_button.md#circular-flag)
+             - [Hover interact behavior](../components/viewport2d_button.md#hover-interact-behavior) is "darken"
+             - [Text descriptor](../components/viewport2d_button.md#text) is the following:
+                - [Content](../text.md#content) is "Real?"
+                - [Color](../text.md#color) is [this color](#verified-color) with its brightness value multipled by [this factor](#bathroom-existence-vote-button-text-color-brightness-mult-factor)
+                - [Weight](../text.md#weight) is [TextWeight.BOLD](../text_weight.md)
+             - [Fill color](../components/viewport2d_button.md#fill-color) is [this color](#verified-color)
+             - [Outline thickness](../components/viewport2d_button.md#outline-thickness) is 0 (no outline)
+             - [Dropshadow descriptor](../components/viewport2d_button.md#drop-shadow) is [this drop shadow descriptor](./dropshadow_descriptor.md)
+             - [Click callback](../components/viewport2d_button.md#on-click-callback) is the following:
+                - <TESTING:> Do noop for now
+          - Right [button](../components/viewport2d_button.md) has the following properties:
+             - Set [x position](../components/viewport2d_button.md#x-position) and [y position](../components/viewport2d_button.md#y-position) so that it is in the correct position
+             - Is [rectangular](../components/viewport2d_button.md#circular-flag)
+             - [Hover interact behavior](../components/viewport2d_button.md#hover-interact-behavior) is "darken"
+             - [Text descriptor](../components/viewport2d_button.md#text) is the following:
+                - [Content](../text.md#content) is "Gone?"
+                - [Color](../text.md#color) is [this color](#non-verified-color) with its brightness value multipled by [this factor](#bathroom-existence-vote-button-text-color-brightness-mult-factor)
+                - [Weight](../text.md#weight) is [TextWeight.BOLD](../text_weight.md)
+             - [Fill color](../components/viewport2d_button.md#fill-color) is [this color](#non-verified-color)
+             - [Outline thickness](../components/viewport2d_button.md#outline-thickness) is 0 (no outline)
+             - [Dropshadow descriptor](../components/viewport2d_button.md#drop-shadow) is [this drop shadow descriptor](./dropshadow_descriptor.md)
+             - [Click callback](../components/viewport2d_button.md#on-click-callback) is the following:
+                - <TESTING:> Do noop for now
+    - When the rectangular panel is interacted with again while expanded:
+       - Collapse the rectangular panel over [this duration] with quadratic easing to hide the expanded elements
+       - Restore the [bathroom information panel's](#bathroom-information-panel) [arrow icon](../resources.md#arrow-icon) to its original rotation by rotating clockwise over [this duration](#bathroom-information-panel-hover-animation-duration) with quadratic easing
+
 ## Ratings panel
  - Store the sum of [`rating_1_count`, `rating_2_count`, `rating_3_count`, `rating_4_count`, or `rating_5_count` columns of this bathroom](../bathroom_db.md#table-schema) in <total-rating-count> 
  - Is a [dropdown menu](../components/dropdown_menu.md) with the following properties:

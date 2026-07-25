@@ -13,7 +13,7 @@
 # Description
 - Retrieving all bathrooms given a lower left location and an upper right location
    - These will be calculated from the Globe viewport when the zoom level is close enough when the camera is within [this amount of distance from](#zoom-stop-distance-from-surface) the surface of the Globe
-   - The server should only send down the [`location`, `verify_status`, `version`, and `id`](./bathroom_db.md#table-schema) for an upsert OR the server can send down a specific DELETE payload with just `id` to signal a local deletion
+   - The server should only send down the [`location`, `version`, and `id`](./bathroom_db.md#table-schema) for an upsert OR the server can send down a specific DELETE payload with just `id` to signal a local deletion
    - When a bounds query is received by the server:
       - All [h3 cells](./bathroom_db_creation.md) that are within those bounds will be returned and [cached](./serverside_caching.md)
       - H3 cells will store full bathroom rows
@@ -63,7 +63,7 @@
 # Bathroom marker
  - A 3D billboard map marker that is located on the location of a bathroom record
     - Bottom middle edge is on the point of the Globe where the bathroom is located
- - If the bathroom is verified:
+ - If the bathroom is verified (its `exists_vote_count` column is greater than its `not_exists_vote_count` column):
     - It's image is the [verified bathroom marker image](./resources.md#verified-bathroom-marker-image)
  - Else:
     - It's image is the [pending verify bathroom marker image](./resources.md#pending-verify-bathroom-marker-image)
@@ -83,15 +83,15 @@
       - location as type `BLOB`
       - remote_id as type `BIGINT`
       - version as type `BIGINT`
-      - verify_status as type `TEXT CHECK(verify_status IN ('pending', 'verified'))`
-         - This column should always have possible values that match [`bathroom_data_primary` table's](./bathroom_db.md) [Verify_Status](./bathroom_db.md#verify_status) enum type
-      - updated_at as type `DATETIME DEFAULT CURRENT_TIMESTAMP`
+      - exists_vote_count as type `BIGINT`
+      - not_exists_vote_count as type `BIGINT`
 - Whenever a (new/updated) Bathroom is retrieved:
    - Upsert it to the local SQLite Geopackage DB
       - Convert the location from a Postgis GEOGRAPHY type to a GPKG Geometry BLOB
       - Store the `id` column
       - Store the `version` column
-      - Convert the `verify_status` column from the Postgres enum to the TEXT equivalent
+      - Store the `exists_vote_count` column
+      - Store the `not_exists_vote_count` column
 - The local cache will be an in-memory DB in write-ahead logging mode that will sync changes to the disk in the background as new bathroom entries are upserted or deleted
    - Changes to DB should happen to in-memory DB first and then it will cascade to disk back-up eventually
 - When the server sends back down bathroom entries in a UPSERT response:

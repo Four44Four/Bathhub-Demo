@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 import { createClient } from "@supabase/supabase-js";
 
 import {
@@ -8,7 +9,6 @@ import {
 import { getReadCache } from "../app/_server/redis/ReadCache";
 import {
   BATHROOM_LOCAL_CACHE_TABLE_NAME,
-  type BathroomClientCacheEntry,
   type BathroomDataPrimaryRow,
   type BathroomSyncResponse,
   type BathroomViewportEntry,
@@ -48,6 +48,8 @@ import {
   runViewportRemoteCacheSync,
   simulateRemoteGateRetry,
   setBathroomVersion,
+  viewportEntry,
+  viewportEntryFromRow,
   WORLD_BOUNDS,
 } from "./integrationHelpers";
 import { loadLocations } from "./loadLocations";
@@ -55,6 +57,7 @@ import {
   requireLocalSupabaseAdminEnv,
   type LocalSupabaseAdminEnv,
 } from "./requireLocalSupabase";
+import { requireLocalRedis } from "./requireLocalRedis";
 
 const { loadSqliteWasmModule } = require("./sqliteWasmLoader.cjs") as {
   loadSqliteWasmModule: () => Promise<import("../app/_client/local-db/web/LocalDbSqlite").SqliteWasm>;
@@ -93,6 +96,19 @@ async function setCacheUpdatedAt(
 
 function renderedIds(rendered: Map<number, BathroomViewportEntry>): number[] {
   return Array.from(rendered.keys()).sort((a, b) => a - b);
+}
+
+function expectLocalCacheEntryMatches(
+  actual: BathroomViewportEntry | undefined,
+  expected: BathroomViewportEntry,
+): void {
+  expect(actual).toMatchObject({
+    id: expected.id,
+    latitude: expected.latitude,
+    longitude: expected.longitude,
+    verify_status: expected.verify_status,
+    version: expected.version,
+  });
 }
 
 type MockCesiumEntity = {
@@ -202,6 +218,7 @@ describe("bathroom local SQLite cache sync against local Supabase", () => {
   let adminEnv: LocalSupabaseAdminEnv | null = null;
 
   beforeAll(async () => {
+    requireLocalRedis();
     adminEnv = requireLocalSupabaseAdminEnv();
     seededRows = await bathroomDbReadInBounds(WORLD_BOUNDS);
 
@@ -302,8 +319,14 @@ describe("bathroom local SQLite cache sync against local Supabase", () => {
       .selectObjects(`SELECT name FROM sqlite_master WHERE type IN ('table', 'view')`)
       .map((row) => row.name)
       .filter((name): name is string => typeof name === "string");
+    const cacheColumns = db
+      .selectObjects(
+        "SELECT name FROM pragma_table_info('bathroom_data_primary_cache')",
+      )
+      .map((row) => row.name)
+      .filter((name): name is string => typeof name === "string");
 
-    expect(isLocalCacheSchemaReady(tableNames)).toBe(true);
+    expect(isLocalCacheSchemaReady(tableNames, cacheColumns)).toBe(true);
   });
 
   test("viewport sync hydrates empty SQLite cache from server upserts using seeded coords", async () => {
@@ -330,6 +353,40 @@ describe("bathroom local SQLite cache sync against local Supabase", () => {
 
     const idVersions = await localDb.getIdVersionPairsInBounds(bounds);
     expectClientCacheEntry(idVersions, row);
+  });
+
+  test("SQLite cache table stores existence vote counts instead of verify_status", async () => {
+    const row = findSeededRow(
+      seededRows,
+      locations,
+      CACHE_TEST_LOCATIONS.warmCache,
+    );
+    const bounds = boundsAround(row.latitude, row.longitude);
+    const localDb = createTestLocalDb();
+
+    await runViewportCacheSync(localDb, bounds);
+
+    const db = await localDb.getSqliteDbForTests();
+    const columns = db
+      .selectObjects(
+        "SELECT name FROM pragma_table_info('bathroom_data_primary_cache')",
+      )
+      .map((entry) => entry.name);
+    expect(columns).toEqual(
+      expect.arrayContaining(["exists_vote_count", "not_exists_vote_count"]),
+    );
+    expect(columns).not.toContain("verify_status");
+
+    const voteRows = db.selectObjects(
+      `SELECT exists_vote_count, not_exists_vote_count
+       FROM ${BATHROOM_LOCAL_CACHE_TABLE_NAME}
+       WHERE remote_id = ?`,
+      [row.id],
+    );
+    expect(voteRows[0]).toEqual({
+      exists_vote_count: row.exists_vote_count,
+      not_exists_vote_count: row.not_exists_vote_count,
+    });
   });
 
   test("warm SQLite cache skips redundant server upserts for matching id and version", async () => {
@@ -387,17 +444,18 @@ describe("bathroom local SQLite cache sync against local Supabase", () => {
 
     await runViewportCacheSync(localDb, bounds);
     originalVersions.set(row.id, row.version);
-    await setBathroomVersion(row.id, 3);
+    const staleVersion = row.version + 3;
+    await setBathroomVersion(row.id, staleVersion);
 
     const refreshed = await runViewportCacheSync(localDb, bounds);
     const upsert = refreshed.syncResponse.upserts.find((entry) => entry.id === row.id);
 
-    expect(upsert?.version).toBe(3);
-    expect(refreshed.rendered.get(row.id)?.version).toBe(3);
+    expect(upsert?.version).toBe(staleVersion);
+    expect(refreshed.rendered.get(row.id)?.version).toBe(staleVersion);
     expect(refreshed.rendered.get(row.id)?.loadedFromCache).toBe(true);
 
     const cached = await localDb.getInBounds(bounds);
-    expect(cached[0]?.version).toBe(3);
+    expect(cached[0]?.version).toBe(staleVersion);
   });
 
   test("SQLite cache removes phantom ids returned in server DELETE responses", async () => {
@@ -412,23 +470,26 @@ describe("bathroom local SQLite cache sync against local Supabase", () => {
 
     await runViewportCacheSync(localDb, bounds);
     await localDb.upsertMany([
-      {
+      viewportEntry({
         id: phantomId,
         latitude: row.latitude + 0.001,
         longitude: row.longitude + 0.001,
-        verify_status: "pending",
         version: 0,
-      },
+      }),
     ]);
 
-    const beforeDelete = await localDb.getIdVersionPairsInBounds(bounds);
-    expect(beforeDelete.some((entry) => entry.id === phantomId)).toBe(true);
+    const localSync = await runViewportLocalCacheSync(localDb, bounds);
+    expect(localSync.rendered.has(phantomId)).toBe(true);
 
-    const syncResponse = await bathroomDbSyncInBounds(bounds, beforeDelete);
-    expect(syncResponse.deleteIds).toContain(phantomId);
-    expect(syncResponse.deleteIds).not.toContain(row.id);
-
-    await localDb.deleteMany(syncResponse.deleteIds);
+    const remoteSync = await runViewportRemoteCacheSync(
+      localDb,
+      bounds,
+      localSync.rendered,
+    );
+    expect(remoteSync.syncResponse.deleteIds).toContain(phantomId);
+    expect(remoteSync.syncResponse.deleteIds).not.toContain(row.id);
+    expect(remoteSync.rendered.has(phantomId)).toBe(false);
+    expectViewportEntryMatchesRow(remoteSync.rendered.get(row.id), row);
 
     const afterDelete = await localDb.getInBounds(bounds);
     expect(afterDelete.some((entry) => entry.id === phantomId)).toBe(false);
@@ -454,20 +515,8 @@ describe("bathroom local SQLite cache sync against local Supabase", () => {
     await localDb.init();
 
     await localDb.upsertMany([
-      {
-        id: inBounds.id,
-        latitude: inBounds.latitude,
-        longitude: inBounds.longitude,
-        verify_status: inBounds.verify_status,
-        version: inBounds.version,
-      },
-      {
-        id: outOfBounds.id,
-        latitude: outOfBounds.latitude,
-        longitude: outOfBounds.longitude,
-        verify_status: outOfBounds.verify_status,
-        version: outOfBounds.version,
-      },
+      viewportEntryFromRow(inBounds),
+      viewportEntryFromRow(outOfBounds),
     ]);
 
     const cached = await localDb.getInBounds(bounds);
@@ -486,13 +535,7 @@ describe("bathroom local SQLite cache sync against local Supabase", () => {
 
     await localDb.init();
     await localDb.upsertMany([
-      {
-        id: expiredRow.id,
-        latitude: expiredRow.latitude,
-        longitude: expiredRow.longitude,
-        verify_status: expiredRow.verify_status,
-        version: expiredRow.version,
-      },
+      viewportEntryFromRow(expiredRow),
     ]);
     await setCacheUpdatedAt(
       localDb,
@@ -501,13 +544,7 @@ describe("bathroom local SQLite cache sync against local Supabase", () => {
     );
 
     await localDb.upsertMany([
-      {
-        id: freshRow.id,
-        latitude: freshRow.latitude,
-        longitude: freshRow.longitude,
-        verify_status: freshRow.verify_status,
-        version: freshRow.version,
-      },
+      viewportEntryFromRow(freshRow),
     ]);
 
     const worldEntries = await localDb.getInBounds(WORLD_BOUNDS);
@@ -532,13 +569,12 @@ describe("bathroom viewport sync runtime integration", () => {
     lowerLeft: { latitude: 10, longitude: 20 },
     upperRight: { latitude: 11, longitude: 21 },
   };
-  const cachedEntry: BathroomViewportEntry = {
+  const cachedEntry: BathroomViewportEntry = viewportEntry({
     id: 777,
     latitude: 10.5,
     longitude: 20.5,
-    verify_status: "pending",
     version: 1,
-  };
+  });
 
   test("viewport sync keeps local markers rendered when remote sync fails", async () => {
     const localDb = createTestLocalDb();
@@ -556,7 +592,7 @@ describe("bathroom viewport sync runtime integration", () => {
     expect(renderedIds(syncResult.rendered)).toEqual([cachedEntry.id]);
     const cached = await localDb.getInBounds(bounds);
     expect(cached).toHaveLength(1);
-    expect(cached[0]).toMatchObject(cachedEntry);
+    expectLocalCacheEntryMatches(cached[0], cachedEntry);
   });
 
   test("viewport sync emits local render before awaiting remote response", async () => {
@@ -582,10 +618,7 @@ describe("bathroom viewport sync runtime integration", () => {
       maxQueryCameraHeightM: BathroomMapMarker.MAX_QUERY_CAMERA_HEIGHT_M,
       localDbPort: localDb,
       isRequestCurrent: () => true,
-      syncRemote: async (
-        _viewportBounds: ViewportBounds,
-        _clientCache: BathroomClientCacheEntry[],
-      ) => {
+      syncRemote: async () => {
         renderedCountAtRemoteCall = renderedSnapshots.length;
         return remotePromise;
       },
@@ -628,7 +661,7 @@ describe("bathroom viewport sync runtime integration", () => {
     expect(renderedIds(result.rendered)).toEqual([cachedEntry.id]);
     const cached = await localDb.getInBounds(bounds);
     expect(cached).toHaveLength(1);
-    expect(cached[0]).toMatchObject(cachedEntry);
+    expectLocalCacheEntryMatches(cached[0], cachedEntry);
   });
 
   test("local SQLite scan runs while remote sync is blocked by in-flight request", async () => {
@@ -755,8 +788,11 @@ describe("bathroom viewport sync runtime integration", () => {
             val: {
               upserts: [
                 {
-                  ...cachedEntry,
-                  verify_status: "verified",
+                  id: cachedEntry.id,
+                  latitude: cachedEntry.latitude,
+                  longitude: cachedEntry.longitude,
+                  exists_vote_count: 2,
+                  not_exists_vote_count: 0,
                   version: 2,
                 },
               ],
@@ -839,11 +875,12 @@ describe("bathroom marker renderer integration", () => {
     const markerHandle = installBathroomMarkers(harness.Cesium, harness.viewer);
 
     const firstEntry: RenderedBathroomEntry = {
-      id: 1,
-      latitude: 47.61,
-      longitude: -122.33,
-      verify_status: "pending",
-      version: 1,
+      ...viewportEntry({
+        id: 1,
+        latitude: 47.61,
+        longitude: -122.33,
+        version: 1,
+      }),
       loadedFromCache: true,
     };
     markerHandle.sync(markerSyncContext([firstEntry]));
@@ -858,29 +895,31 @@ describe("bathroom marker renderer integration", () => {
     );
 
     const previousRendered = createRenderedBathroomMap([
-      {
+      viewportEntry({
         id: 1,
         latitude: 47.61,
         longitude: -122.33,
-        verify_status: "pending",
         version: 1,
-      },
+      }),
     ]);
     const secondPass: RenderedBathroomEntry[] = [
       {
-        id: 1,
-        latitude: 47.611,
-        longitude: -122.331,
-        verify_status: "verified",
-        version: 2,
+        ...viewportEntry({
+          id: 1,
+          latitude: 47.611,
+          longitude: -122.331,
+          exists_vote_count: 2,
+          version: 2,
+        }),
         loadedFromCache: false,
       },
       {
-        id: 2,
-        latitude: 47.612,
-        longitude: -122.332,
-        verify_status: "pending",
-        version: 1,
+        ...viewportEntry({
+          id: 2,
+          latitude: 47.612,
+          longitude: -122.332,
+          version: 1,
+        }),
         loadedFromCache: true,
       },
     ];
@@ -902,11 +941,12 @@ describe("bathroom marker renderer integration", () => {
       markerSyncContext(
         [
           {
-            id: 2,
-            latitude: 47.612,
-            longitude: -122.332,
-            verify_status: "pending",
-            version: 1,
+            ...viewportEntry({
+              id: 2,
+              latitude: 47.612,
+              longitude: -122.332,
+              version: 1,
+            }),
             loadedFromCache: true,
           },
         ],

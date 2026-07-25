@@ -11,24 +11,38 @@ import {
   bathroomLatLongToH3Cell,
   h3CellToPostgisPolygon,
 } from "../app/_server/pure/geospatial/BathroomH3Cells";
+import { getReadCache } from "../app/_server/redis/ReadCache";
 import { H3_BATHROOM_CELL_RESOLUTION } from "../app/_server/ServerConstants";
 import { disconnectRedisTestGlobals } from "./disconnectRedisTestGlobals";
-import { requireLocalSupabaseEnv } from "./requireLocalSupabase";
+import { requireLocalRedis } from "./requireLocalRedis";
+import {
+  requireLocalSupabaseAdminEnv,
+  requireLocalSupabaseEnv,
+} from "./requireLocalSupabase";
 
 const createdBathroomIds: number[] = [];
 
 describe("bathroom_data_primary H3 cell RPC against local Supabase", () => {
   beforeAll(() => {
+    requireLocalRedis();
     requireLocalSupabaseEnv();
   });
 
   afterAll(async () => {
+    const readCache = getReadCache();
+    await Promise.all(
+      createdBathroomIds.map((id) => readCache.removeBathroom(id)),
+    );
+
     if (createdBathroomIds.length > 0) {
-      const { url, key } = requireLocalSupabaseEnv();
-      await createClient(url, key)
+      const { url, serviceRoleKey } = requireLocalSupabaseAdminEnv();
+      const { error } = await createClient(url, serviceRoleKey)
         .from("bathroom_data_primary")
         .delete()
         .in("id", createdBathroomIds);
+      if (error !== null) {
+        throw new Error(`Failed to clean H3 RPC fixtures: ${error.message}`);
+      }
     }
 
     await disconnectRedisTestGlobals();
@@ -42,7 +56,9 @@ describe("bathroom_data_primary H3 cell RPC against local Supabase", () => {
     );
     const neighborCell = gridDisk(baseCell, 1).find((cell) => cell !== baseCell);
     expect(neighborCell).toBeDefined();
-    if (neighborCell === undefined) return;
+    if (neighborCell === undefined) {
+      throw new Error("Expected gridDisk to return a neighboring H3 cell");
+    }
 
     const [neighborLatitude, neighborLongitude] = cellToLatLng(neighborCell);
     const baseRow = await bathroomDbCreate(
@@ -74,6 +90,14 @@ describe("bathroom_data_primary H3 cell RPC against local Supabase", () => {
     expect(rows.map((row) => row.id)).toEqual(
       expect.arrayContaining([baseRow.id, neighborRow.id]),
     );
+    expect(rows.find((row) => row.id === baseRow.id)).toMatchObject({
+      exists_vote_count: 0,
+      not_exists_vote_count: 0,
+    });
+    expect(rows.find((row) => row.id === neighborRow.id)).toMatchObject({
+      exists_vote_count: 0,
+      not_exists_vote_count: 0,
+    });
     expect(rows.some((row) => row.cell === emptyCell)).toBe(false);
   });
 });

@@ -3,6 +3,7 @@ import {
   type BathroomClientCacheEntry,
   type BathroomViewportEntry,
   type ViewportBounds,
+  deriveVerifyStatusFromExistenceVotes,
 } from "../../../_shared/BathroomDataPrimary";
 import { isCacheEntryExpired } from "../../pure/bathroom/CacheExpiration";
 import { isLocalCacheSchemaReady } from "../../pure/bathroom/LocalCacheSchema";
@@ -69,6 +70,15 @@ export type BathroomLocalDbSqliteOptions = {
 function listTableNames(db: SqliteDb): string[] {
   const rows = db.selectObjects(
     `SELECT name FROM sqlite_master WHERE type IN ('table', 'view')`,
+  );
+  return rows
+    .map((row) => row.name)
+    .filter((name): name is string => typeof name === "string");
+}
+
+function listCacheTableColumns(db: SqliteDb): string[] {
+  const rows = db.selectObjects(
+    `SELECT name FROM pragma_table_info('${BATHROOM_LOCAL_CACHE_TABLE_NAME}')`,
   );
   return rows
     .map((row) => row.name)
@@ -170,12 +180,17 @@ function coerceSqliteBlob(value: unknown): Uint8Array | null {
   return null;
 }
 
+function isVoteCount(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0;
+}
+
 function rowToViewportEntry(row: Record<string, unknown>): BathroomViewportEntry | null {
   const location = coerceSqliteBlob(row.location);
   if (
     typeof row.remote_id !== "number" ||
     typeof row.version !== "number" ||
-    (row.verify_status !== "pending" && row.verify_status !== "verified") ||
+    !isVoteCount(row.exists_vote_count) ||
+    !isVoteCount(row.not_exists_vote_count) ||
     location === null
   ) {
     return null;
@@ -186,7 +201,12 @@ function rowToViewportEntry(row: Record<string, unknown>): BathroomViewportEntry
     id: row.remote_id,
     latitude,
     longitude,
-    verify_status: row.verify_status,
+    exists_vote_count: row.exists_vote_count,
+    not_exists_vote_count: row.not_exists_vote_count,
+    verify_status: deriveVerifyStatusFromExistenceVotes(
+      row.exists_vote_count,
+      row.not_exists_vote_count,
+    ),
     version: row.version,
   };
 }
@@ -238,7 +258,12 @@ export function createBathroomLocalDbSqlite(
           if (onDiskBytes && isSqliteDatabaseBytes(onDiskBytes)) {
             try {
               loadGpkgBytesIntoMemoryDb(sqlite3, memoryDb, onDiskBytes);
-              if (!isLocalCacheSchemaReady(listTableNames(memoryDb))) {
+              if (
+                !isLocalCacheSchemaReady(
+                  listTableNames(memoryDb),
+                  listCacheTableColumns(memoryDb),
+                )
+              ) {
                 throw new Error("Bathroom cache gpkg schema is incomplete.");
               }
               hydratedFromDisk = true;
@@ -270,7 +295,7 @@ export function createBathroomLocalDbSqlite(
     async getInBounds(bounds: ViewportBounds): Promise<BathroomViewportEntry[]> {
       const { db: activeDb } = await ensureDb();
       const rows = activeDb.selectObjects(
-        `SELECT c.remote_id, c.location, c.version, c.verify_status
+        `SELECT c.remote_id, c.location, c.version, c.exists_vote_count, c.not_exists_vote_count
          FROM ${BATHROOM_LOCAL_CACHE_TABLE_NAME} c
          INNER JOIN ${RTREE_TABLE_NAME} r ON c.remote_id = r.remote_id
          WHERE r.max_x >= ? AND r.min_x <= ? AND r.max_y >= ? AND r.min_y <= ?`,
@@ -330,19 +355,21 @@ export function createBathroomLocalDbSqlite(
         const location = encodeGpkgPointWgs84(entry.longitude, entry.latitude);
         activeDb.exec(
           `INSERT INTO ${BATHROOM_LOCAL_CACHE_TABLE_NAME} (
-             remote_id, location, version, verify_status, updated_at
-           ) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+             remote_id, location, version, exists_vote_count, not_exists_vote_count, updated_at
+           ) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
            ON CONFLICT(remote_id) DO UPDATE SET
              location = excluded.location,
              version = excluded.version,
-             verify_status = excluded.verify_status,
+             exists_vote_count = excluded.exists_vote_count,
+             not_exists_vote_count = excluded.not_exists_vote_count,
              updated_at = excluded.updated_at`,
           {
             bind: [
               entry.id,
               location,
               entry.version,
-              entry.verify_status,
+              entry.exists_vote_count,
+              entry.not_exists_vote_count,
             ],
           },
         );

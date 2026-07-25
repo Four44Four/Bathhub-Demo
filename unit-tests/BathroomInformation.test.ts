@@ -1,8 +1,8 @@
 import {
   bathroomExistenceVoteBarAgainstLabelColor,
   bathroomExistenceVoteBarForLabelColor,
+  bathroomExistenceVoteCountsFromRow,
   bathroomExistenceVoteForRatio,
-  bathroomExistenceVoteStubCounts,
   bathroomInformationLabel,
   bathroomInformationPanelArrowRotationDeg,
   bathroomInformationPanelArrowRowHeightPx,
@@ -41,13 +41,18 @@ describe("bathroomInformationPanelIconPath", () => {
   });
 });
 
-describe("bathroomExistenceVoteStubCounts", () => {
-  test("returns a 50/50 stub while vote columns are unavailable", () => {
-    expect(bathroomExistenceVoteStubCounts()).toEqual({
-      forCount: 1,
+describe("bathroomExistenceVoteCountsFromRow", () => {
+  test("maps bathroom_data_primary vote columns to panel counts", () => {
+    expect(
+      bathroomExistenceVoteCountsFromRow({
+        exists_vote_count: 3,
+        not_exists_vote_count: 1,
+      }),
+    ).toEqual({
+      forCount: 3,
       againstCount: 1,
     });
-    expect(bathroomExistenceVoteForRatio(1, 1)).toBe(0.5);
+    expect(bathroomExistenceVoteForRatio(3, 1)).toBe(0.75);
   });
 });
 

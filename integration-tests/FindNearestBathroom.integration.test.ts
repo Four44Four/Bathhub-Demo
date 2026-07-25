@@ -6,13 +6,18 @@ import {
   incrementRatingCount as bathroomDbIncrementRating,
 } from "../app/_server/database/bathroom-data-primary/CrudCore";
 import { FIND_NEAREST_BATHROOM_ERROR_CONTEXT } from "../app/_server/pure/bathroom-data-primary/FindNearestBathroom";
+import { getReadCache } from "../app/_server/redis/ReadCache";
 import { disconnectRedisTestGlobals } from "./disconnectRedisTestGlobals";
-import { requireLocalSupabaseEnv } from "./requireLocalSupabase";
+import { requireLocalRedis } from "./requireLocalRedis";
+import {
+  requireLocalSupabaseAdminEnv,
+  requireLocalSupabaseEnv,
+} from "./requireLocalSupabase";
 
 /**
  * Mid-Atlantic coordinates with no locations.json seed rows.
- * Crud.integration.test.ts runs first and seeds global cities (including NYC
- * at 40.712776, -74.005974), so NYC-adjacent origins would pick the seed.
+ * Keeping these fixtures away from global cities prevents unrelated local rows
+ * (for example NYC at 40.712776, -74.005974) from affecting nearest results.
  *
  * Test rows are inserted via CrudCore (not the rate-limited Crud wrapper) because
  * Jest runs outside a Next.js request scope where headers() is unavailable.
@@ -33,13 +38,19 @@ async function createTrackedBathroom(latitude: number, longitude: number) {
 
 describe("find nearest bathroom against local Supabase", () => {
   beforeAll(() => {
+    requireLocalRedis();
     requireLocalSupabaseEnv();
   });
 
   afterAll(async () => {
+    const readCache = getReadCache();
+    await Promise.all(
+      createdBathroomIds.map((id) => readCache.removeBathroom(id)),
+    );
+
     if (createdBathroomIds.length > 0) {
-      const { url, key } = requireLocalSupabaseEnv();
-      const { error } = await createClient(url, key)
+      const { url, serviceRoleKey } = requireLocalSupabaseAdminEnv();
+      const { error } = await createClient(url, serviceRoleKey)
         .from("bathroom_data_primary")
         .delete()
         .in("id", createdBathroomIds);
@@ -116,7 +127,7 @@ describe("find nearest bathroom against local Supabase", () => {
 
     await bathroomDbIncrementRating(closeLowRated.id, 1);
     await bathroomDbIncrementRating(fartherHighRated.id, 5);
-    await bathroomDbIncrementRating(fartherHighRated.id, 5);
+    await bathroomDbIncrementRating(fartherHighRated.id, 4);
 
     const closest = await bathroomDbFindNearest(origin, {
       maxDistanceM: 20_000,

@@ -1,6 +1,7 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 import { BathroomMapMarker, Globe as GlobeConsts } from "../app/_client/ComponentConstants";
 import { createUserSettingsDbSqlite } from "../app/_client/user-settings-db/UserSettingsDbSqlite";
-import { USER_SETTINGS_MIGRATION_V0_TO_V1 } from "../app/_shared/user-settings/migrations/v0-to-v1";
+import { USER_SETTINGS_SCHEMA_MIGRATIONS } from "../app/_shared/user-settings/migrations";
 import { USER_SETTINGS_DEFAULTS } from "../app/_shared/user-settings/UserSettingsSchema";
 import { resolveGlobeMovementSmooth } from "../app/_client/user-settings/useGlobeMovementSmooth";
 import {
@@ -16,6 +17,16 @@ import {
 const { loadSqliteWasmModule } = require("./sqliteWasmLoader.cjs") as {
   loadSqliteWasmModule: () => Promise<import("../app/_client/local-db/web/LocalDbSqlite").SqliteWasm>;
 };
+
+async function migrateUserSettingsDbToCurrentSchema(
+  db: ReturnType<typeof createUserSettingsDbSqlite>,
+): Promise<void> {
+  for (const migration of USER_SETTINGS_SCHEMA_MIGRATIONS) {
+    if (migration !== undefined) {
+      await db.runForwardMigration(migration.forwardSql);
+    }
+  }
+}
 
 function flushWheelZoomToIdle(
   anim: ReturnType<typeof installGlobeAnimationTestEnv>,
@@ -38,7 +49,7 @@ function flushWheelZoomToIdle(
   }
 }
 
-function   withHarness(
+function withHarness(
   options: Parameters<typeof createGlobeOrbitHarness>[0],
   run: (ctx: {
     harness: GlobeOrbitHarness;
@@ -346,7 +357,7 @@ describe("Globe viewport Cesium integration (GlobeViewport + user settings specs
         initSqliteWasm: loadSqliteWasmModule,
       });
       await db.init();
-      await db.runForwardMigration(USER_SETTINGS_MIGRATION_V0_TO_V1.forwardSql);
+      await migrateUserSettingsDbToCurrentSchema(db);
       await db.saveSettingsToDb({
         ...USER_SETTINGS_DEFAULTS,
         camera_init_surface_offset_m: 3200,
@@ -434,7 +445,7 @@ describe("Globe viewport Cesium integration (GlobeViewport + user settings specs
         initSqliteWasm: loadSqliteWasmModule,
       });
       await db.init();
-      await db.runForwardMigration(USER_SETTINGS_MIGRATION_V0_TO_V1.forwardSql);
+      await migrateUserSettingsDbToCurrentSchema(db);
       await db.saveSettingsToDb({
         ...USER_SETTINGS_DEFAULTS,
         globe_movement_smooth: false,

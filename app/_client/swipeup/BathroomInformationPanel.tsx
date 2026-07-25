@@ -20,7 +20,6 @@ import {
   bathroomExistenceVoteBarAgainstLabelColor,
   bathroomExistenceVoteBarForLabelColor,
   bathroomExistenceVoteForRatio,
-  bathroomExistenceVoteStubCounts,
   bathroomInformationPanelArrowRotationDeg,
   bathroomInformationPanelArrowRowHeightPx,
   bathroomInformationPanelBodyClipHeightPx,
@@ -30,6 +29,7 @@ import {
   bathroomInformationPanelIconPath,
   bathroomInformationPanelIconShouldHighlight,
   type BathroomExistenceVoteCounts,
+  type BathroomExistenceVoteSide,
 } from "../pure/bathroom/BathroomInformation";
 import { dropshadowToBoxShadowCss } from "../pure/Dropshadow";
 import {
@@ -43,11 +43,14 @@ import {
 import type { VerifyStatus } from "../../_shared/BathroomDataPrimary";
 import { TextWeight } from "../Utils";
 import { useAnimatedLinear01 } from "../useAnimatedLinear01";
+import { LoadingSpinner } from "../viewport2d/LoadingSpinner";
 
 type BathroomInformationPanelProps = {
   verifyStatus: VerifyStatus;
   widthPx: number;
-  voteCounts?: BathroomExistenceVoteCounts;
+  voteCounts: BathroomExistenceVoteCounts;
+  votingSide?: BathroomExistenceVoteSide | null;
+  onVote?: (side: BathroomExistenceVoteSide) => void;
 };
 
 function ExistenceVoteBar({
@@ -128,19 +131,21 @@ function ExistenceVoteBar({
 function ExistenceVoteButton({
   label,
   fillColor,
+  isLoading,
   onClick,
   onHighlightChange,
   onPointerHoverSync,
 }: {
   label: string;
   fillColor: string;
+  isLoading: boolean;
   onClick: (event: MouseEvent<HTMLButtonElement>) => void;
   onHighlightChange: (highlighted: boolean) => void;
   onPointerHoverSync: () => void;
 }) {
   const [isHovered, setIsHovered] = useState(false);
   const [isPressed, setIsPressed] = useState(false);
-  const isHighlighted = isHovered || isPressed;
+  const isHighlighted = (isHovered || isPressed) && !isLoading;
 
   useEffect(() => {
     onHighlightChange(isHighlighted);
@@ -175,7 +180,7 @@ function ExistenceVoteButton({
     border: "none",
     backgroundColor: resolvedFillColor,
     color: resolvedTextColor,
-    cursor: "pointer",
+    cursor: isLoading ? "default" : "pointer",
     boxShadow: dropshadowToBoxShadowCss(BathroomPageConsts.DROP_SHADOW),
     fontSize: 14,
     lineHeight: 1.2,
@@ -193,7 +198,9 @@ function ExistenceVoteButton({
       style={buttonStyle}
       onClick={(event) => {
         event.stopPropagation();
-        onClick(event);
+        if (!isLoading) {
+          onClick(event);
+        }
       }}
       onMouseEnter={(event) => {
         event.stopPropagation();
@@ -218,7 +225,15 @@ function ExistenceVoteButton({
         setIsPressed(false);
       }}
     >
-      {label}
+      {isLoading ? (
+        <LoadingSpinner
+          accentColor={BathroomPageConsts.LOADING_SPINNER_ACCENT_COLOR}
+          baseColor={BathroomPageConsts.LOADING_SPINNER_BASE_COLOR}
+          radiusPx={BathroomPageConsts.BUTTON_LOADING_SPINNER_RADIUS_PX}
+        />
+      ) : (
+        label
+      )}
     </button>
   );
 }
@@ -227,7 +242,9 @@ function ExistenceVoteButton({
 export function BathroomInformationPanel({
   verifyStatus,
   widthPx,
-  voteCounts = bathroomExistenceVoteStubCounts(),
+  voteCounts,
+  votingSide = null,
+  onVote,
 }: BathroomInformationPanelProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
@@ -439,9 +456,13 @@ export function BathroomInformationPanel({
     transformOrigin: "center center",
   };
 
-  const noopVoteClick = (event: MouseEvent<HTMLButtonElement>) => {
-    event.stopPropagation();
-  };
+  const handleVoteClick = useCallback(
+    (side: BathroomExistenceVoteSide) => (event: MouseEvent<HTMLButtonElement>) => {
+      event.stopPropagation();
+      onVote?.(side);
+    },
+    [onVote],
+  );
 
   const realVoteHighlightChange = useCallback(
     (highlighted: boolean) => setVoteButtonHighlighted("real", highlighted),
@@ -463,14 +484,16 @@ export function BathroomInformationPanel({
         <ExistenceVoteButton
           label="Real?"
           fillColor={BathroomPageConsts.VERIFIED_COLOR}
-          onClick={noopVoteClick}
+          isLoading={votingSide === "exists"}
+          onClick={handleVoteClick("exists")}
           onHighlightChange={realVoteHighlightChange}
           onPointerHoverSync={scheduleSyncPanelPointerHoverFromDom}
         />
         <ExistenceVoteButton
           label="Gone?"
           fillColor={BathroomPageConsts.NON_VERIFIED_COLOR}
-          onClick={noopVoteClick}
+          isLoading={votingSide === "not_exists"}
+          onClick={handleVoteClick("not_exists")}
           onHighlightChange={goneVoteHighlightChange}
           onPointerHoverSync={scheduleSyncPanelPointerHoverFromDom}
         />

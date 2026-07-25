@@ -1,5 +1,8 @@
 import { BathroomPage as BathroomPageConsts } from "../../ComponentConstants";
-import type { VerifyStatus } from "../../../_shared/BathroomDataPrimary";
+import type {
+  BathroomDataPrimaryRow,
+  VerifyStatus,
+} from "../../../_shared/BathroomDataPrimary";
 import { clamp01 } from "../../Utils";
 import { dropdownMenuQuadraticEase } from "../dropdown-menu/DropdownMenuLayout";
 import { dropshadowVisibleOverflowPaddingPx } from "../Dropshadow";
@@ -133,12 +136,16 @@ export type BathroomExistenceVoteCounts = {
   againstCount: number;
 };
 
-/**
- * Stub vote counts while bathroom_data_primary has no existence-vote columns
- * (see bathroom_page.md TESTING notice).
- */
-export function bathroomExistenceVoteStubCounts(): BathroomExistenceVoteCounts {
-  return { forCount: 1, againstCount: 1 };
+export type BathroomExistenceVoteSide = "exists" | "not_exists";
+
+/** Maps bathroom_data_primary vote columns to panel vote counts. */
+export function bathroomExistenceVoteCountsFromRow(
+  row: Pick<BathroomDataPrimaryRow, "exists_vote_count" | "not_exists_vote_count">,
+): BathroomExistenceVoteCounts {
+  return {
+    forCount: row.exists_vote_count,
+    againstCount: row.not_exists_vote_count,
+  };
 }
 
 /** Fraction of the existence vote bar width allocated to votes for (0–1). */

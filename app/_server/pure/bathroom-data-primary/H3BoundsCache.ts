@@ -79,7 +79,8 @@ export function parseBathroomH3CellRpcRows(
       typeof row.id !== "number" ||
       typeof row.latitude !== "number" ||
       typeof row.longitude !== "number" ||
-      (row.verify_status !== "pending" && row.verify_status !== "verified") ||
+      typeof row.exists_vote_count !== "number" ||
+      typeof row.not_exists_vote_count !== "number" ||
       typeof row.temp_data !== "string" ||
       typeof row.created_at !== "string" ||
       typeof row.version !== "number"
@@ -91,7 +92,8 @@ export function parseBathroomH3CellRpcRows(
       id: row.id,
       latitude: row.latitude,
       longitude: row.longitude,
-      verify_status: row.verify_status,
+      exists_vote_count: row.exists_vote_count,
+      not_exists_vote_count: row.not_exists_vote_count,
       temp_data: row.temp_data,
       created_at: row.created_at,
       version: row.version,
@@ -191,7 +193,8 @@ function h3CellRpcRowToBathroomRow(
     id: row.id,
     latitude: row.latitude,
     longitude: row.longitude,
-    verify_status: row.verify_status,
+    exists_vote_count: row.exists_vote_count,
+    not_exists_vote_count: row.not_exists_vote_count,
     temp_data: row.temp_data,
     created_at: row.created_at,
     version: row.version,

@@ -14,7 +14,8 @@ export type BathroomDataPrimaryRow = {
   id: number;
   latitude: number;
   longitude: number;
-  verify_status: VerifyStatus;
+  exists_vote_count: number;
+  not_exists_vote_count: number;
   temp_data: string;
   created_at: string;
   version: number;
@@ -40,7 +41,8 @@ export type BathroomSyncUpsert = {
   id: number;
   latitude: number;
   longitude: number;
-  verify_status: VerifyStatus;
+  exists_vote_count: number;
+  not_exists_vote_count: number;
   version: number;
 };
 
@@ -50,7 +52,52 @@ export type BathroomSyncResponse = {
 };
 
 /** Bathroom shown on the globe and stored in the local cache. */
-export type BathroomViewportEntry = BathroomSyncUpsert;
+export type BathroomViewportEntry = BathroomSyncUpsert & {
+  /** Derived client-side for markers and local cache (see bathroom_db_reading.md). */
+  verify_status: VerifyStatus;
+};
 
 export const BATHROOM_LOCAL_CACHE_TABLE_NAME =
   "bathroom_data_primary_cache" as const;
+
+/** Derives marker/cache verify status from existence vote counts. */
+export function deriveVerifyStatusFromExistenceVotes(
+  existsVoteCount: number,
+  notExistsVoteCount: number,
+): VerifyStatus {
+  return existsVoteCount > notExistsVoteCount ? "verified" : "pending";
+}
+
+export function bathroomSyncUpsertToViewportEntry(
+  upsert: BathroomSyncUpsert,
+): BathroomViewportEntry {
+  return {
+    ...upsert,
+    verify_status: deriveVerifyStatusFromExistenceVotes(
+      upsert.exists_vote_count,
+      upsert.not_exists_vote_count,
+    ),
+  };
+}
+
+/** Maps a bathroom_data_primary row to a globe viewport/cache entry. */
+export function bathroomDataPrimaryRowToViewportEntry(
+  row: Pick<
+    BathroomDataPrimaryRow,
+    | "id"
+    | "latitude"
+    | "longitude"
+    | "exists_vote_count"
+    | "not_exists_vote_count"
+    | "version"
+  >,
+): BathroomViewportEntry {
+  return bathroomSyncUpsertToViewportEntry({
+    id: row.id,
+    latitude: row.latitude,
+    longitude: row.longitude,
+    exists_vote_count: row.exists_vote_count,
+    not_exists_vote_count: row.not_exists_vote_count,
+    version: row.version,
+  });
+}

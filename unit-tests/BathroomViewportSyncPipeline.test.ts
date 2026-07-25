@@ -5,7 +5,44 @@ import {
   runBathroomViewportSyncPipeline,
 } from "../app/_client/pure/bathroom/BathroomViewportSyncPipeline";
 import { replaceRenderedBathrooms } from "../app/_client/pure/bathroom/RenderedBathrooms";
-import { type BathroomViewportEntry } from "../app/_shared/BathroomDataPrimary";
+import {
+  type BathroomSyncResponse,
+  type BathroomSyncUpsert,
+  type BathroomViewportEntry,
+  deriveVerifyStatusFromExistenceVotes,
+} from "../app/_shared/BathroomDataPrimary";
+
+function viewportEntry(
+  overrides: Partial<BathroomViewportEntry> & Pick<BathroomViewportEntry, "id">,
+): BathroomViewportEntry {
+  const exists_vote_count = overrides.exists_vote_count ?? 0;
+  const not_exists_vote_count = overrides.not_exists_vote_count ?? 0;
+  return {
+    latitude: 0,
+    longitude: 0,
+    version: 0,
+    exists_vote_count,
+    not_exists_vote_count,
+    verify_status: deriveVerifyStatusFromExistenceVotes(
+      exists_vote_count,
+      not_exists_vote_count,
+    ),
+    ...overrides,
+  };
+}
+
+function syncUpsert(
+  overrides: Partial<BathroomSyncUpsert> & Pick<BathroomSyncUpsert, "id">,
+): BathroomSyncUpsert {
+  return {
+    latitude: 0,
+    longitude: 0,
+    version: 0,
+    exists_vote_count: 0,
+    not_exists_vote_count: 0,
+    ...overrides,
+  };
+}
 
 function createLocalDbMock(
   localEntries: BathroomViewportEntry[],
@@ -33,13 +70,13 @@ describe("BathroomViewportSyncPipeline", () => {
 
   test("keeps local bathrooms rendered when remote sync returns null", async () => {
     const localDbPort = createLocalDbMock([
-      {
+      viewportEntry({
         id: 7,
         latitude: 0.25,
         longitude: 0.75,
-        verify_status: "verified",
+        exists_vote_count: 2,
         version: 2,
-      },
+      }),
     ]);
     const onRenderedBathroomsChange = jest.fn();
     const onRemoteSyncError = jest.fn();
@@ -62,28 +99,18 @@ describe("BathroomViewportSyncPipeline", () => {
   });
 
   test("renders local entries before remote sync resolves", async () => {
-    let resolveRemote:
-      | ((value: {
-          val: {
-            upserts: BathroomViewportEntry[];
-            deleteIds: number[];
-          };
-        }) => void)
-      | undefined;
-    const remotePromise = new Promise<{
-      val: { upserts: BathroomViewportEntry[]; deleteIds: number[] };
-    }>((resolve) => {
+    let resolveRemote: ((value: { val: BathroomSyncResponse }) => void) | undefined;
+    const remotePromise = new Promise<{ val: BathroomSyncResponse }>((resolve) => {
       resolveRemote = resolve;
     });
 
     const localDbPort = createLocalDbMock([
-      {
+      viewportEntry({
         id: 1,
         latitude: 0.1,
         longitude: 0.1,
-        verify_status: "pending",
         version: 0,
-      },
+      }),
     ]);
     const onRenderedBathroomsChange = jest.fn();
 
@@ -104,13 +131,13 @@ describe("BathroomViewportSyncPipeline", () => {
     resolveRemote?.({
       val: {
         upserts: [
-          {
+          syncUpsert({
             id: 2,
             latitude: 0.2,
             longitude: 0.2,
-            verify_status: "verified",
+            exists_vote_count: 2,
             version: 1,
-          },
+          }),
         ],
         deleteIds: [],
       },
@@ -123,13 +150,13 @@ describe("BathroomViewportSyncPipeline", () => {
 
   test("local sync hydrates rendered bathrooms without calling remote", async () => {
     const localDbPort = createLocalDbMock([
-      {
+      viewportEntry({
         id: 3,
         latitude: 0.3,
         longitude: 0.3,
-        verify_status: "verified",
+        exists_vote_count: 2,
         version: 1,
-      },
+      }),
     ]);
     const onRenderedBathroomsChange = jest.fn();
     const syncRemote = jest.fn();
@@ -152,13 +179,12 @@ describe("BathroomViewportSyncPipeline", () => {
     const localDbPort = createLocalDbMock([]);
     const onRenderedBathroomsChange = jest.fn();
     const initialRendered = replaceRenderedBathrooms([
-      {
+      viewportEntry({
         id: 4,
         latitude: 0.4,
         longitude: 0.4,
-        verify_status: "pending",
         version: 0,
-      },
+      }),
     ]);
 
     await runBathroomViewportRemoteSync({
@@ -170,13 +196,13 @@ describe("BathroomViewportSyncPipeline", () => {
       syncRemote: async () => ({
         val: {
           upserts: [
-            {
+            syncUpsert({
               id: 4,
               latitude: 0.41,
               longitude: 0.41,
-              verify_status: "verified",
+              exists_vote_count: 2,
               version: 2,
-            },
+            }),
           ],
           deleteIds: [],
         },
@@ -195,13 +221,13 @@ describe("BathroomViewportSyncPipeline", () => {
   });
 
   test("local sync after remote fetch preserves loadedFromCache false for debug tint", async () => {
-    const remoteFetched = {
+    const remoteFetched = viewportEntry({
       id: 5,
       latitude: 0.5,
       longitude: 0.5,
-      verify_status: "verified" as const,
+      exists_vote_count: 2,
       version: 1,
-    };
+    });
     const localDbPort = createLocalDbMock([remoteFetched]);
     const previousRendered = new Map([
       [
@@ -225,13 +251,12 @@ describe("BathroomViewportSyncPipeline", () => {
 
   test("stale remote upsert keeps loadedFromCache true when id was already cached", async () => {
     const localDbPort = createLocalDbMock([
-      {
+      viewportEntry({
         id: 6,
         latitude: 0.6,
         longitude: 0.6,
-        verify_status: "pending",
         version: 1,
-      },
+      }),
     ]);
     localDbPort.getIdVersionPairsInBounds.mockResolvedValue([{ id: 6, version: 1 }]);
     const onRenderedBathroomsChange = jest.fn();
@@ -239,11 +264,12 @@ describe("BathroomViewportSyncPipeline", () => {
       [
         6,
         {
-          id: 6,
-          latitude: 0.6,
-          longitude: 0.6,
-          verify_status: "pending" as const,
-          version: 1,
+          ...viewportEntry({
+            id: 6,
+            latitude: 0.6,
+            longitude: 0.6,
+            version: 1,
+          }),
           loadedFromCache: true,
         },
       ],
@@ -258,13 +284,13 @@ describe("BathroomViewportSyncPipeline", () => {
       syncRemote: async () => ({
         val: {
           upserts: [
-            {
+            syncUpsert({
               id: 6,
               latitude: 0.61,
               longitude: 0.61,
-              verify_status: "verified",
+              exists_vote_count: 2,
               version: 2,
-            },
+            }),
           ],
           deleteIds: [],
         },
@@ -282,28 +308,18 @@ describe("BathroomViewportSyncPipeline", () => {
 
   test("drops stale requests before applying remote merges", async () => {
     let activeRequestId = 2;
-    let resolveRemote:
-      | ((value: {
-          val: {
-            upserts: BathroomViewportEntry[];
-            deleteIds: number[];
-          };
-        }) => void)
-      | undefined;
-    const remotePromise = new Promise<{
-      val: { upserts: BathroomViewportEntry[]; deleteIds: number[] };
-    }>((resolve) => {
+    let resolveRemote: ((value: { val: BathroomSyncResponse }) => void) | undefined;
+    const remotePromise = new Promise<{ val: BathroomSyncResponse }>((resolve) => {
       resolveRemote = resolve;
     });
 
     const localDbPort = createLocalDbMock([
-      {
+      viewportEntry({
         id: 2,
         latitude: 0.4,
         longitude: 0.4,
-        verify_status: "pending",
         version: 2,
-      },
+      }),
     ]);
     const onRenderedBathroomsChange = jest.fn();
 
@@ -324,13 +340,13 @@ describe("BathroomViewportSyncPipeline", () => {
     resolveRemote?.({
       val: {
         upserts: [
-          {
+          syncUpsert({
             id: 9,
             latitude: 0.5,
             longitude: 0.5,
-            verify_status: "verified",
+            exists_vote_count: 2,
             version: 4,
-          },
+          }),
         ],
         deleteIds: [],
       },

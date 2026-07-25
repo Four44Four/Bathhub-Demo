@@ -1,6 +1,5 @@
 import {
   type BathroomDataPrimaryFullRow,
-  type VerifyStatus,
 } from "../../../_shared/BathroomDataPrimary";
 import { formatSupabaseError } from "../formatSupabaseError";
 
@@ -38,12 +37,12 @@ export function buildReadBathroomByIdRpcParams(
   return { p_id: id };
 }
 
-function isVerifyStatus(value: unknown): value is VerifyStatus {
-  return value === "pending" || value === "verified";
+function isVoteCount(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0;
 }
 
 function isRatingCount(value: unknown): value is number {
-  return typeof value === "number" && Number.isFinite(value) && value >= 0;
+  return isVoteCount(value);
 }
 
 /** Parses a full bathroom row returned by {@link READ_BATHROOM_BY_ID_RPC_NAME}. */
@@ -59,7 +58,8 @@ export function parseBathroomDataPrimaryFullRow(
     typeof candidate.id !== "number" ||
     typeof candidate.latitude !== "number" ||
     typeof candidate.longitude !== "number" ||
-    !isVerifyStatus(candidate.verify_status) ||
+    !isVoteCount(candidate.exists_vote_count) ||
+    !isVoteCount(candidate.not_exists_vote_count) ||
     typeof candidate.temp_data !== "string" ||
     typeof candidate.created_at !== "string" ||
     typeof candidate.version !== "number" ||
@@ -76,7 +76,8 @@ export function parseBathroomDataPrimaryFullRow(
     id: candidate.id,
     latitude: candidate.latitude,
     longitude: candidate.longitude,
-    verify_status: candidate.verify_status,
+    exists_vote_count: candidate.exists_vote_count,
+    not_exists_vote_count: candidate.not_exists_vote_count,
     temp_data: candidate.temp_data,
     created_at: candidate.created_at,
     version: candidate.version,

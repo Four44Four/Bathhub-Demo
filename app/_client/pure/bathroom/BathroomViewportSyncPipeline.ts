@@ -2,7 +2,9 @@ import { type Errorable } from "../../../_shared/Utils";
 import {
   type BathroomClientCacheEntry,
   type BathroomSyncResponse,
+  type BathroomViewportEntry,
   type ViewportBounds,
+  bathroomSyncUpsertToViewportEntry,
 } from "../../../_shared/BathroomDataPrimary";
 import { type BathroomLocalDbPort } from "../../local-db/LocalDbPort";
 import {
@@ -86,12 +88,13 @@ export async function runBathroomViewportRemoteSync(
 
   const { upserts, deleteIds } = result.val;
   const cachedIdsBeforeUpsert = cachedIdsFromClientCache(clientCache);
+  const viewportUpserts = upserts.map(bathroomSyncUpsertToViewportEntry);
 
-  if (upserts.length > 0) {
-    await deps.localDbPort.upsertMany(upserts);
+  if (viewportUpserts.length > 0) {
+    await deps.localDbPort.upsertMany(viewportUpserts);
     rendered = applyUpsertsToRenderedBathrooms(
       rendered,
-      upserts,
+      viewportUpserts,
       cachedIdsBeforeUpsert,
     );
     if (!deps.isRequestCurrent(deps.requestId)) {

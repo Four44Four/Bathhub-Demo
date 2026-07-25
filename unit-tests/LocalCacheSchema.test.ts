@@ -1,6 +1,8 @@
 import {
   isLocalCacheSchemaReady,
+  missingRequiredLocalCacheColumns,
   missingRequiredLocalCacheTables,
+  REQUIRED_LOCAL_CACHE_COLUMNS,
   REQUIRED_LOCAL_CACHE_TABLES,
 } from "../app/_client/pure/bathroom/LocalCacheSchema";
 
@@ -19,6 +21,20 @@ describe("LocalCacheSchema", () => {
     ).toEqual(["rtree_bathroom_data_primary_cache_location"]);
   });
 
+  test("missingRequiredLocalCacheColumns reports absent vote-count columns", () => {
+    expect(missingRequiredLocalCacheColumns([])).toEqual([
+      ...REQUIRED_LOCAL_CACHE_COLUMNS,
+    ]);
+    expect(
+      missingRequiredLocalCacheColumns([
+        "remote_id",
+        "location",
+        "version",
+        "verify_status",
+      ]),
+    ).toEqual(["exists_vote_count", "not_exists_vote_count"]);
+  });
+
   test("isLocalCacheSchemaReady is true only when every required table exists", () => {
     expect(isLocalCacheSchemaReady([...REQUIRED_LOCAL_CACHE_TABLES])).toBe(
       true,
@@ -26,5 +42,20 @@ describe("LocalCacheSchema", () => {
     expect(isLocalCacheSchemaReady(["bathroom_data_primary_cache"])).toBe(
       false,
     );
+  });
+
+  test("isLocalCacheSchemaReady requires vote-count columns on the cache table", () => {
+    expect(
+      isLocalCacheSchemaReady(
+        [...REQUIRED_LOCAL_CACHE_TABLES],
+        [...REQUIRED_LOCAL_CACHE_COLUMNS, "updated_at"],
+      ),
+    ).toBe(true);
+    expect(
+      isLocalCacheSchemaReady(
+        [...REQUIRED_LOCAL_CACHE_TABLES],
+        ["remote_id", "location", "version", "verify_status", "updated_at"],
+      ),
+    ).toBe(false);
   });
 });

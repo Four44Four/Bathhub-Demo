@@ -1,5 +1,7 @@
 import { type BathroomDataPrimaryRow } from "../../../_shared/BathroomDataPrimary";
-import { parseCachedBathroomRecord } from "./CachedBathroomRecord";
+import {
+  parseBathroomDataPrimaryRowFromCache,
+} from "./CachedBathroomRecord";
 
 export type CachedBathroomH3CellRecord = {
   resolution: number;
@@ -39,7 +41,7 @@ export function parseCachedBathroomH3CellRecord(
 
   const rows: BathroomDataPrimaryRow[] = [];
   for (const row of candidate.rows) {
-    const parsedRow = parseCachedBathroomRecord(JSON.stringify(row));
+    const parsedRow = parseBathroomDataPrimaryRowFromCache(row);
     if (parsedRow === null) {
       return null;
     }

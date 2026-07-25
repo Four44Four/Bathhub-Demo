@@ -1,10 +1,14 @@
-import { type BathroomDataPrimaryRow, type VerifyStatus } from "../app/_shared/BathroomDataPrimary";
+import {
+  type BathroomDataPrimaryRow,
+  deriveVerifyStatusFromExistenceVotes,
+} from "../app/_shared/BathroomDataPrimary";
 
 export type InputCoordinate = {
   label: string;
   latitude: number;
   longitude: number;
-  verify_status: VerifyStatus;
+  exists_vote_count: number;
+  not_exists_vote_count: number;
 };
 
 export type FailedRowReport = {
@@ -28,11 +32,19 @@ const ANSI = {
   reset: "\x1b[0m",
 } as const;
 
-const INPUT_COLUMNS = ["label", "latitude", "longitude", "verify_status"] as const;
+const INPUT_COLUMNS = [
+  "label",
+  "latitude",
+  "longitude",
+  "exists_vote_count",
+  "not_exists_vote_count",
+] as const;
 const OUTPUT_COLUMNS = [
   "id",
   "latitude",
   "longitude",
+  "exists_vote_count",
+  "not_exists_vote_count",
   "verify_status",
   "temp_data",
   "created_at",
@@ -80,7 +92,8 @@ function inputRows(inputs: InputCoordinate[]): string[][] {
     input.label,
     input.latitude.toFixed(6),
     input.longitude.toFixed(6),
-    input.verify_status,
+    String(input.exists_vote_count),
+    String(input.not_exists_vote_count),
   ]);
 }
 
@@ -89,9 +102,15 @@ function outputRows(rows: BathroomDataPrimaryRow[]): string[][] {
     String(row.id),
     row.latitude.toFixed(6),
     row.longitude.toFixed(6),
-    row.verify_status,
+    String(row.exists_vote_count),
+    String(row.not_exists_vote_count),
+    deriveVerifyStatusFromExistenceVotes(
+      row.exists_vote_count,
+      row.not_exists_vote_count,
+    ),
     row.temp_data,
     row.created_at,
+    String(row.version),
   ]);
 }
 
@@ -101,7 +120,12 @@ function failedRows(failures: FailedRowReport[]): string[][] {
     failure.row === null ? "-" : String(failure.row.id),
     failure.row === null ? "-" : failure.row.latitude.toFixed(6),
     failure.row === null ? "-" : failure.row.longitude.toFixed(6),
-    failure.row === null ? "-" : failure.row.verify_status,
+    failure.row === null
+      ? "-"
+      : deriveVerifyStatusFromExistenceVotes(
+          failure.row.exists_vote_count,
+          failure.row.not_exists_vote_count,
+        ),
     failure.errors.join("; "),
   ]);
 }

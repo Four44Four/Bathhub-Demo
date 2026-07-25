@@ -3,7 +3,13 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 
-import { incrementBathroomRating, readBathroomById } from "../Bathroom";
+import {
+  applyBathroomViewportUpsert,
+  incrementBathroomExistenceVote,
+  incrementBathroomRating,
+  readBathroomById,
+} from "../Bathroom";
+import { deriveVerifyStatusFromExistenceVotes } from "../../_shared/BathroomDataPrimary";
 import {
   BathroomPage as BathroomPageConsts,
   BathroomRemoteDB,
@@ -22,6 +28,11 @@ import {
   bathroomTotalRatingCount,
   type BathroomRatingCounts,
 } from "../pure/bathroom/BathroomRating";
+import {
+  bathroomExistenceVoteCountsFromRow,
+  type BathroomExistenceVoteCounts,
+  type BathroomExistenceVoteSide,
+} from "../pure/bathroom/BathroomInformation";
 import { bathroomPageDropdownWidthPx, bathroomPageDropdownXPx } from "../pure/dropdown-menu/DropdownMenuLayout";
 import {
   bathroomPageFetchFailureAlertMessage,
@@ -168,8 +179,13 @@ export function BathroomPage() {
   const [ratingCounts, setRatingCounts] = useState<BathroomRatingCounts | null>(
     null,
   );
+  const [existenceVoteCounts, setExistenceVoteCounts] =
+    useState<BathroomExistenceVoteCounts | null>(null);
   const [draftRating, setDraftRating] = useState(0);
   const [isPostingRating, setIsPostingRating] = useState(false);
+  const [votingSide, setVotingSide] = useState<BathroomExistenceVoteSide | null>(
+    null,
+  );
 
   useEffect(() => {
     const previousMenuWasOpenAboveCollapsed =
@@ -188,16 +204,20 @@ export function BathroomPage() {
     if (selectedBathroomId == null) {
       setLoadState({ status: "idle" });
       setRatingCounts(null);
+      setExistenceVoteCounts(null);
       setDraftRating(0);
       setIsPostingRating(false);
+      setVotingSide(null);
       return;
     }
 
     let cancelled = false;
     setLoadState({ status: "loading" });
     setRatingCounts(null);
+    setExistenceVoteCounts(null);
     setDraftRating(0);
     setIsPostingRating(false);
+    setVotingSide(null);
 
     void (async () => {
       const result = await promiseWithTimeout(
@@ -215,6 +235,7 @@ export function BathroomPage() {
         }
         setLoadState({ status: "loaded", row: result.val });
         setRatingCounts(bathroomRatingCountsFromFullRow(result.val));
+        setExistenceVoteCounts(bathroomExistenceVoteCountsFromRow(result.val));
         return;
       }
 
@@ -240,7 +261,13 @@ export function BathroomPage() {
 
   const loadedRow = loadState.status === "loaded" ? loadState.row : null;
   const bathroomId = loadedRow?.id ?? selectedBathroomId ?? 0;
-  const verifyStatus = loadedRow?.verify_status ?? "pending";
+  const verifyStatus =
+    existenceVoteCounts === null
+      ? "pending"
+      : deriveVerifyStatusFromExistenceVotes(
+          existenceVoteCounts.forCount,
+          existenceVoteCounts.againstCount,
+        );
 
   const sideMarginPx = SwipeUpMainMenuConsts.MARGIN_SIDE_PX;
   const dropdownWidthPx = bathroomPageDropdownWidthPx(widthPx, sideMarginPx);
@@ -282,7 +309,7 @@ export function BathroomPage() {
     );
   }
 
-  if (loadState.status !== "loaded" || ratingCounts == null) {
+  if (loadState.status !== "loaded" || ratingCounts == null || existenceVoteCounts == null) {
     return null;
   }
 
@@ -377,6 +404,39 @@ export function BathroomPage() {
       <BathroomInformationPanel
         verifyStatus={verifyStatus}
         widthPx={informationPanelWidthPx}
+        voteCounts={existenceVoteCounts}
+        votingSide={votingSide}
+        onVote={(side) => {
+          if (votingSide !== null) {
+            return;
+          }
+
+          setVotingSide(side);
+          void (async () => {
+            const result = await incrementBathroomExistenceVote(
+              bathroomId,
+              side === "exists",
+            );
+            if (reportRateLimitViolation(result.errorMsg)) {
+              setVotingSide(null);
+              return;
+            }
+
+            if (result.val == null) {
+              setVotingSide(null);
+              showImportantAlert({
+                message: "Error occurred while posting existence vote",
+                okLabel: "Ok",
+                positive: false,
+              });
+              return;
+            }
+
+            setExistenceVoteCounts(bathroomExistenceVoteCountsFromRow(result.val));
+            await applyBathroomViewportUpsert(result.val);
+            setVotingSide(null);
+          })();
+        }}
       />
     </div>
   );

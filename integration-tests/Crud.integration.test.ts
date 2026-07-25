@@ -1,14 +1,18 @@
+import { createClient } from "@supabase/supabase-js";
+
 import {
   createAt as bathroomDbCreate,
   getById as bathroomDbReadById,
   getInBounds as bathroomDbReadInBounds,
+  incrementExistenceVoteCount as bathroomDbIncrementExistenceVoteCore,
   incrementRatingCount as bathroomDbIncrementRating,
-  updateVerifyStatus as bathroomDbUpdateVerifyStatus,
 } from "../app/_server/database/bathroom-data-primary/CrudCore";
 import {
   CREATE_BATHROOM_ERROR_CONTEXT,
   TEMP_DATA_LENGTH,
 } from "../app/_server/pure/bathroom-data-primary/CreateBathroom";
+import { INCREMENT_BATHROOM_EXISTENCE_VOTE_ERROR_CONTEXT } from "../app/_server/pure/bathroom-data-primary/IncrementBathroomExistenceVote";
+import { getReadCache } from "../app/_server/redis/ReadCache";
 import {
   type BathroomDataPrimaryRow,
   type ViewportBounds,
@@ -20,7 +24,11 @@ import {
 } from "./formatCrudReport";
 import { disconnectRedisTestGlobals } from "./disconnectRedisTestGlobals";
 import { loadLocations } from "./loadLocations";
-import { requireLocalSupabaseEnv } from "./requireLocalSupabase";
+import { requireLocalRedis } from "./requireLocalRedis";
+import {
+  requireLocalSupabaseAdminEnv,
+  requireLocalSupabaseEnv,
+} from "./requireLocalSupabase";
 
 const READ_IN_BOUNDS_ERROR_CONTEXT =
   "Failed to list bathroom_data_primary rows in bounds" as const;
@@ -87,9 +95,15 @@ function validateRow(
     );
   }
 
-  if (actual.verify_status !== expected.verify_status) {
+  if (actual.exists_vote_count !== expected.exists_vote_count) {
     errors.push(
-      `${phase}: verify_status expected ${expected.verify_status}, got ${actual.verify_status}`,
+      `${phase}: exists_vote_count expected ${expected.exists_vote_count}, got ${actual.exists_vote_count}`,
+    );
+  }
+
+  if (actual.not_exists_vote_count !== expected.not_exists_vote_count) {
+    errors.push(
+      `${phase}: not_exists_vote_count expected ${expected.not_exists_vote_count}, got ${actual.not_exists_vote_count}`,
     );
   }
 
@@ -151,6 +165,7 @@ describe("bathroom_data_primary CRUD against local Supabase", () => {
   let testsPassed = true;
 
   beforeAll(() => {
+    requireLocalRedis();
     requireLocalSupabaseEnv();
   });
 
@@ -197,11 +212,14 @@ describe("bathroom_data_primary CRUD against local Supabase", () => {
     }
 
     try {
-      tableRows = await bathroomDbReadInBounds(WORLD_BOUNDS);
+      const createdIds = new Set(created.map(({ row }) => row.id));
+      tableRows = (await bathroomDbReadInBounds(WORLD_BOUNDS)).filter((row) =>
+        createdIds.has(row.id),
+      );
       if (tableRows.length !== expectedBathrooms.length) {
         testsPassed = false;
         recordFailure(failedRows, "(table scan)", null, [
-          `read: expected ${expectedBathrooms.length} rows in bathroom_data_primary, got ${tableRows.length}`,
+          `read: expected ${expectedBathrooms.length} created fixture rows, got ${tableRows.length}`,
         ]);
       }
     } catch (error) {
@@ -224,6 +242,21 @@ describe("bathroom_data_primary CRUD against local Supabase", () => {
       testsPassed,
     });
 
+    const createdIds = created.map(({ row }) => row.id);
+    const readCache = getReadCache();
+    await Promise.all(createdIds.map((id) => readCache.removeBathroom(id)));
+
+    if (createdIds.length > 0) {
+      const { url, serviceRoleKey } = requireLocalSupabaseAdminEnv();
+      const { error } = await createClient(url, serviceRoleKey)
+        .from("bathroom_data_primary")
+        .delete()
+        .in("id", createdIds);
+      if (error !== null) {
+        throw new Error(`Failed to clean CRUD fixtures: ${error.message}`);
+      }
+    }
+
     await disconnectRedisTestGlobals();
   });
 
@@ -233,7 +266,7 @@ describe("bathroom_data_primary CRUD against local Supabase", () => {
     expect(env.key.length).toBeGreaterThan(0);
   });
 
-  test("create responses match pre-generated locations and verify statuses", () => {
+  test("create responses match pre-generated locations and vote counts", () => {
     expect(created).toHaveLength(expectedBathrooms.length);
     expect(failuresForPhase(failedRows, "create")).toHaveLength(0);
   });
@@ -243,34 +276,8 @@ describe("bathroom_data_primary CRUD against local Supabase", () => {
     expect(failuresForPhase(failedRows, "read")).toHaveLength(0);
   });
 
-  test("bathroom_data_primary row count matches locations.json after seeding", () => {
+  test("created bathroom fixture count matches locations.json", () => {
     expect(tableRows).toHaveLength(expectedBathrooms.length);
-  });
-
-  test("bathroomDbUpdateVerifyStatus updates verify_status and increments version", async () => {
-    const target = created[0]?.row;
-    expect(target).toBeDefined();
-    if (target === undefined) return;
-
-    const updated = await bathroomDbUpdateVerifyStatus(target.id, "verified");
-
-    expect(updated).toMatchObject({
-      id: target.id,
-      latitude: target.latitude,
-      longitude: target.longitude,
-      verify_status: "verified",
-      version: target.version + 1,
-    });
-
-    const rows = await bathroomDbReadInBounds(
-      boundsAround(target.latitude, target.longitude),
-    );
-    const persisted = rows.find((candidate) => candidate.id === target.id);
-    expect(persisted).toMatchObject({
-      id: target.id,
-      verify_status: "verified",
-      version: target.version + 1,
-    });
   });
 
   test("bathroomDbReadInBounds returns empty for an out-of-bounds viewport", async () => {
@@ -290,7 +297,8 @@ describe("bathroom_data_primary CRUD against local Supabase", () => {
     expect(row?.id).toBe(target.id);
     expect(row?.latitude).toBeCloseTo(target.latitude, 5);
     expect(row?.longitude).toBeCloseTo(target.longitude, 5);
-    expect(row?.verify_status).toBe(target.verify_status);
+    expect(row?.exists_vote_count).toBe(target.exists_vote_count);
+    expect(row?.not_exists_vote_count).toBe(target.not_exists_vote_count);
     expect(row?.rating_1_count).toBe(0);
     expect(row?.rating_2_count).toBe(0);
     expect(row?.rating_3_count).toBe(0);
@@ -326,13 +334,68 @@ describe("bathroom_data_primary CRUD against local Supabase", () => {
     });
   });
 
+  test("bathroomDbIncrementExistenceVote increments exists_vote_count and version", async () => {
+    const target = created[3]?.row;
+    expect(target).toBeDefined();
+    if (target === undefined) {
+      return;
+    }
+
+    const updated = await bathroomDbIncrementExistenceVoteCore(target.id, "exists");
+
+    expect(updated).toMatchObject({
+      id: target.id,
+      exists_vote_count: target.exists_vote_count + 1,
+      not_exists_vote_count: target.not_exists_vote_count,
+      version: target.version + 1,
+    });
+
+    const row = await bathroomDbReadById(target.id);
+    expect(row).toMatchObject({
+      id: target.id,
+      exists_vote_count: target.exists_vote_count + 1,
+      not_exists_vote_count: target.not_exists_vote_count,
+      version: target.version + 1,
+    });
+  });
+
+  test("bathroomDbIncrementExistenceVote increments not_exists_vote_count and version", async () => {
+    const target = created[4]?.row;
+    expect(target).toBeDefined();
+    if (target === undefined) {
+      return;
+    }
+
+    const updated = await bathroomDbIncrementExistenceVoteCore(
+      target.id,
+      "not_exists",
+    );
+
+    expect(updated).toMatchObject({
+      id: target.id,
+      exists_vote_count: target.exists_vote_count,
+      not_exists_vote_count: target.not_exists_vote_count + 1,
+      version: target.version + 1,
+    });
+
+    const row = await bathroomDbReadById(target.id);
+    expect(row).toMatchObject({
+      id: target.id,
+      exists_vote_count: target.exists_vote_count,
+      not_exists_vote_count: target.not_exists_vote_count + 1,
+      version: target.version + 1,
+    });
+  });
+
   describe("error paths", () => {
     test("bathroomDbCreate rejects invalid latitude from PostGIS", async () => {
       await expect(bathroomDbCreate(Number.NaN, 0)).rejects.toThrow(
         CREATE_BATHROOM_ERROR_CONTEXT,
       );
 
-      expect((await bathroomDbReadInBounds(WORLD_BOUNDS)).length).toBe(
+      const rows = await bathroomDbReadInBounds(WORLD_BOUNDS);
+      const createdIds = new Set(created.map(({ row }) => row.id));
+      expect(rows.filter((row) => createdIds.has(row.id))).toHaveLength(
         expectedBathrooms.length,
       );
     });
@@ -345,9 +408,17 @@ describe("bathroom_data_primary CRUD against local Supabase", () => {
         }),
       ).rejects.toThrow(READ_IN_BOUNDS_ERROR_CONTEXT);
 
-      expect((await bathroomDbReadInBounds(WORLD_BOUNDS)).length).toBe(
+      const rows = await bathroomDbReadInBounds(WORLD_BOUNDS);
+      const createdIds = new Set(created.map(({ row }) => row.id));
+      expect(rows.filter((row) => createdIds.has(row.id))).toHaveLength(
         expectedBathrooms.length,
       );
+    });
+
+    test("bathroomDbIncrementExistenceVote rejects an invalid bathroom id", async () => {
+      await expect(
+        bathroomDbIncrementExistenceVoteCore(0, "exists"),
+      ).rejects.toThrow(INCREMENT_BATHROOM_EXISTENCE_VOTE_ERROR_CONTEXT);
     });
   });
 });

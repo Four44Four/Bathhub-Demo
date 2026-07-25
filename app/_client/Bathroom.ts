@@ -9,8 +9,9 @@ import {
   type BathroomDataPrimaryRow,
   type BathroomSyncResponse,
   type BathroomViewportEntry,
-  type VerifyStatus,
   type ViewportBounds,
+  bathroomDataPrimaryRowToViewportEntry,
+  bathroomSyncUpsertToViewportEntry,
 } from "../_shared/BathroomDataPrimary";
 import * as BathroomCrud from "../_server/database/bathroom-data-primary/Crud";
 import { type GlobeViewportHandle } from "./globe/GlobeViewport";
@@ -32,6 +33,9 @@ export type BathroomViewportRenderHandler = (
 
 let bathroomViewportRenderHandler: BathroomViewportRenderHandler | null = null;
 let forceBathroomViewportSyncHandler: (() => void) | null = null;
+let bathroomViewportUpsertHandler:
+  | ((entry: BathroomViewportEntry) => Promise<void> | void)
+  | null = null;
 
 /** Registers the callback that renders bathrooms returned from a viewport refresh. */
 export function registerBathroomViewportRenderHandler(
@@ -57,6 +61,34 @@ export function registerForceBathroomViewportSyncHandler(
   };
 }
 
+/** Registers immediate local-cache + map-marker updates for one bathroom upsert. */
+export function registerBathroomViewportUpsertHandler(
+  handler: (entry: BathroomViewportEntry) => Promise<void> | void,
+): () => void {
+  bathroomViewportUpsertHandler = handler;
+  return () => {
+    if (bathroomViewportUpsertHandler === handler) {
+      bathroomViewportUpsertHandler = null;
+    }
+  };
+}
+
+/** Updates the local cache and rendered bathroom map marker for one bathroom row. */
+export async function applyBathroomViewportUpsert(
+  row: Pick<
+    BathroomDataPrimaryRow,
+    | "id"
+    | "latitude"
+    | "longitude"
+    | "exists_vote_count"
+    | "not_exists_vote_count"
+    | "version"
+  >,
+): Promise<void> {
+  const entry = bathroomDataPrimaryRowToViewportEntry(row);
+  await bathroomViewportUpsertHandler?.(entry);
+}
+
 /** Re-samples viewport bounds then forces an immediate bathroom query for the visible area. */
 export function forceGlobeBathroomViewportQuery(
   globe: { requestViewportResync?: () => void } | null,
@@ -72,18 +104,18 @@ export async function createBathroomAt(
   return BathroomCrud.bathroomDbCreate(latitude, longitude);
 }
 
-export async function updateBathroomVerifyStatus(
-  id: number,
-  verifyStatus: VerifyStatus,
-): Promise<Errorable<BathroomDataPrimaryRow>> {
-  return BathroomCrud.bathroomDbUpdateVerifyStatus(id, verifyStatus);
-}
-
 export async function incrementBathroomRating(
   id: number,
   stars: number,
 ): Promise<Errorable<BathroomDataPrimaryFullRow>> {
   return BathroomCrud.bathroomDbIncrementRating(id, stars);
+}
+
+export async function incrementBathroomExistenceVote(
+  id: number,
+  voteForExists: boolean,
+): Promise<Errorable<BathroomDataPrimaryFullRow>> {
+  return BathroomCrud.bathroomDbIncrementExistenceVote(id, voteForExists);
 }
 
 export async function readBathroomsInBounds(
@@ -114,7 +146,9 @@ export async function syncBathroomsInGlobeViewport(
 ): Promise<Errorable<BathroomSyncResponse>> {
   const result = await syncBathroomsInBounds(bounds, clientCache);
   if (result.val && renderHandler) {
-    renderHandler(result.val.upserts);
+    renderHandler(
+      result.val.upserts.map(bathroomSyncUpsertToViewportEntry),
+    );
   }
   return result;
 }

@@ -16,8 +16,20 @@ export const REQUIRED_LOCAL_CACHE_TABLES = [
   RTREE_TABLE_NAME,
 ] as const;
 
+/** Columns on {@link BATHROOM_LOCAL_CACHE_TABLE_NAME} per bathroom_db_reading.md. */
+export const REQUIRED_LOCAL_CACHE_COLUMNS = [
+  "remote_id",
+  "location",
+  "version",
+  "exists_vote_count",
+  "not_exists_vote_count",
+] as const;
+
 export type RequiredLocalCacheTable =
   (typeof REQUIRED_LOCAL_CACHE_TABLES)[number];
+
+export type RequiredLocalCacheColumn =
+  (typeof REQUIRED_LOCAL_CACHE_COLUMNS)[number];
 
 export function missingRequiredLocalCacheTables(
   existingTableNames: readonly string[],
@@ -26,8 +38,22 @@ export function missingRequiredLocalCacheTables(
   return REQUIRED_LOCAL_CACHE_TABLES.filter((name) => !existing.has(name));
 }
 
+export function missingRequiredLocalCacheColumns(
+  existingColumnNames: readonly string[],
+): RequiredLocalCacheColumn[] {
+  const existing = new Set(existingColumnNames);
+  return REQUIRED_LOCAL_CACHE_COLUMNS.filter((name) => !existing.has(name));
+}
+
 export function isLocalCacheSchemaReady(
   existingTableNames: readonly string[],
+  cacheTableColumns?: readonly string[],
 ): boolean {
-  return missingRequiredLocalCacheTables(existingTableNames).length === 0;
+  if (missingRequiredLocalCacheTables(existingTableNames).length > 0) {
+    return false;
+  }
+  if (cacheTableColumns === undefined) {
+    return true;
+  }
+  return missingRequiredLocalCacheColumns(cacheTableColumns).length === 0;
 }

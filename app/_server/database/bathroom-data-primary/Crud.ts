@@ -6,7 +6,6 @@ import {
   type BathroomDataPrimaryRow,
   type BathroomSyncResponse,
   type LatLong,
-  type VerifyStatus,
   type ViewportBounds,
 } from "../../../_shared/BathroomDataPrimary";
 import { type Errorable } from "../../../_shared/Utils";
@@ -56,17 +55,22 @@ export async function bathroomDbIncrementRating(
   }
 }
 
-export async function bathroomDbUpdateVerifyStatus(
+export async function bathroomDbIncrementExistenceVote(
   id: number,
-  verifyStatus: VerifyStatus,
-): Promise<Errorable<BathroomDataPrimaryRow>> {
+  voteForExists: boolean,
+): Promise<Errorable<BathroomDataPrimaryFullRow>> {
   const rateLimit = await tryEnforceServerRateLimit("bathroom-update");
   if (!rateLimit.allowed) {
     return { val: null, errorMsg: rateLimit.message };
   }
 
   try {
-    return { val: await Core.updateVerifyStatus(id, verifyStatus) };
+    return {
+      val: await Core.incrementExistenceVoteCount(
+        id,
+        voteForExists ? "exists" : "not_exists",
+      ),
+    };
   } catch (error: unknown) {
     return {
       val: null,

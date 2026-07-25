@@ -11,24 +11,27 @@
        - "Violated rate limit for bathroom creation" for bathroom creation
        - "Violated rate limit for retrieving bathrooms" for bathroom reading sync
        - "Violated rate limit for finding nearest bathroom" for nearest bathroom query
- - Bathrooms:
-    - Creation:
-       - 5 per minute
-       - 15 per day
-    - Reading/sync with client bounds:
-       - 100 per 30 seconds
-    - Querying about nearest bathroom to coordinates:
-       - 20 per minute
-    - Updating:
-       - 20 per minute
- - Path data generation via ORS:
-    - 10 per minute
-    - 300 per day
- - User config rate limits:
-    - Pulling current default DB:
-       - 5 per minute
-       - 20 per day
-    - Pulling migration scripts:
-       - 5 per minute
-       - 50 per day
  - [Redis maximum memory eviction policy is least recently used](./serverside_caching.md)
+
+## Bathrooms
+### Creation (bathrooms)
+ - 5 per minute
+ - 15 per day
+### Reading/sync with client bounds (bathrooms)
+ - 100 per 30 seconds
+### Querying about nearest bathroom to coordinates (bathrooms)
+ - 20 per minute
+### Updating (bathrooms)
+ - 20 per minute
+
+## Path data generation via ORS
+ - 10 per minute
+ - 300 per day
+
+## User config rate limits
+ - Pulling current default DB:
+    - 5 per minute
+    - 20 per day
+ - Pulling migration scripts:
+    - 5 per minute
+    - 50 per day

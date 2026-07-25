@@ -3,8 +3,8 @@ const mockTryEnforceServerRateLimit = jest.fn();
 const mockGetDefaultUserSettingsDbSnapshotBytes = jest.fn();
 const mockFindNearestBathroom = jest.fn();
 const mockCreateAt = jest.fn();
-const mockUpdateVerifyStatus = jest.fn();
 const mockIncrementRatingCount = jest.fn();
+const mockIncrementExistenceVoteCount = jest.fn();
 const mockGetInBounds = jest.fn();
 const mockGetById = jest.fn();
 const mockSyncInBounds = jest.fn();
@@ -39,8 +39,9 @@ jest.mock("../app/_server/FindNearestBathroom", () => ({
 
 jest.mock("../app/_server/database/bathroom-data-primary/CrudCore", () => ({
   createAt: (...args: unknown[]) => mockCreateAt(...args),
-  updateVerifyStatus: (...args: unknown[]) => mockUpdateVerifyStatus(...args),
   incrementRatingCount: (...args: unknown[]) => mockIncrementRatingCount(...args),
+  incrementExistenceVoteCount: (...args: unknown[]) =>
+    mockIncrementExistenceVoteCount(...args),
   getInBounds: (...args: unknown[]) => mockGetInBounds(...args),
   getById: (...args: unknown[]) => mockGetById(...args),
   syncInBounds: (...args: unknown[]) => mockSyncInBounds(...args),
@@ -60,11 +61,11 @@ import { GET as userSettingsDefaultDbGet } from "../app/api/user-settings/defaul
 import {
   bathroomDbCreate,
   bathroomDbFindNearest,
+  bathroomDbIncrementExistenceVote,
   bathroomDbIncrementRating,
   bathroomDbReadById,
   bathroomDbReadInBounds,
   bathroomDbSyncInBounds,
-  bathroomDbUpdateVerifyStatus,
 } from "../app/_server/database/bathroom-data-primary/Crud";
 import { getPathBetweenPoints } from "../app/_server/Pathfind";
 import { getUserSettingsSchemaMigration } from "../app/_server/user-settings/UserSettingsSchemaMigration";
@@ -78,8 +79,8 @@ describe("rate-limited server entrypoints", () => {
     mockGetDefaultUserSettingsDbSnapshotBytes.mockReset();
     mockFindNearestBathroom.mockReset();
     mockCreateAt.mockReset();
-    mockUpdateVerifyStatus.mockReset();
     mockIncrementRatingCount.mockReset();
+    mockIncrementExistenceVoteCount.mockReset();
     mockGetInBounds.mockReset();
     mockGetById.mockReset();
     mockSyncInBounds.mockReset();
@@ -157,22 +158,6 @@ describe("rate-limited server entrypoints", () => {
     expect(mockCreateAt).not.toHaveBeenCalled();
   });
 
-  test("bathroom update action enforces bathroom-update scope before DB work", async () => {
-    const message =
-      "Rate limit exceeded: bathroom updates is limited to 20 requests per minute.";
-    mockTryEnforceServerRateLimit.mockResolvedValue({
-      allowed: false,
-      message,
-    });
-
-    await expect(bathroomDbUpdateVerifyStatus(1, "verified")).resolves.toEqual({
-      val: null,
-      errorMsg: message,
-    });
-    expect(mockTryEnforceServerRateLimit).toHaveBeenCalledWith("bathroom-update");
-    expect(mockUpdateVerifyStatus).not.toHaveBeenCalled();
-  });
-
   test("bathroom increment rating action enforces bathroom-update scope before DB work", async () => {
     const message =
       "Rate limit exceeded: bathroom updates is limited to 20 requests per minute.";
@@ -187,6 +172,22 @@ describe("rate-limited server entrypoints", () => {
     });
     expect(mockTryEnforceServerRateLimit).toHaveBeenCalledWith("bathroom-update");
     expect(mockIncrementRatingCount).not.toHaveBeenCalled();
+  });
+
+  test("bathroom increment existence vote action enforces bathroom-update scope before DB work", async () => {
+    const message =
+      "Rate limit exceeded: bathroom updates is limited to 20 requests per minute.";
+    mockTryEnforceServerRateLimit.mockResolvedValue({
+      allowed: false,
+      message,
+    });
+
+    await expect(bathroomDbIncrementExistenceVote(1, true)).resolves.toEqual({
+      val: null,
+      errorMsg: message,
+    });
+    expect(mockTryEnforceServerRateLimit).toHaveBeenCalledWith("bathroom-update");
+    expect(mockIncrementExistenceVoteCount).not.toHaveBeenCalled();
   });
 
   test("bathroom read action enforces bathroom-read-sync scope before DB work", async () => {

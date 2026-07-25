@@ -5,14 +5,23 @@ import { spawnSync } from "node:child_process";
 const WORKSPACE_ROOT = path.resolve(__dirname, "..");
 const MIGRATIONS_DIR = path.join(WORKSPACE_ROOT, "supabase", "migrations");
 const IDEMPOTENT_MIGRATION_START = "20260706000000";
-const EXPECTED_LATEST_SCHEMA_VERSION = 13;
+// These migrations still reference verify_status, which 20260717000000 removes.
+// Rerunning them after the existence-vote migration would regress RPC definitions.
+const NON_RERUNNABLE_MIGRATION_FILENAMES = new Set([
+  "20260706000000_bathroom_data_primary_h3_cell_rpc.sql",
+  "20260714000000_bathroom_data_primary_read_by_id_rpc.sql",
+  "20260715000000_bathroom_data_primary_increment_rating_rpc.sql",
+]);
+const EXPECTED_LATEST_SCHEMA_VERSION = 15;
 const EXPECTED_RATING_COLUMNS = 5;
-const EXPECTED_RPC_COUNT = 3;
+const EXPECTED_RPC_COUNT = 8;
 
 type ServerSchemaState = {
   schemaVersionRows: number;
   schemaVersion: number;
   ratingColumnCount: number;
+  existenceVoteColumnCount: number;
+  verifyStatusColumnCount: number;
   rpcCount: number;
 };
 
@@ -34,7 +43,8 @@ function listRerunnableMigrationPaths(): string[] {
     .filter(
       (filename) =>
         filename.endsWith(".sql") &&
-        filename.localeCompare(`${IDEMPOTENT_MIGRATION_START}_`) >= 0,
+        filename.localeCompare(`${IDEMPOTENT_MIGRATION_START}_`) >= 0 &&
+        !NON_RERUNNABLE_MIGRATION_FILENAMES.has(filename),
     )
     .sort()
     .map((filename) => path.join(MIGRATIONS_DIR, filename));
@@ -79,6 +89,22 @@ function readServerSchemaState(databaseUrl: string): ServerSchemaState {
             AND table_name = 'bathroom_data_primary'
             AND column_name LIKE 'rating_%_count'
         ),
+      'existenceVoteColumnCount',
+        (
+          SELECT COUNT(*)
+          FROM information_schema.columns
+          WHERE table_schema = 'public'
+            AND table_name = 'bathroom_data_primary'
+            AND column_name IN ('exists_vote_count', 'not_exists_vote_count')
+        ),
+      'verifyStatusColumnCount',
+        (
+          SELECT COUNT(*)
+          FROM information_schema.columns
+          WHERE table_schema = 'public'
+            AND table_name = 'bathroom_data_primary'
+            AND column_name = 'verify_status'
+        ),
       'rpcCount',
         (
           SELECT COUNT(*)
@@ -87,9 +113,14 @@ function readServerSchemaState(databaseUrl: string): ServerSchemaState {
             ON namespace.oid = procedure.pronamespace
           WHERE namespace.nspname = 'public'
             AND procedure.proname IN (
+              'create_bathroom_data_primary_at',
+              'get_bathroom_data_primary_in_bbox',
               'get_bathroom_data_primary_in_h3_cell_polygons',
+              'sync_bathroom_data_primary_in_bbox',
+              'get_nearest_bathroom_data_primary',
               'get_bathroom_data_primary_by_id',
-              'increment_bathroom_data_primary_rating_count'
+              'increment_bathroom_data_primary_rating_count',
+              'increment_bathroom_data_primary_existence_vote_count'
             )
         )
     )::text;
@@ -113,16 +144,15 @@ function rerunMigrations(
 }
 
 describe("server PostgreSQL migration reruns", () => {
-  test("migrations from 20260706000000 are repeatable and preserve latest schema state", () => {
+  test("idempotent server migrations preserve latest schema state when rerun", () => {
     const databaseUrl = requireLocalPostgresUrl();
     const migrationPaths = listRerunnableMigrationPaths();
     expect(migrationPaths.map((migrationPath) => path.basename(migrationPath))).toEqual([
-      "20260706000000_bathroom_data_primary_h3_cell_rpc.sql",
       "20260707000000_server_db_schema_version.sql",
       "20260713000000_bathroom_data_primary_rating_counts.sql",
-      "20260714000000_bathroom_data_primary_read_by_id_rpc.sql",
-      "20260715000000_bathroom_data_primary_increment_rating_rpc.sql",
       "20260716000000_bathroom_nearest_rpc_min_rating.sql",
+      "20260717000000_bathroom_data_primary_existence_votes.sql",
+      "20260718000000_bathroom_data_primary_increment_existence_vote_rpc.sql",
     ]);
 
     const before = readServerSchemaState(databaseUrl);
@@ -130,6 +160,8 @@ describe("server PostgreSQL migration reruns", () => {
       schemaVersionRows: 1,
       schemaVersion: EXPECTED_LATEST_SCHEMA_VERSION,
       ratingColumnCount: EXPECTED_RATING_COLUMNS,
+      existenceVoteColumnCount: 2,
+      verifyStatusColumnCount: 0,
       rpcCount: EXPECTED_RPC_COUNT,
     });
 

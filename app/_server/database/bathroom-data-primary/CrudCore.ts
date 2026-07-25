@@ -8,7 +8,6 @@ import {
   type BathroomDataPrimaryRow,
   type BathroomSyncResponse,
   type LatLong,
-  type VerifyStatus,
   type ViewportBounds,
 } from "../../../_shared/BathroomDataPrimary";
 import {
@@ -50,10 +49,11 @@ import {
   type IncrementBathroomRatingRpc,
 } from "../../pure/bathroom-data-primary/IncrementBathroomRating";
 import {
-  UPDATE_BATHROOM_VERIFY_STATUS_RPC_NAME,
-  updateBathroomVerifyStatus,
-  type UpdateBathroomVerifyStatusRpc,
-} from "../../pure/bathroom-data-primary/UpdateBathroom";
+  INCREMENT_BATHROOM_EXISTENCE_VOTE_RPC_NAME,
+  incrementBathroomExistenceVote,
+  type BathroomExistenceVoteSide,
+  type IncrementBathroomExistenceVoteRpc,
+} from "../../pure/bathroom-data-primary/IncrementBathroomExistenceVote";
 import {
   H3_BATHROOM_CELL_RESOLUTION,
   H3_BATHROOM_MAX_BOUNDS_CACHE_CELLS,
@@ -127,6 +127,35 @@ export async function createAt(
   });
 }
 
+export async function incrementExistenceVoteCount(
+  id: number,
+  side: BathroomExistenceVoteSide,
+): Promise<BathroomDataPrimaryFullRow> {
+  const client = getSupabaseClient();
+  const rpc: IncrementBathroomExistenceVoteRpc = async (params) => {
+    const { data, error } = await client
+      .rpc(INCREMENT_BATHROOM_EXISTENCE_VOTE_RPC_NAME, params)
+      .maybeSingle();
+    return {
+      data: data as BathroomDataPrimaryFullRow | null,
+      error,
+    };
+  };
+
+  return incrementBathroomExistenceVote(id, side, rpc).then(async (row) => {
+    await runReadCacheSideEffect(async () => {
+      const readCache = getReadCache();
+      await readCache.invalidateBathroom(id);
+      await readCache.cacheBathroomFullRow(row);
+      await readCache.invalidateBathroomH3Cell(
+        bathroomRowToH3Cell(row),
+        H3_BATHROOM_CELL_RESOLUTION,
+      );
+    });
+    return row;
+  });
+}
+
 export async function incrementRatingCount(
   id: number,
   stars: number,
@@ -147,31 +176,6 @@ export async function incrementRatingCount(
       const readCache = getReadCache();
       await readCache.invalidateBathroom(id);
       await readCache.cacheBathroomFullRow(row);
-      await readCache.invalidateBathroomH3Cell(
-        bathroomRowToH3Cell(row),
-        H3_BATHROOM_CELL_RESOLUTION,
-      );
-    });
-    return row;
-  });
-}
-
-export async function updateVerifyStatus(
-  id: number,
-  verifyStatus: VerifyStatus,
-): Promise<BathroomDataPrimaryRow> {
-  const client = getSupabaseClient();
-  const rpc: UpdateBathroomVerifyStatusRpc = async (params) => {
-    const { data, error } = await client
-      .rpc(UPDATE_BATHROOM_VERIFY_STATUS_RPC_NAME, params)
-      .single();
-    return { data: data as BathroomDataPrimaryRow | null, error };
-  };
-
-  return updateBathroomVerifyStatus(id, verifyStatus, rpc).then(async (row) => {
-    await runReadCacheSideEffect(async () => {
-      const readCache = getReadCache();
-      await readCache.invalidateBathroom(id);
       await readCache.invalidateBathroomH3Cell(
         bathroomRowToH3Cell(row),
         H3_BATHROOM_CELL_RESOLUTION,

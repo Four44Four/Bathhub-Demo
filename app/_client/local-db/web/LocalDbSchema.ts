@@ -55,7 +55,8 @@ CREATE TABLE IF NOT EXISTS ${BATHROOM_LOCAL_CACHE_TABLE_NAME} (
   remote_id INTEGER PRIMARY KEY NOT NULL,
   location BLOB NOT NULL,
   version INTEGER NOT NULL,
-  verify_status TEXT NOT NULL CHECK (verify_status IN ('pending', 'verified')),
+  exists_vote_count INTEGER NOT NULL,
+  not_exists_vote_count INTEGER NOT NULL,
   updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 );
 

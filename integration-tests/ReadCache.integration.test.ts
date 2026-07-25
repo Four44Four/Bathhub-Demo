@@ -2,9 +2,11 @@ import { createClient } from "@supabase/supabase-js";
 
 import {
   createAt as bathroomDbCreate,
+  getById as bathroomDbReadById,
   getInBounds as bathroomDbReadInBounds,
+  incrementExistenceVoteCount as bathroomDbIncrementExistenceVote,
+  incrementRatingCount as bathroomDbIncrementRating,
   syncInBounds as bathroomDbSyncInBounds,
-  updateVerifyStatus as bathroomDbUpdateVerifyStatus,
 } from "../app/_server/database/bathroom-data-primary/CrudCore";
 import { estimateViewportH3CellCount, bathroomLatLongToH3Cell } from "../app/_server/pure/geospatial/BathroomH3Cells";
 import { parseCachedBathroomRecord } from "../app/_server/pure/redis/CachedBathroomRecord";
@@ -15,7 +17,7 @@ import {
   READ_CACHE_TABLE_BATHROOM_DATA_PRIMARY,
   resolveReadCacheNamespace,
 } from "../app/_server/pure/redis/RedisConstants";
-import { createReadCache } from "../app/_server/redis/ReadCache";
+import { createReadCache, getReadCache } from "../app/_server/redis/ReadCache";
 import { getRedisPort } from "../app/_server/redis/getRedisPort";
 import { disconnectRedisTestGlobals } from "./disconnectRedisTestGlobals";
 import {
@@ -25,9 +27,19 @@ import {
 } from "../app/_server/ServerConstants";
 import { type ViewportBounds } from "../app/_shared/BathroomDataPrimary";
 import { requireLocalRedis } from "./requireLocalRedis";
-import { requireLocalSupabaseEnv } from "./requireLocalSupabase";
+import {
+  requireLocalSupabaseAdminEnv,
+  requireLocalSupabaseEnv,
+} from "./requireLocalSupabase";
 
 const createdBathroomIds: number[] = [];
+
+function untrackCreatedBathroom(id: number): void {
+  const index = createdBathroomIds.indexOf(id);
+  if (index >= 0) {
+    createdBathroomIds.splice(index, 1);
+  }
+}
 
 function boundsAround(
   latitude: number,
@@ -53,12 +65,20 @@ describe("Redis-backed serverside read cache", () => {
   });
 
   afterAll(async () => {
+    const readCache = getReadCache();
+    await Promise.all(
+      createdBathroomIds.map((id) => readCache.removeBathroom(id)),
+    );
+
     if (createdBathroomIds.length > 0) {
-      const { url, key } = requireLocalSupabaseEnv();
-      await createClient(url, key)
+      const { url, serviceRoleKey } = requireLocalSupabaseAdminEnv();
+      const { error } = await createClient(url, serviceRoleKey)
         .from("bathroom_data_primary")
         .delete()
         .in("id", createdBathroomIds);
+      if (error !== null) {
+        throw new Error(`Failed to clean read-cache fixtures: ${error.message}`);
+      }
     }
 
     await disconnectRedisTestGlobals();
@@ -82,6 +102,32 @@ describe("Redis-backed serverside read cache", () => {
     expect(parsed?.id).toBe(row.id);
     expect(parsed?.latitude).toBeCloseTo(-6.1, 3);
     expect(parsed?.longitude).toBeCloseTo(-11.2, 3);
+  });
+
+  test("getById reuses a full cached row after the database row is removed", async () => {
+    const row = await bathroomDbCreate(-6.14, -11.24);
+    createdBathroomIds.push(row.id);
+
+    const firstRead = await bathroomDbReadById(row.id);
+    expect(firstRead).toMatchObject({
+      id: row.id,
+      rating_1_count: 0,
+      rating_2_count: 0,
+      rating_3_count: 0,
+      rating_4_count: 0,
+      rating_5_count: 0,
+    });
+
+    const { url, serviceRoleKey } = requireLocalSupabaseAdminEnv();
+    const { error } = await createClient(url, serviceRoleKey)
+      .from("bathroom_data_primary")
+      .delete()
+      .eq("id", row.id);
+    if (error !== null) {
+      throw new Error(`Failed to delete getById fixture: ${error.message}`);
+    }
+
+    await expect(bathroomDbReadById(row.id)).resolves.toEqual(firstRead);
   });
 
   test("createAt invalidates a cached empty H3 cell and the next bounds read repopulates it", async () => {
@@ -147,7 +193,7 @@ describe("Redis-backed serverside read cache", () => {
     expect(await redis.getString(key)).toBeNull();
   });
 
-  test("updateVerifyStatus invalidates cached bathroom entries", async () => {
+  test("incrementRatingCount refreshes cached bathroom entries", async () => {
     const row = await bathroomDbCreate(-6.25, -11.35);
     createdBathroomIds.push(row.id);
 
@@ -159,11 +205,16 @@ describe("Redis-backed serverside read cache", () => {
     );
 
     expect(await redis.getString(key)).not.toBeNull();
-    await bathroomDbUpdateVerifyStatus(row.id, "verified");
-    expect(await redis.getString(key)).toBeNull();
+    await bathroomDbIncrementRating(row.id, 3);
+
+    const cached = await redis.getString(key);
+    expect(cached).not.toBeNull();
+    const parsed = parseCachedBathroomRecord(cached!);
+    expect(parsed?.version).toBe(row.version + 1);
+    expect(parsed?.rating_3_count).toBe(1);
   });
 
-  test("updateVerifyStatus invalidates cached H3 cell entries", async () => {
+  test("incrementRatingCount invalidates cached H3 cell entries", async () => {
     const row = await bathroomDbCreate(-6.27, -11.37);
     createdBathroomIds.push(row.id);
 
@@ -178,7 +229,43 @@ describe("Redis-backed serverside read cache", () => {
     await bathroomDbReadInBounds(boundsAround(row.latitude, row.longitude));
     expect(await redis.getString(h3Key)).not.toBeNull();
 
-    await bathroomDbUpdateVerifyStatus(row.id, "verified");
+    await bathroomDbIncrementRating(row.id, 4);
+    expect(await redis.getString(h3Key)).toBeNull();
+  });
+
+  test("incrementExistenceVoteCount refreshes the bathroom cache and invalidates its H3 cell", async () => {
+    const row = await bathroomDbCreate(-6.285, -11.385);
+    createdBathroomIds.push(row.id);
+
+    const redis = getRedisPort();
+    const namespace = resolveReadCacheNamespace(process.env.NODE_ENV);
+    const bathroomKey = buildReadCacheKey(
+      namespace,
+      READ_CACHE_TABLE_BATHROOM_DATA_PRIMARY,
+      row.id,
+    );
+    const h3Cell = bathroomLatLongToH3Cell(row, H3_BATHROOM_CELL_RESOLUTION);
+    const h3Key = buildBathroomH3CellCacheKey(
+      namespace,
+      H3_BATHROOM_CELL_RESOLUTION,
+      h3Cell,
+    );
+
+    await bathroomDbReadInBounds(boundsAround(row.latitude, row.longitude));
+    expect(await redis.getString(bathroomKey)).not.toBeNull();
+    expect(await redis.getString(h3Key)).not.toBeNull();
+
+    await bathroomDbIncrementExistenceVote(row.id, "exists");
+
+    const cached = await redis.getString(bathroomKey);
+    expect(cached).not.toBeNull();
+    expect(parseCachedBathroomRecord(cached!)).toMatchObject({
+      id: row.id,
+      exists_vote_count: row.exists_vote_count + 1,
+      not_exists_vote_count: row.not_exists_vote_count,
+      version: row.version + 1,
+      verify_status: "verified",
+    });
     expect(await redis.getString(h3Key)).toBeNull();
   });
 
@@ -234,12 +321,15 @@ describe("Redis-backed serverside read cache", () => {
     await bathroomDbReadInBounds(bounds);
     expect(await redis.getString(h3Key)).not.toBeNull();
 
-    const { url, key } = requireLocalSupabaseEnv();
-    await createClient(url, key)
+    const { url, serviceRoleKey } = requireLocalSupabaseAdminEnv();
+    const { error } = await createClient(url, serviceRoleKey)
       .from("bathroom_data_primary")
       .delete()
       .eq("id", row.id);
-    createdBathroomIds.pop();
+    if (error !== null) {
+      throw new Error(`Failed to delete sync fixture: ${error.message}`);
+    }
+    untrackCreatedBathroom(row.id);
 
     await bathroomDbSyncInBounds(bounds, [{ id: row.id, version: row.version }]);
     expect(await redis.getString(h3Key)).toBeNull();

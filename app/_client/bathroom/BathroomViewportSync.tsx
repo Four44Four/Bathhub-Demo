@@ -6,6 +6,7 @@ import { type Errorable } from "../../_shared/Utils";
 import {
   type BathroomClientCacheEntry,
   type BathroomSyncResponse,
+  type BathroomViewportEntry,
   type ViewportBounds,
 } from "../../_shared/BathroomDataPrimary";
 import {
@@ -14,6 +15,7 @@ import {
   BathroomRemoteDB,
 } from "../ComponentConstants";
 import {
+  registerBathroomViewportUpsertHandler,
   registerForceBathroomViewportSyncHandler,
   syncBathroomsInGlobeViewport,
 } from "../Bathroom";
@@ -30,6 +32,7 @@ import {
   isGlobeViewportCameraSampleReady,
 } from "../pure/bathroom/BathroomViewportQuery";
 import {
+  applyViewportUpsertPreservingLoadedFromCache,
   type RenderedBathroomMap,
   renderedBathroomsToArray,
 } from "../pure/bathroom/RenderedBathrooms";
@@ -313,12 +316,27 @@ export function BathroomViewportSync({ globeRef }: BathroomViewportSyncProps) {
     void runLocalViewportSync(++requestSeqRef.current);
   };
 
+  const applyViewportUpsert = async (entry: BathroomViewportEntry) => {
+    await localDb.current.init();
+    await localDb.current.upsertMany([entry]);
+
+    const previousRendered = renderedRef.current;
+    renderedRef.current = applyViewportUpsertPreservingLoadedFromCache(
+      previousRendered,
+      entry,
+    );
+    syncMarkersFromRendered(previousRendered);
+  };
+
   useEffect(() => {
     const globe = globeRef.current;
     if (!globe) return;
 
     const unregisterForceSync = registerForceBathroomViewportSyncHandler(
       forceLocalViewportSync,
+    );
+    const unregisterViewportUpsert = registerBathroomViewportUpsertHandler(
+      applyViewportUpsert,
     );
 
     let cancelled = false;
@@ -338,6 +356,7 @@ export function BathroomViewportSync({ globeRef }: BathroomViewportSyncProps) {
     return () => {
       cancelled = true;
       unregisterForceSync();
+      unregisterViewportUpsert();
       markersRef.current?.destroy();
       markersRef.current = null;
     };

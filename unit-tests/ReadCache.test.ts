@@ -69,7 +69,8 @@ describe("CachedBathroomRecord", () => {
     id: 9,
     latitude: 40.7,
     longitude: -74.0,
-    verify_status: "verified" as const,
+    exists_vote_count: 2,
+    not_exists_vote_count: 0,
     temp_data: "x",
     created_at: "2026-01-01T00:00:00Z",
     version: 2,
@@ -104,6 +105,8 @@ describe("CachedBathroomRecord", () => {
       version: 0,
       temp_data: "",
       created_at: "",
+      exists_vote_count: 0,
+      not_exists_vote_count: 0,
     });
   });
 });
@@ -113,7 +116,8 @@ describe("CachedBathroomH3CellRecord", () => {
     id: 9,
     latitude: 40.7,
     longitude: -74.0,
-    verify_status: "verified" as const,
+    exists_vote_count: 2,
+    not_exists_vote_count: 0,
     temp_data: "x",
     created_at: "2026-01-01T00:00:00Z",
     version: 2,
@@ -211,7 +215,8 @@ describe("createReadCache", () => {
     id: 9,
     latitude: 40.7,
     longitude: -74,
-    verify_status: "verified" as const,
+    exists_vote_count: 2,
+    not_exists_vote_count: 0,
     temp_data: "",
     created_at: "2026-01-01T00:00:00Z",
     version: 2,

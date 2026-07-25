@@ -2,7 +2,7 @@ import {
   type BathroomClientCacheEntry,
   type BathroomSyncResponse,
   type BathroomSyncUpsert,
-  type VerifyStatus,
+  bathroomSyncUpsertToViewportEntry,
 } from "../../../_shared/BathroomDataPrimary";
 
 export const SYNC_BATHROOM_RPC_NAME =
@@ -16,7 +16,8 @@ export type BathroomRemoteRowSummary = {
   version: number;
   latitude: number;
   longitude: number;
-  verify_status: VerifyStatus;
+  exists_vote_count: number;
+  not_exists_vote_count: number;
 };
 
 export type SyncBathroomRpcParams = {
@@ -52,6 +53,37 @@ export function buildSyncBathroomRpcParams(
   };
 }
 
+function isVoteCount(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0;
+}
+
+function parseSyncUpsert(item: unknown): BathroomSyncUpsert | null {
+  if (item === null || typeof item !== "object") {
+    return null;
+  }
+
+  const row = item as Record<string, unknown>;
+  if (
+    typeof row.id !== "number" ||
+    typeof row.latitude !== "number" ||
+    typeof row.longitude !== "number" ||
+    typeof row.version !== "number" ||
+    !isVoteCount(row.exists_vote_count) ||
+    !isVoteCount(row.not_exists_vote_count)
+  ) {
+    return null;
+  }
+
+  return {
+    id: row.id,
+    latitude: row.latitude,
+    longitude: row.longitude,
+    exists_vote_count: row.exists_vote_count,
+    not_exists_vote_count: row.not_exists_vote_count,
+    version: row.version,
+  };
+}
+
 /** Pure diff used by tests; mirrors the sync RPC semantics. */
 export function computeBathroomSyncDiff(
   remoteRows: BathroomRemoteRowSummary[],
@@ -70,7 +102,8 @@ export function computeBathroomSyncDiff(
         id: row.id,
         latitude: row.latitude,
         longitude: row.longitude,
-        verify_status: row.verify_status,
+        exists_vote_count: row.exists_vote_count,
+        not_exists_vote_count: row.not_exists_vote_count,
         version: row.version,
       });
     }
@@ -101,24 +134,10 @@ export function parseSyncBathroomRpcPayload(
   const upserts: BathroomSyncUpsert[] = [];
   if (Array.isArray(record.upserts)) {
     for (const item of record.upserts) {
-      if (item === null || typeof item !== "object") continue;
-      const row = item as Record<string, unknown>;
-      if (
-        typeof row.id !== "number" ||
-        typeof row.latitude !== "number" ||
-        typeof row.longitude !== "number" ||
-        typeof row.version !== "number" ||
-        (row.verify_status !== "pending" && row.verify_status !== "verified")
-      ) {
-        continue;
+      const parsed = parseSyncUpsert(item);
+      if (parsed !== null) {
+        upserts.push(parsed);
       }
-      upserts.push({
-        id: row.id,
-        latitude: row.latitude,
-        longitude: row.longitude,
-        verify_status: row.verify_status,
-        version: row.version,
-      });
     }
   }
 
@@ -132,4 +151,11 @@ export function parseSyncBathroomRpcPayload(
   }
 
   return { upserts, deleteIds };
+}
+
+/** Converts sync upserts into viewport entries with derived verify_status. */
+export function syncResponseToViewportUpserts(
+  response: BathroomSyncResponse,
+): ReturnType<typeof bathroomSyncUpsertToViewportEntry>[] {
+  return response.upserts.map(bathroomSyncUpsertToViewportEntry);
 }

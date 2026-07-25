@@ -186,7 +186,7 @@ export function createReadCache(deps: ReadCacheDependencies): ReadCachePort {
         serializeCachedBathroomH3CellRecord({
           resolution,
           cell,
-          rows: rows.map((row) => bathroomRowToCachedRecord(row)),
+          rows: [...rows],
         }),
         deps.config.ttlSecs,
       );

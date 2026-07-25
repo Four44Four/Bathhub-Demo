@@ -1,6 +1,7 @@
 import {
   applyDeletesToRenderedBathrooms,
   applyUpsertsToRenderedBathrooms,
+  applyViewportUpsertPreservingLoadedFromCache,
   mergeLocalCacheEntriesIntoRendered,
   replaceRenderedBathrooms,
 } from "../app/_client/pure/bathroom/RenderedBathrooms";
@@ -8,6 +9,29 @@ import {
   isCameraCloseEnoughForBathroomQuery,
   isGlobeViewportCameraSampleReady,
 } from "../app/_client/pure/bathroom/BathroomViewportQuery";
+import {
+  type BathroomViewportEntry,
+  deriveVerifyStatusFromExistenceVotes,
+} from "../app/_shared/BathroomDataPrimary";
+
+function viewportEntry(
+  overrides: Partial<BathroomViewportEntry> & Pick<BathroomViewportEntry, "id">,
+): BathroomViewportEntry {
+  const exists_vote_count = overrides.exists_vote_count ?? 0;
+  const not_exists_vote_count = overrides.not_exists_vote_count ?? 0;
+  return {
+    latitude: 0,
+    longitude: 0,
+    version: 0,
+    exists_vote_count,
+    not_exists_vote_count,
+    verify_status: deriveVerifyStatusFromExistenceVotes(
+      exists_vote_count,
+      not_exists_vote_count,
+    ),
+    ...overrides,
+  };
+}
 
 describe("Bathroom viewport pure helpers", () => {
   test("isGlobeViewportCameraSampleReady rejects the pre-sample sentinel", () => {
@@ -25,13 +49,12 @@ describe("Bathroom viewport pure helpers", () => {
 
   test("rendered bathroom map upserts and deletes by id", () => {
     const initial = replaceRenderedBathrooms([
-      {
+      viewportEntry({
         id: 1,
         latitude: 1,
         longitude: 2,
-        verify_status: "pending",
         version: 0,
-      },
+      }),
     ]);
 
     expect(initial.get(1)?.loadedFromCache).toBe(true);
@@ -39,13 +62,13 @@ describe("Bathroom viewport pure helpers", () => {
     const withUpsert = applyUpsertsToRenderedBathrooms(
       initial,
       [
-        {
+        viewportEntry({
           id: 2,
           latitude: 3,
           longitude: 4,
-          verify_status: "verified",
+          exists_vote_count: 2,
           version: 1,
-        },
+        }),
       ],
       new Set(),
     );
@@ -58,25 +81,24 @@ describe("Bathroom viewport pure helpers", () => {
 
   test("remote upsert marks stale cache rows as loadedFromCache", () => {
     const initial = replaceRenderedBathrooms([
-      {
+      viewportEntry({
         id: 1,
         latitude: 1,
         longitude: 2,
-        verify_status: "pending",
         version: 0,
-      },
+      }),
     ]);
 
     const withStaleUpsert = applyUpsertsToRenderedBathrooms(
       initial,
       [
-        {
+        viewportEntry({
           id: 1,
           latitude: 1,
           longitude: 2,
-          verify_status: "verified",
+          exists_vote_count: 2,
           version: 2,
-        },
+        }),
       ],
       new Set([1]),
     );
@@ -87,37 +109,63 @@ describe("Bathroom viewport pure helpers", () => {
 
   test("mergeLocalCacheEntriesIntoRendered preserves remote-fetch debug flags", () => {
     const previous = replaceRenderedBathrooms([
-      {
+      viewportEntry({
         id: 1,
         latitude: 1,
         longitude: 2,
-        verify_status: "verified",
+        exists_vote_count: 2,
         version: 1,
-      },
+      }),
     ]);
     previous.set(1, { ...previous.get(1)!, loadedFromCache: false });
 
     const merged = mergeLocalCacheEntriesIntoRendered(
       [
-        {
+        viewportEntry({
           id: 1,
           latitude: 1.1,
           longitude: 2.1,
-          verify_status: "verified",
+          exists_vote_count: 2,
           version: 1,
-        },
-        {
+        }),
+        viewportEntry({
           id: 2,
           latitude: 3,
           longitude: 4,
-          verify_status: "pending",
           version: 0,
-        },
+        }),
       ],
       previous,
     );
 
     expect(merged.get(1)?.loadedFromCache).toBe(false);
     expect(merged.get(2)?.loadedFromCache).toBe(true);
+  });
+
+  test("applyViewportUpsertPreservingLoadedFromCache updates verify_status and preserves cache flag", () => {
+    const initial = replaceRenderedBathrooms([
+      viewportEntry({
+        id: 1,
+        latitude: 1,
+        longitude: 2,
+        exists_vote_count: 0,
+        version: 1,
+      }),
+    ]);
+    initial.set(1, { ...initial.get(1)!, loadedFromCache: false });
+
+    const updated = applyViewportUpsertPreservingLoadedFromCache(
+      initial,
+      viewportEntry({
+        id: 1,
+        latitude: 1,
+        longitude: 2,
+        exists_vote_count: 2,
+        version: 2,
+      }),
+    );
+
+    expect(updated.get(1)?.loadedFromCache).toBe(false);
+    expect(updated.get(1)?.verify_status).toBe("verified");
   });
 });

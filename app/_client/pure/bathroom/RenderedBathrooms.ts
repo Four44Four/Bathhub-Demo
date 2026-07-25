@@ -73,6 +73,20 @@ export function applyUpsertsToRenderedBathrooms(
   return next;
 }
 
+/** Upserts one viewport entry while preserving an existing loadedFromCache flag. */
+export function applyViewportUpsertPreservingLoadedFromCache(
+  rendered: RenderedBathroomMap,
+  upsert: BathroomViewportEntry,
+): RenderedBathroomMap {
+  const next = new Map(rendered);
+  const previousEntry = rendered.get(upsert.id);
+  next.set(upsert.id, {
+    ...upsert,
+    loadedFromCache: previousEntry?.loadedFromCache ?? true,
+  });
+  return next;
+}
+
 export function applyDeletesToRenderedBathrooms(
   rendered: RenderedBathroomMap,
   deleteIds: number[],

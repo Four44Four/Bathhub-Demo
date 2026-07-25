@@ -1,6 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
+/* eslint-disable @typescript-eslint/no-require-imports */
 import {
   buildAndValidateDefaultUserSettingsDbSnapshot,
 } from "../app/_shared/user-settings/buildDefaultUserSettingsDbSnapshot";

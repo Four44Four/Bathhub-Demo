@@ -3,7 +3,9 @@ import {
   type UserSettingsRow,
 } from "../app/_shared/user-settings/UserSettingsSchema";
 import { USER_SETTINGS_MIGRATION_V0_TO_V1 } from "../app/_shared/user-settings/migrations/v0-to-v1";
+import { USER_SETTINGS_MIGRATION_V1_TO_V2 } from "../app/_shared/user-settings/migrations/v1-to-v2";
 import type { UserSettingsDbPort } from "../app/_client/user-settings-db/UserSettingsDbSqlite";
+import { USER_SETTINGS_FRONTEND_SCHEMA_VERSION } from "../app/_client/user-settings/UserSettingsSchemaVersion";
 import {
   finishUserSettingsBootstrapReady,
   attemptUserSettingsSchemaBootstrap,
@@ -48,17 +50,35 @@ function createMockDb(
   };
 }
 
-function createMigrationDeps(
-  overrides: Partial<UserSettingsSchemaMigrationRunnerDeps> = {},
-): UserSettingsSchemaMigrationRunnerDeps {
-  return {
-    getMigration: jest.fn(async () => ({
+function mockMigrationForVersion(fromVersion: number) {
+  if (fromVersion === 0) {
+    return {
       ok: true as const,
       fromVersion: 0,
       toVersion: 1,
       forwardSql: USER_SETTINGS_MIGRATION_V0_TO_V1.forwardSql,
       defaults: USER_SETTINGS_MIGRATION_V0_TO_V1.defaults,
-    })),
+    };
+  }
+  if (fromVersion === 1) {
+    return {
+      ok: true as const,
+      fromVersion: 1,
+      toVersion: 2,
+      forwardSql: USER_SETTINGS_MIGRATION_V1_TO_V2.forwardSql,
+      defaults: USER_SETTINGS_MIGRATION_V1_TO_V2.defaults,
+    };
+  }
+  throw new Error(`Unexpected migration from version ${fromVersion}`);
+}
+
+function createMigrationDeps(
+  overrides: Partial<UserSettingsSchemaMigrationRunnerDeps> = {},
+): UserSettingsSchemaMigrationRunnerDeps {
+  return {
+    getMigration: jest.fn(async (fromVersion) =>
+      mockMigrationForVersion(fromVersion),
+    ),
     reportError: jest.fn(async () => {}),
     preloadDefaults: jest.fn(() => {}),
     ...overrides,
@@ -123,7 +143,7 @@ describe("UserSettingsSchemaMigrationRunner", () => {
     const db = createMockDb({
       getPersistentSchemaVersion: jest.fn(async () => schemaVersion),
       runForwardMigration: jest.fn(async () => {
-        schemaVersion = 1;
+        schemaVersion = (schemaVersion ?? 0) + 1;
       }),
     });
     const deps = createMigrationDeps();
@@ -132,7 +152,8 @@ describe("UserSettingsSchemaMigrationRunner", () => {
 
     expect(result).toEqual({ ok: true });
     expect(deps.getMigration).toHaveBeenCalledWith(0);
-    expect(schemaVersion).toBe(1);
+    expect(deps.getMigration).toHaveBeenCalledWith(1);
+    expect(schemaVersion).toBe(USER_SETTINGS_FRONTEND_SCHEMA_VERSION);
   });
 
   test("does not load persistent settings when versions mismatch or migration errored", async () => {
@@ -203,7 +224,7 @@ describe("attemptUserSettingsSchemaBootstrap", () => {
     const outcome = await attemptUserSettingsSchemaBootstrap(
       db,
       finishReady,
-      1,
+      USER_SETTINGS_FRONTEND_SCHEMA_VERSION,
       createMigrationDeps(),
     );
 
@@ -217,14 +238,14 @@ describe("attemptUserSettingsSchemaBootstrap", () => {
     const db = createMockDb({
       getPersistentSchemaVersion: jest.fn(async () => schemaVersion),
       runForwardMigration: jest.fn(async () => {
-        schemaVersion = 1;
+        schemaVersion = (schemaVersion ?? 0) + 1;
       }),
     });
     const finishReady = jest.fn(async (migrationHasErrored) => {
       const phase = await finishUserSettingsBootstrapReady(
         db,
         migrationHasErrored,
-        1,
+        USER_SETTINGS_FRONTEND_SCHEMA_VERSION,
       );
       expect(phase).toBe("ready");
     });
@@ -232,7 +253,7 @@ describe("attemptUserSettingsSchemaBootstrap", () => {
     const outcome = await attemptUserSettingsSchemaBootstrap(
       db,
       finishReady,
-      1,
+      USER_SETTINGS_FRONTEND_SCHEMA_VERSION,
       createMigrationDeps(),
     );
 
@@ -250,7 +271,7 @@ describe("attemptUserSettingsSchemaBootstrap", () => {
       const phase = await finishUserSettingsBootstrapReady(
         db,
         migrationHasErrored,
-        1,
+        USER_SETTINGS_FRONTEND_SCHEMA_VERSION,
       );
       expect(phase).toBe("migration_errored");
     });
@@ -258,7 +279,7 @@ describe("attemptUserSettingsSchemaBootstrap", () => {
     const outcome = await attemptUserSettingsSchemaBootstrap(
       db,
       finishReady,
-      1,
+      USER_SETTINGS_FRONTEND_SCHEMA_VERSION,
       createMigrationDeps(),
     );
 

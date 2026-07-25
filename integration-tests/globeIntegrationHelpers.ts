@@ -796,13 +796,11 @@ export function installGlobeAnimationTestEnv(): {
     restore() {
       perfSpy.mockRestore();
       if (prevPointerEvent === undefined) {
-        // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
         delete (g as { PointerEvent?: typeof MockPointerEvent }).PointerEvent;
       } else {
         g.PointerEvent = prevPointerEvent;
       }
       if (prevWheelEvent === undefined) {
-        // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
         delete (g as { WheelEvent?: typeof MockWheelEvent }).WheelEvent;
       } else {
         g.WheelEvent = prevWheelEvent;

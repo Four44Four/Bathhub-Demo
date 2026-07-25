@@ -6,6 +6,7 @@ import {
   type BathroomSyncResponse,
   type BathroomViewportEntry,
   type ViewportBounds,
+  deriveVerifyStatusFromExistenceVotes,
 } from "../app/_shared/BathroomDataPrimary";
 import { BathroomMapMarker } from "../app/_client/ComponentConstants";
 import { type BathroomLocalDbPort } from "../app/_client/local-db/LocalDbPort";
@@ -78,7 +79,7 @@ export function findSeededRow(
 
   if (row === undefined) {
     throw new Error(
-      `No seeded bathroom_data_primary row found for ${label}; run Crud.integration.test.ts first`,
+      `No bathroom_data_primary fixture found for locations.json label ${label}`,
     );
   }
 
@@ -144,7 +145,7 @@ export async function runViewportLocalCacheSync(
     throw new Error("Local viewport sync was cancelled before rendering");
   }
 
-  return { rendered: nextRendered, requestId };
+  return { rendered, requestId };
 }
 
 export type RunViewportRemoteSyncResult = {
@@ -283,7 +284,12 @@ export function expectViewportEntryMatchesRow(
   expect(entry?.id).toBe(row.id);
   expect(nearlyEqual(entry?.latitude ?? 0, row.latitude)).toBe(true);
   expect(nearlyEqual(entry?.longitude ?? 0, row.longitude)).toBe(true);
-  expect(entry?.verify_status).toBe(row.verify_status);
+  expect(entry?.verify_status).toBe(
+    deriveVerifyStatusFromExistenceVotes(
+      row.exists_vote_count,
+      row.not_exists_vote_count,
+    ),
+  );
   expect(entry?.version).toBe(row.version);
 }
 
@@ -292,4 +298,38 @@ export function expectClientCacheEntry(
   row: BathroomDataPrimaryRow,
 ): void {
   expect(cache).toContainEqual({ id: row.id, version: row.version });
+}
+
+export function viewportEntry(
+  overrides: Partial<BathroomViewportEntry> & Pick<BathroomViewportEntry, "id">,
+): BathroomViewportEntry {
+  const exists_vote_count = overrides.exists_vote_count ?? 0;
+  const not_exists_vote_count = overrides.not_exists_vote_count ?? 0;
+  return {
+    latitude: 0,
+    longitude: 0,
+    version: 0,
+    exists_vote_count,
+    not_exists_vote_count,
+    verify_status: deriveVerifyStatusFromExistenceVotes(
+      exists_vote_count,
+      not_exists_vote_count,
+    ),
+    ...overrides,
+  };
+}
+
+export function viewportEntryFromRow(
+  row: BathroomDataPrimaryRow,
+  overrides: Partial<BathroomViewportEntry> = {},
+): BathroomViewportEntry {
+  return viewportEntry({
+    id: row.id,
+    latitude: row.latitude,
+    longitude: row.longitude,
+    exists_vote_count: row.exists_vote_count,
+    not_exists_vote_count: row.not_exists_vote_count,
+    version: row.version,
+    ...overrides,
+  });
 }

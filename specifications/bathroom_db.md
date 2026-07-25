@@ -1,14 +1,11 @@
-# Custom types
-## Verify_Status 
- - Enum of 'pending' and 'verified'
-
 # Table name
  - bathroom_data_primary
 
 # Table schema
  - `id` as type `BIGSERIAL`
  - `location` as type `GEOGRAPHY`
- - `verify_status` as type `Verify_Status`
+ - `exists_vote_count` as type `BIGINT NOT NULL`
+ - `not_exists_vote_count` as type `BIGINT NOT NULL`
  - `temp_data` as type `TEXT` with restrictions -> length of exactly 64
  - `created_at` as type `TIMESTAMP`
  - `version` as type `BIGINT NOT NULL`

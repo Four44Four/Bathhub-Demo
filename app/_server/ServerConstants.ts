@@ -14,6 +14,11 @@ export const H3_BATHROOM_CELL_RESOLUTION = 10;
 /** Max H3 cells to use for one bathroom bounds cache lookup before DB fallback. */
 export const H3_BATHROOM_MAX_BOUNDS_CACHE_CELLS = 2500;
 
+export {
+  BATHROOM_EXISTENCE_VALUE_DAILY_DECAY_CRON_SCHEDULE_UTC,
+  BATHROOM_EXISTENCE_VALUE_DAILY_DECAY_FACTOR,
+} from "./pure/bathroom-data-primary/DecayBathroomExistenceValue";
+
 export type { RateLimitWindowConfig };
 
 export const SERVER_RATE_LIMITS = {

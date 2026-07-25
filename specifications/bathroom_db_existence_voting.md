@@ -2,8 +2,12 @@
 ## Bathroom existence value deletion start threshold
  - -10.0
 
-# Description
- - <TODO:>
+# Scheduled tasks
+ - Uses `pg_cron` extension
+## Daily
+ - Run at 12:00 am UTC+0
+### Decay bathroom existence value (daily scheduled task)
+ - All bathrooms' [`existence_value` column](./bathroom_db.md#table-schema) will by multiplied by 0.995 (decrease by 0.5%)
 
 # Functions
 ## Vote for bathroom existence

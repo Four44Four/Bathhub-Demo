@@ -14,9 +14,9 @@ const NON_RERUNNABLE_MIGRATION_FILENAMES = new Set([
   "20260717000000_bathroom_data_primary_existence_votes.sql",
   "20260718000000_bathroom_data_primary_increment_existence_vote_rpc.sql",
 ]);
-const EXPECTED_LATEST_SCHEMA_VERSION = 16;
+const EXPECTED_LATEST_SCHEMA_VERSION = 17;
 const EXPECTED_RATING_COLUMNS = 5;
-const EXPECTED_RPC_COUNT = 8;
+const EXPECTED_RPC_COUNT = 9;
 
 type ServerSchemaState = {
   schemaVersionRows: number;
@@ -122,7 +122,8 @@ function readServerSchemaState(databaseUrl: string): ServerSchemaState {
               'get_nearest_bathroom_data_primary',
               'get_bathroom_data_primary_by_id',
               'increment_bathroom_data_primary_rating_count',
-              'increment_bathroom_data_primary_existence_vote_count'
+              'increment_bathroom_data_primary_existence_vote_count',
+              'decay_bathroom_data_primary_existence_value'
             )
         )
     )::text;
@@ -154,6 +155,7 @@ describe("server PostgreSQL migration reruns", () => {
       "20260713000000_bathroom_data_primary_rating_counts.sql",
       "20260716000000_bathroom_nearest_rpc_min_rating.sql",
       "20260725000000_bathroom_data_primary_existence_value.sql",
+      "20260726000000_bathroom_data_primary_existence_value_decay.sql",
     ]);
 
     const before = readServerSchemaState(databaseUrl);

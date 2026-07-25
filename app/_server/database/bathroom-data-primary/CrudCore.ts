@@ -55,6 +55,10 @@ import {
   type IncrementBathroomExistenceVoteRpc,
 } from "../../pure/bathroom-data-primary/IncrementBathroomExistenceVote";
 import {
+  DECAY_BATHROOM_EXISTENCE_VALUE_RPC_NAME,
+  decayAllBathroomExistenceValues,
+} from "../../pure/bathroom-data-primary/DecayBathroomExistenceValue";
+import {
   H3_BATHROOM_CELL_RESOLUTION,
   H3_BATHROOM_MAX_BOUNDS_CACHE_CELLS,
 } from "../../ServerConstants";
@@ -124,6 +128,16 @@ export async function createAt(
       );
     });
     return row;
+  });
+}
+
+export async function decayAllExistenceValues(): Promise<number> {
+  const client = getSupabaseClient();
+  return decayAllBathroomExistenceValues(async () => {
+    const { data, error } = await client.rpc(
+      DECAY_BATHROOM_EXISTENCE_VALUE_RPC_NAME,
+    );
+    return { data: data as number | null, error };
   });
 }
 

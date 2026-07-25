@@ -161,6 +161,9 @@ npx jest --config "$INTEGRATION_JEST_CONFIG" --runInBand --verbose "$SCRIPT_DIR/
 echo "run-tests: running bathroom H3 cell RPC integration checks..."
 npx jest --config "$INTEGRATION_JEST_CONFIG" --runInBand --verbose "$SCRIPT_DIR/H3CellRpc.integration.test.ts"
 
+echo "run-tests: running bathroom existence value decay integration checks..."
+npx jest --config "$INTEGRATION_JEST_CONFIG" --runInBand --verbose "$SCRIPT_DIR/DecayBathroomExistenceValue.integration.test.ts"
+
 echo "run-tests: running Redis read cache integration checks..."
 npx jest --config "$INTEGRATION_JEST_CONFIG" --runInBand --verbose "$SCRIPT_DIR/ReadCache.integration.test.ts"
 

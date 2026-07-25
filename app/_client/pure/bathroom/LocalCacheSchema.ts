@@ -21,8 +21,7 @@ export const REQUIRED_LOCAL_CACHE_COLUMNS = [
   "remote_id",
   "location",
   "version",
-  "exists_vote_count",
-  "not_exists_vote_count",
+  "exists_value",
 ] as const;
 
 export type RequiredLocalCacheTable =

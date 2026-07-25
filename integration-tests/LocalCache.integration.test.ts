@@ -355,7 +355,7 @@ describe("bathroom local SQLite cache sync against local Supabase", () => {
     expectClientCacheEntry(idVersions, row);
   });
 
-  test("SQLite cache table stores existence vote counts instead of verify_status", async () => {
+  test("SQLite cache table stores exists_value instead of verify_status", async () => {
     const row = findSeededRow(
       seededRows,
       locations,
@@ -373,19 +373,18 @@ describe("bathroom local SQLite cache sync against local Supabase", () => {
       )
       .map((entry) => entry.name);
     expect(columns).toEqual(
-      expect.arrayContaining(["exists_vote_count", "not_exists_vote_count"]),
+      expect.arrayContaining(["exists_value"]),
     );
     expect(columns).not.toContain("verify_status");
 
     const voteRows = db.selectObjects(
-      `SELECT exists_vote_count, not_exists_vote_count
+      `SELECT exists_value
        FROM ${BATHROOM_LOCAL_CACHE_TABLE_NAME}
        WHERE remote_id = ?`,
       [row.id],
     );
     expect(voteRows[0]).toEqual({
-      exists_vote_count: row.exists_vote_count,
-      not_exists_vote_count: row.not_exists_vote_count,
+      exists_value: row.existence_value,
     });
   });
 
@@ -791,8 +790,7 @@ describe("bathroom viewport sync runtime integration", () => {
                   id: cachedEntry.id,
                   latitude: cachedEntry.latitude,
                   longitude: cachedEntry.longitude,
-                  exists_vote_count: 2,
-                  not_exists_vote_count: 0,
+                  existence_value: 2,
                   version: 2,
                 },
               ],
@@ -908,7 +906,7 @@ describe("bathroom marker renderer integration", () => {
           id: 1,
           latitude: 47.611,
           longitude: -122.331,
-          exists_vote_count: 2,
+          existence_value: 2,
           version: 2,
         }),
         loadedFromCache: false,

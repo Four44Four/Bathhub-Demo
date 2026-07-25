@@ -6,7 +6,6 @@ import type {
 import { clamp01 } from "../../Utils";
 import { dropdownMenuQuadraticEase } from "../dropdown-menu/DropdownMenuLayout";
 import { dropshadowVisibleOverflowPaddingPx } from "../Dropshadow";
-import { multiplyHexColorBrightness } from "../viewport2d/ButtonInteractColor";
 
 export type BathroomInformationPanelExpandedContentShadowInset = {
   /** Extra bottom room inside expanded content for button drop shadows. */
@@ -131,47 +130,27 @@ export function bathroomInformationPanelIconPath(
     : BathroomPageConsts.BATHROOM_NON_VERIFIED_ICON_PATH;
 }
 
-export type BathroomExistenceVoteCounts = {
-  forCount: number;
-  againstCount: number;
-};
-
 export type BathroomExistenceVoteSide = "exists" | "not_exists";
 
-/** Maps bathroom_data_primary vote columns to panel vote counts. */
-export function bathroomExistenceVoteCountsFromRow(
-  row: Pick<BathroomDataPrimaryRow, "exists_vote_count" | "not_exists_vote_count">,
-): BathroomExistenceVoteCounts {
-  return {
-    forCount: row.exists_vote_count,
-    againstCount: row.not_exists_vote_count,
-  };
+/** Maps bathroom_data_primary existence_value to the panel value. */
+export function bathroomExistenceValueFromRow(
+  row: Pick<BathroomDataPrimaryRow, "existence_value">,
+): number {
+  return row.existence_value;
 }
 
-/** Fraction of the existence vote bar width allocated to votes for (0–1). */
-export function bathroomExistenceVoteForRatio(
-  forCount: number,
-  againstCount: number,
+/**
+ * Fraction of the existence vote bar filled from the left (0–1).
+ * Maps existence_value relative to the deletion-start threshold range.
+ */
+export function bathroomExistenceVoteBarFillRatio(
+  existenceValue: number,
 ): number {
-  const total = forCount + againstCount;
-  if (total <= 0) {
+  const deletionThreshold =
+    BathroomPageConsts.BATHROOM_EXISTENCE_VALUE_DELETION_START_THRESHOLD;
+  const span = Math.abs(deletionThreshold) * 2;
+  if (span <= 0) {
     return 0.5;
   }
-  return forCount / total;
-}
-
-/** Text color for the for-vote count beside the existence vote bar. */
-export function bathroomExistenceVoteBarForLabelColor(): string {
-  return multiplyHexColorBrightness(
-    BathroomPageConsts.VERIFIED_COLOR,
-    BathroomPageConsts.BATHROOM_INFORMATION_PANEL_EXISTENCE_VOTE_BAR_TEXT_COLOR_BRIGHTNESS_MULT_FACTOR,
-  );
-}
-
-/** Text color for the against-vote count beside the existence vote bar. */
-export function bathroomExistenceVoteBarAgainstLabelColor(): string {
-  return multiplyHexColorBrightness(
-    BathroomPageConsts.NON_VERIFIED_COLOR,
-    BathroomPageConsts.BATHROOM_INFORMATION_PANEL_EXISTENCE_VOTE_BAR_TEXT_COLOR_BRIGHTNESS_MULT_FACTOR,
-  );
+  return clamp01((existenceValue - deletionThreshold) / span);
 }

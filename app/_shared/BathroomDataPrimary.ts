@@ -14,8 +14,7 @@ export type BathroomDataPrimaryRow = {
   id: number;
   latitude: number;
   longitude: number;
-  exists_vote_count: number;
-  not_exists_vote_count: number;
+  existence_value: number;
   temp_data: string;
   created_at: string;
   version: number;
@@ -41,8 +40,7 @@ export type BathroomSyncUpsert = {
   id: number;
   latitude: number;
   longitude: number;
-  exists_vote_count: number;
-  not_exists_vote_count: number;
+  existence_value: number;
   version: number;
 };
 
@@ -60,12 +58,11 @@ export type BathroomViewportEntry = BathroomSyncUpsert & {
 export const BATHROOM_LOCAL_CACHE_TABLE_NAME =
   "bathroom_data_primary_cache" as const;
 
-/** Derives marker/cache verify status from existence vote counts. */
-export function deriveVerifyStatusFromExistenceVotes(
-  existsVoteCount: number,
-  notExistsVoteCount: number,
+/** Derives marker/cache verify status from existence_value. */
+export function deriveVerifyStatusFromExistenceValue(
+  existenceValue: number,
 ): VerifyStatus {
-  return existsVoteCount > notExistsVoteCount ? "verified" : "pending";
+  return existenceValue > 0.0 ? "verified" : "pending";
 }
 
 export function bathroomSyncUpsertToViewportEntry(
@@ -73,10 +70,7 @@ export function bathroomSyncUpsertToViewportEntry(
 ): BathroomViewportEntry {
   return {
     ...upsert,
-    verify_status: deriveVerifyStatusFromExistenceVotes(
-      upsert.exists_vote_count,
-      upsert.not_exists_vote_count,
-    ),
+    verify_status: deriveVerifyStatusFromExistenceValue(upsert.existence_value),
   };
 }
 
@@ -84,20 +78,14 @@ export function bathroomSyncUpsertToViewportEntry(
 export function bathroomDataPrimaryRowToViewportEntry(
   row: Pick<
     BathroomDataPrimaryRow,
-    | "id"
-    | "latitude"
-    | "longitude"
-    | "exists_vote_count"
-    | "not_exists_vote_count"
-    | "version"
+    "id" | "latitude" | "longitude" | "existence_value" | "version"
   >,
 ): BathroomViewportEntry {
   return bathroomSyncUpsertToViewportEntry({
     id: row.id,
     latitude: row.latitude,
     longitude: row.longitude,
-    exists_vote_count: row.exists_vote_count,
-    not_exists_vote_count: row.not_exists_vote_count,
+    existence_value: row.existence_value,
     version: row.version,
   });
 }

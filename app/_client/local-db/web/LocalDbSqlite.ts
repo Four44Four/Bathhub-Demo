@@ -3,7 +3,7 @@ import {
   type BathroomClientCacheEntry,
   type BathroomViewportEntry,
   type ViewportBounds,
-  deriveVerifyStatusFromExistenceVotes,
+  deriveVerifyStatusFromExistenceValue,
 } from "../../../_shared/BathroomDataPrimary";
 import { isCacheEntryExpired } from "../../pure/bathroom/CacheExpiration";
 import { isLocalCacheSchemaReady } from "../../pure/bathroom/LocalCacheSchema";
@@ -180,8 +180,8 @@ function coerceSqliteBlob(value: unknown): Uint8Array | null {
   return null;
 }
 
-function isVoteCount(value: unknown): value is number {
-  return typeof value === "number" && Number.isFinite(value) && value >= 0;
+function isExistenceValue(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value);
 }
 
 function rowToViewportEntry(row: Record<string, unknown>): BathroomViewportEntry | null {
@@ -189,8 +189,7 @@ function rowToViewportEntry(row: Record<string, unknown>): BathroomViewportEntry
   if (
     typeof row.remote_id !== "number" ||
     typeof row.version !== "number" ||
-    !isVoteCount(row.exists_vote_count) ||
-    !isVoteCount(row.not_exists_vote_count) ||
+    !isExistenceValue(row.exists_value) ||
     location === null
   ) {
     return null;
@@ -201,12 +200,8 @@ function rowToViewportEntry(row: Record<string, unknown>): BathroomViewportEntry
     id: row.remote_id,
     latitude,
     longitude,
-    exists_vote_count: row.exists_vote_count,
-    not_exists_vote_count: row.not_exists_vote_count,
-    verify_status: deriveVerifyStatusFromExistenceVotes(
-      row.exists_vote_count,
-      row.not_exists_vote_count,
-    ),
+    existence_value: row.exists_value,
+    verify_status: deriveVerifyStatusFromExistenceValue(row.exists_value),
     version: row.version,
   };
 }
@@ -295,7 +290,7 @@ export function createBathroomLocalDbSqlite(
     async getInBounds(bounds: ViewportBounds): Promise<BathroomViewportEntry[]> {
       const { db: activeDb } = await ensureDb();
       const rows = activeDb.selectObjects(
-        `SELECT c.remote_id, c.location, c.version, c.exists_vote_count, c.not_exists_vote_count
+        `SELECT c.remote_id, c.location, c.version, c.exists_value
          FROM ${BATHROOM_LOCAL_CACHE_TABLE_NAME} c
          INNER JOIN ${RTREE_TABLE_NAME} r ON c.remote_id = r.remote_id
          WHERE r.max_x >= ? AND r.min_x <= ? AND r.max_y >= ? AND r.min_y <= ?`,
@@ -355,21 +350,19 @@ export function createBathroomLocalDbSqlite(
         const location = encodeGpkgPointWgs84(entry.longitude, entry.latitude);
         activeDb.exec(
           `INSERT INTO ${BATHROOM_LOCAL_CACHE_TABLE_NAME} (
-             remote_id, location, version, exists_vote_count, not_exists_vote_count, updated_at
-           ) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+             remote_id, location, version, exists_value, updated_at
+           ) VALUES (?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
            ON CONFLICT(remote_id) DO UPDATE SET
              location = excluded.location,
              version = excluded.version,
-             exists_vote_count = excluded.exists_vote_count,
-             not_exists_vote_count = excluded.not_exists_vote_count,
+             exists_value = excluded.exists_value,
              updated_at = excluded.updated_at`,
           {
             bind: [
               entry.id,
               location,
               entry.version,
-              entry.exists_vote_count,
-              entry.not_exists_vote_count,
+              entry.existence_value,
             ],
           },
         );

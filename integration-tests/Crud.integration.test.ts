@@ -95,15 +95,9 @@ function validateRow(
     );
   }
 
-  if (actual.exists_vote_count !== expected.exists_vote_count) {
+  if (actual.existence_value !== expected.existence_value) {
     errors.push(
-      `${phase}: exists_vote_count expected ${expected.exists_vote_count}, got ${actual.exists_vote_count}`,
-    );
-  }
-
-  if (actual.not_exists_vote_count !== expected.not_exists_vote_count) {
-    errors.push(
-      `${phase}: not_exists_vote_count expected ${expected.not_exists_vote_count}, got ${actual.not_exists_vote_count}`,
+      `${phase}: existence_value expected ${expected.existence_value}, got ${actual.existence_value}`,
     );
   }
 
@@ -297,8 +291,7 @@ describe("bathroom_data_primary CRUD against local Supabase", () => {
     expect(row?.id).toBe(target.id);
     expect(row?.latitude).toBeCloseTo(target.latitude, 5);
     expect(row?.longitude).toBeCloseTo(target.longitude, 5);
-    expect(row?.exists_vote_count).toBe(target.exists_vote_count);
-    expect(row?.not_exists_vote_count).toBe(target.not_exists_vote_count);
+    expect(row?.existence_value).toBe(target.existence_value);
     expect(row?.rating_1_count).toBe(0);
     expect(row?.rating_2_count).toBe(0);
     expect(row?.rating_3_count).toBe(0);
@@ -334,7 +327,7 @@ describe("bathroom_data_primary CRUD against local Supabase", () => {
     });
   });
 
-  test("bathroomDbIncrementExistenceVote increments exists_vote_count and version", async () => {
+  test("bathroomDbIncrementExistenceVote increments existence_value and version", async () => {
     const target = created[3]?.row;
     expect(target).toBeDefined();
     if (target === undefined) {
@@ -345,21 +338,19 @@ describe("bathroom_data_primary CRUD against local Supabase", () => {
 
     expect(updated).toMatchObject({
       id: target.id,
-      exists_vote_count: target.exists_vote_count + 1,
-      not_exists_vote_count: target.not_exists_vote_count,
+      existence_value: target.existence_value + 1,
       version: target.version + 1,
     });
 
     const row = await bathroomDbReadById(target.id);
     expect(row).toMatchObject({
       id: target.id,
-      exists_vote_count: target.exists_vote_count + 1,
-      not_exists_vote_count: target.not_exists_vote_count,
+      existence_value: target.existence_value + 1,
       version: target.version + 1,
     });
   });
 
-  test("bathroomDbIncrementExistenceVote increments not_exists_vote_count and version", async () => {
+  test("bathroomDbIncrementExistenceVote decrements existence_value and version", async () => {
     const target = created[4]?.row;
     expect(target).toBeDefined();
     if (target === undefined) {
@@ -373,16 +364,14 @@ describe("bathroom_data_primary CRUD against local Supabase", () => {
 
     expect(updated).toMatchObject({
       id: target.id,
-      exists_vote_count: target.exists_vote_count,
-      not_exists_vote_count: target.not_exists_vote_count + 1,
+      existence_value: target.existence_value - 1,
       version: target.version + 1,
     });
 
     const row = await bathroomDbReadById(target.id);
     expect(row).toMatchObject({
       id: target.id,
-      exists_vote_count: target.exists_vote_count,
-      not_exists_vote_count: target.not_exists_vote_count + 1,
+      existence_value: target.existence_value - 1,
       version: target.version + 1,
     });
   });

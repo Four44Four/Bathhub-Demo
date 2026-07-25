@@ -17,9 +17,7 @@ import {
   Viewport2dButton as Viewport2dButtonConsts,
 } from "../ComponentConstants";
 import {
-  bathroomExistenceVoteBarAgainstLabelColor,
-  bathroomExistenceVoteBarForLabelColor,
-  bathroomExistenceVoteForRatio,
+  bathroomExistenceVoteBarFillRatio,
   bathroomInformationPanelArrowRotationDeg,
   bathroomInformationPanelArrowRowHeightPx,
   bathroomInformationPanelBodyClipHeightPx,
@@ -28,7 +26,6 @@ import {
   bathroomInformationPanelIconColor,
   bathroomInformationPanelIconPath,
   bathroomInformationPanelIconShouldHighlight,
-  type BathroomExistenceVoteCounts,
   type BathroomExistenceVoteSide,
 } from "../pure/bathroom/BathroomInformation";
 import { dropshadowToBoxShadowCss } from "../pure/Dropshadow";
@@ -48,21 +45,19 @@ import { LoadingSpinner } from "../viewport2d/LoadingSpinner";
 type BathroomInformationPanelProps = {
   verifyStatus: VerifyStatus;
   widthPx: number;
-  voteCounts: BathroomExistenceVoteCounts;
+  existenceValue: number;
   votingSide?: BathroomExistenceVoteSide | null;
   onVote?: (side: BathroomExistenceVoteSide) => void;
 };
 
 function ExistenceVoteBar({
-  forCount,
-  againstCount,
+  existenceValue,
   panelWidthPx,
 }: {
-  forCount: number;
-  againstCount: number;
+  existenceValue: number;
   panelWidthPx: number;
 }) {
-  const forRatio = bathroomExistenceVoteForRatio(forCount, againstCount);
+  const forRatio = bathroomExistenceVoteBarFillRatio(existenceValue);
   const barWidthPx =
     panelWidthPx * BathroomPageConsts.BATHROOM_INFORMATION_PANEL_EXISTENCE_VOTE_BAR_WIDTH_RATIO;
   const barHeightPx = BathroomPageConsts.RATING_BAR_HEIGHT_PX;
@@ -71,24 +66,7 @@ function ExistenceVoteBar({
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    gap: BathroomPageConsts.COMPONENTS_GAP_PX,
     width: "100%",
-  };
-
-  const labelBaseStyle: CSSProperties = {
-    fontSize: 14,
-    lineHeight: 1.2,
-    flexShrink: 0,
-  };
-
-  const forLabelStyle: CSSProperties = {
-    ...labelBaseStyle,
-    color: bathroomExistenceVoteBarForLabelColor(),
-  };
-
-  const againstLabelStyle: CSSProperties = {
-    ...labelBaseStyle,
-    color: bathroomExistenceVoteBarAgainstLabelColor(),
   };
 
   const barStyle: CSSProperties = {
@@ -114,16 +92,10 @@ function ExistenceVoteBar({
 
   return (
     <div style={rowStyle}>
-      <span className={TextWeight.BOLD} style={forLabelStyle}>
-        {forCount}
-      </span>
       <div style={barStyle}>
         <div style={forStyle} />
         <div style={againstStyle} />
       </div>
-      <span className={TextWeight.BOLD} style={againstLabelStyle}>
-        {againstCount}
-      </span>
     </div>
   );
 }
@@ -242,7 +214,7 @@ function ExistenceVoteButton({
 export function BathroomInformationPanel({
   verifyStatus,
   widthPx,
-  voteCounts,
+  existenceValue,
   votingSide = null,
   onVote,
 }: BathroomInformationPanelProps) {
@@ -311,7 +283,7 @@ export function BathroomInformationPanel({
 
   useLayoutEffect(() => {
     measureExpandedContent();
-  }, [measureExpandedContent, voteCounts.forCount, voteCounts.againstCount, widthPx]);
+  }, [measureExpandedContent, existenceValue, widthPx]);
 
   useEffect(() => {
     const node = expandedMeasureRef.current;
@@ -476,8 +448,7 @@ export function BathroomInformationPanel({
   const expandedContent = (
     <>
       <ExistenceVoteBar
-        forCount={voteCounts.forCount}
-        againstCount={voteCounts.againstCount}
+        existenceValue={existenceValue}
         panelWidthPx={widthPx}
       />
       <div style={buttonRowStyle}>

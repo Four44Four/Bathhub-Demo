@@ -18,7 +18,10 @@ export function isHttpAuthFailureStatus(status: number): boolean {
 export function classifyEndpointFailure(
   error: unknown,
 ): { kind: EnvVarUsabilityIssueKind; detail: string } | null {
-  if (error instanceof Error && error.name === "AbortError") {
+  if (
+    error instanceof Error &&
+    (error.name === "AbortError" || error.name === "TimeoutError")
+  ) {
     return { kind: "unreachable", detail: "timed out" };
   }
 

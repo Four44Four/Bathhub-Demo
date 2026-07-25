@@ -9,24 +9,19 @@ import {
   type BathroomSyncResponse,
   type BathroomSyncUpsert,
   type BathroomViewportEntry,
-  deriveVerifyStatusFromExistenceVotes,
+  deriveVerifyStatusFromExistenceValue,
 } from "../app/_shared/BathroomDataPrimary";
 
 function viewportEntry(
   overrides: Partial<BathroomViewportEntry> & Pick<BathroomViewportEntry, "id">,
 ): BathroomViewportEntry {
-  const exists_vote_count = overrides.exists_vote_count ?? 0;
-  const not_exists_vote_count = overrides.not_exists_vote_count ?? 0;
+  const existence_value = overrides.existence_value ?? 0;
   return {
     latitude: 0,
     longitude: 0,
     version: 0,
-    exists_vote_count,
-    not_exists_vote_count,
-    verify_status: deriveVerifyStatusFromExistenceVotes(
-      exists_vote_count,
-      not_exists_vote_count,
-    ),
+    existence_value,
+    verify_status: deriveVerifyStatusFromExistenceValue(existence_value),
     ...overrides,
   };
 }
@@ -38,8 +33,7 @@ function syncUpsert(
     latitude: 0,
     longitude: 0,
     version: 0,
-    exists_vote_count: 0,
-    not_exists_vote_count: 0,
+    existence_value: 0,
     ...overrides,
   };
 }
@@ -74,7 +68,7 @@ describe("BathroomViewportSyncPipeline", () => {
         id: 7,
         latitude: 0.25,
         longitude: 0.75,
-        exists_vote_count: 2,
+        existence_value: 2,
         version: 2,
       }),
     ]);
@@ -135,7 +129,7 @@ describe("BathroomViewportSyncPipeline", () => {
             id: 2,
             latitude: 0.2,
             longitude: 0.2,
-            exists_vote_count: 2,
+            existence_value: 2,
             version: 1,
           }),
         ],
@@ -154,7 +148,7 @@ describe("BathroomViewportSyncPipeline", () => {
         id: 3,
         latitude: 0.3,
         longitude: 0.3,
-        exists_vote_count: 2,
+        existence_value: 2,
         version: 1,
       }),
     ]);
@@ -200,7 +194,7 @@ describe("BathroomViewportSyncPipeline", () => {
               id: 4,
               latitude: 0.41,
               longitude: 0.41,
-              exists_vote_count: 2,
+              existence_value: 2,
               version: 2,
             }),
           ],
@@ -225,7 +219,7 @@ describe("BathroomViewportSyncPipeline", () => {
       id: 5,
       latitude: 0.5,
       longitude: 0.5,
-      exists_vote_count: 2,
+      existence_value: 2,
       version: 1,
     });
     const localDbPort = createLocalDbMock([remoteFetched]);
@@ -288,7 +282,7 @@ describe("BathroomViewportSyncPipeline", () => {
               id: 6,
               latitude: 0.61,
               longitude: 0.61,
-              exists_vote_count: 2,
+              existence_value: 2,
               version: 2,
             }),
           ],
@@ -344,7 +338,7 @@ describe("BathroomViewportSyncPipeline", () => {
             id: 9,
             latitude: 0.5,
             longitude: 0.5,
-            exists_vote_count: 2,
+            existence_value: 2,
             version: 4,
           }),
         ],

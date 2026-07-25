@@ -4,211 +4,181 @@
       "label": "nyc",
       "latitude": 40.712776,
       "longitude": -74.005974,
-      "exists_vote_count": 0,
-      "not_exists_vote_count": 0
+      "existence_value": 0
     },
     {
       "label": "los_angeles",
       "latitude": 34.052235,
       "longitude": -118.243683,
-      "exists_vote_count": 0,
-      "not_exists_vote_count": 0
+      "existence_value": 0
     },
     {
       "label": "chicago",
       "latitude": 41.878113,
       "longitude": -87.629799,
-      "exists_vote_count": 0,
-      "not_exists_vote_count": 0
+      "existence_value": 0
     },
     {
       "label": "houston",
       "latitude": 29.760427,
       "longitude": -95.369804,
-      "exists_vote_count": 0,
-      "not_exists_vote_count": 0
+      "existence_value": 0
     },
     {
       "label": "seattle",
       "latitude": 47.606209,
       "longitude": -122.332069,
-      "exists_vote_count": 0,
-      "not_exists_vote_count": 0
+      "existence_value": 0
     },
     {
       "label": "london",
       "latitude": 51.507351,
       "longitude": -0.127758,
-      "exists_vote_count": 0,
-      "not_exists_vote_count": 0
+      "existence_value": 0
     },
     {
       "label": "paris",
       "latitude": 48.856613,
       "longitude": 2.352222,
-      "exists_vote_count": 0,
-      "not_exists_vote_count": 0
+      "existence_value": 0
     },
     {
       "label": "tokyo",
       "latitude": 35.689487,
       "longitude": 139.691711,
-      "exists_vote_count": 0,
-      "not_exists_vote_count": 0
+      "existence_value": 0
     },
     {
       "label": "sydney",
       "latitude": -33.86882,
       "longitude": 151.209296,
-      "exists_vote_count": 0,
-      "not_exists_vote_count": 0
+      "existence_value": 0
     },
     {
       "label": "cairo",
       "latitude": 30.04442,
       "longitude": 31.235712,
-      "exists_vote_count": 0,
-      "not_exists_vote_count": 0
+      "existence_value": 0
     },
     {
       "label": "sao_paulo",
       "latitude": -23.55052,
       "longitude": -46.633308,
-      "exists_vote_count": 0,
-      "not_exists_vote_count": 0
+      "existence_value": 0
     },
     {
       "label": "cape_town",
       "latitude": -33.924869,
       "longitude": 18.424055,
-      "exists_vote_count": 0,
-      "not_exists_vote_count": 0
+      "existence_value": 0
     },
     {
       "label": "mumbai",
       "latitude": 19.075984,
       "longitude": 72.877656,
-      "exists_vote_count": 0,
-      "not_exists_vote_count": 0
+      "existence_value": 0
     },
     {
       "label": "moscow",
       "latitude": 55.755826,
       "longitude": 37.6173,
-      "exists_vote_count": 0,
-      "not_exists_vote_count": 0
+      "existence_value": 0
     },
     {
       "label": "buenos_aires",
       "latitude": -34.603684,
       "longitude": -58.381559,
-      "exists_vote_count": 0,
-      "not_exists_vote_count": 0
+      "existence_value": 0
     },
     {
       "label": "mexico_city",
       "latitude": 19.432608,
       "longitude": -99.133209,
-      "exists_vote_count": 0,
-      "not_exists_vote_count": 0
+      "existence_value": 0
     },
     {
       "label": "bangkok",
       "latitude": 13.756331,
       "longitude": 100.501762,
-      "exists_vote_count": 0,
-      "not_exists_vote_count": 0
+      "existence_value": 0
     },
     {
       "label": "istanbul",
       "latitude": 41.008238,
       "longitude": 28.978359,
-      "exists_vote_count": 0,
-      "not_exists_vote_count": 0
+      "existence_value": 0
     },
     {
       "label": "seoul",
       "latitude": 37.566535,
       "longitude": 126.977969,
-      "exists_vote_count": 0,
-      "not_exists_vote_count": 0
+      "existence_value": 0
     },
     {
       "label": "nairobi",
       "latitude": -1.292066,
       "longitude": 36.821945,
-      "exists_vote_count": 0,
-      "not_exists_vote_count": 0
+      "existence_value": 0
     },
     {
       "label": "reykjavik",
       "latitude": 64.146582,
       "longitude": -21.942636,
-      "exists_vote_count": 0,
-      "not_exists_vote_count": 0
+      "existence_value": 0
     },
     {
       "label": "auckland",
       "latitude": -36.848461,
       "longitude": 174.763336,
-      "exists_vote_count": 0,
-      "not_exists_vote_count": 0
+      "existence_value": 0
     },
     {
       "label": "lima",
       "latitude": -12.046374,
       "longitude": -77.042793,
-      "exists_vote_count": 0,
-      "not_exists_vote_count": 0
+      "existence_value": 0
     },
     {
       "label": "jakarta",
       "latitude": -6.208763,
       "longitude": 106.845599,
-      "exists_vote_count": 0,
-      "not_exists_vote_count": 0
+      "existence_value": 0
     },
     {
       "label": "lagos",
       "latitude": 6.524379,
       "longitude": 3.379206,
-      "exists_vote_count": 0,
-      "not_exists_vote_count": 0
+      "existence_value": 0
     },
     {
       "label": "beijing",
       "latitude": 39.904211,
       "longitude": 116.407395,
-      "exists_vote_count": 0,
-      "not_exists_vote_count": 0
+      "existence_value": 0
     },
     {
       "label": "vancouver",
       "latitude": 49.282729,
       "longitude": -123.120738,
-      "exists_vote_count": 0,
-      "not_exists_vote_count": 0
+      "existence_value": 0
     },
     {
       "label": "manila",
       "latitude": 14.599512,
       "longitude": 120.984222,
-      "exists_vote_count": 0,
-      "not_exists_vote_count": 0
+      "existence_value": 0
     },
     {
       "label": "santiago",
       "latitude": -33.44889,
       "longitude": -70.669265,
-      "exists_vote_count": 0,
-      "not_exists_vote_count": 0
+      "existence_value": 0
     },
     {
       "label": "oslo",
       "latitude": 59.913869,
       "longitude": 10.752245,
-      "exists_vote_count": 0,
-      "not_exists_vote_count": 0
+      "existence_value": 0
     }
   ]
 }

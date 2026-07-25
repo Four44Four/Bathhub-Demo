@@ -1,8 +1,6 @@
 import {
-  bathroomExistenceVoteBarAgainstLabelColor,
-  bathroomExistenceVoteBarForLabelColor,
-  bathroomExistenceVoteCountsFromRow,
-  bathroomExistenceVoteForRatio,
+  bathroomExistenceValueFromRow,
+  bathroomExistenceVoteBarFillRatio,
   bathroomInformationLabel,
   bathroomInformationPanelArrowRotationDeg,
   bathroomInformationPanelArrowRowHeightPx,
@@ -41,35 +39,22 @@ describe("bathroomInformationPanelIconPath", () => {
   });
 });
 
-describe("bathroomExistenceVoteCountsFromRow", () => {
-  test("maps bathroom_data_primary vote columns to panel counts", () => {
+describe("bathroomExistenceValueFromRow", () => {
+  test("maps bathroom_data_primary existence_value to the panel value", () => {
     expect(
-      bathroomExistenceVoteCountsFromRow({
-        exists_vote_count: 3,
-        not_exists_vote_count: 1,
+      bathroomExistenceValueFromRow({
+        existence_value: 2,
       }),
-    ).toEqual({
-      forCount: 3,
-      againstCount: 1,
-    });
-    expect(bathroomExistenceVoteForRatio(3, 1)).toBe(0.75);
+    ).toBe(2);
   });
 });
 
-describe("bathroom existence vote bar label colors", () => {
-  test("uses verified and non-verified colors at the vote-bar text brightness", () => {
-    expect(bathroomExistenceVoteBarForLabelColor()).toBe("#53a58b");
-    expect(bathroomExistenceVoteBarAgainstLabelColor()).toBe("#a57a53");
-  });
-});
-
-describe("bathroomExistenceVoteForRatio", () => {
-  test("returns 0.5 when there are no votes", () => {
-    expect(bathroomExistenceVoteForRatio(0, 0)).toBe(0.5);
-  });
-
-  test("computes the for-vote fraction from counts", () => {
-    expect(bathroomExistenceVoteForRatio(3, 1)).toBe(0.75);
+describe("bathroomExistenceVoteBarFillRatio", () => {
+  test("maps existence_value across the deletion-threshold span", () => {
+    expect(bathroomExistenceVoteBarFillRatio(0)).toBe(0.5);
+    expect(bathroomExistenceVoteBarFillRatio(-10)).toBe(0);
+    expect(bathroomExistenceVoteBarFillRatio(10)).toBe(1);
+    expect(bathroomExistenceVoteBarFillRatio(-5)).toBe(0.25);
   });
 });
 

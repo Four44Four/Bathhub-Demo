@@ -47,8 +47,6 @@
  - 50% of the bathroom information panel width
 ## Bathroom existence vote button text color brightness mult factor
  - 0.5
-## Bathroom information panel existence vote bar text color brightness mult factor
- - 0.75
 ## Bathroom information panel arrow icon size
  - 10px
 ## Bathroom information panel arrow row height
@@ -78,7 +76,7 @@
 ## Bathroom information panel
  - Rectangular panel on the [left side of the swipe-up menu](./swipe_up_menu.md) with corner radius of [this size](#bathroom-information-panel-corner-radius) with [this background fill color](#bathroom-information-panel-background-fill-color)
  - Rectangular panel's height should be enough to fit its contents (taller if expanded) and the internal padding of the rectangular panel
- - If <bathroom-id>'s [`exists_vote_count` column is greater than its `not_exists_vote_count` column](../bathroom_db.md#table-schema):
+ - If <bathroom-id>'s [`existence_value` column is greater than 0.0](../bathroom_db.md#table-schema):
     - Display the [bathroom icon](../resources.md#bathroom-icon) in the horizontal center of the rectangle anchored to the top end that is expanded to fill the button's width while still maintaining aspect ratio
     - [Bathroom icon](../resources.md#bathroom-icon) has [this color](#verified-color)
  - Else:
@@ -100,16 +98,11 @@
  - When the rectangular panel is interacted with:
     - Rotate the [arrow icon](../resources.md#arrow-icon) at the bottom of the [bathroom information panel](#bathroom-information-panel) 180 degrees counter-clockwise so that it ends up pointing up over [this duration](#bathroom-information-panel-hover-animation-duration) with quadratic easing
        - The [arrow icon](../resources.md#arrow-icon) will remain at the bottom of the rectangular panel with its dedicated row
-    - Expand the rectangular panel's height over [this duration] with quadratic easing to reveal the following elements, which are all clipped by the bounds of the rectangular panel, position starts from under the buffer under the bathroom icon where the "..." text used to be:
-       - A horizontally centered horizontal bar that is [this wide](#bathroom-information-panel-existence-vote-bar-width) representing [the amount of votes for or against the bathroom's existence](../bathroom_db.md#table-schema)
-          - The left side of the bar is [this color](#verified-color) and length is determined by the [`exists_vote_count` column's value from the bathroom DB](../bathroom_db.md#table-schema)
-          - The right side of the bar is [this color](#non-verified-color) and length is determined by the [`not_exists_vote_count` column's value from the bathroom DB](../bathroom_db.md#table-schema)
-          - Outside of the bar on the left side of the bar is a text with the following [text descriptor](../text.md) properties:
-             - [Content](../text.md#content) is the [`exists_vote_count` column's value from the bathroom DB](../bathroom_db.md#table-schema)
-             - [Color](../text.md#color) is [this color](#verified-color) with its brightness value multipled by [this factor](#bathroom-information-panel-existence-vote-bar-text-color-brightness-mult-factor)
-          - Outside of the bar on the right side of the bar is a text with the following [text descriptor](../text.md) properties:
-             - [Content](../text.md#content) is the [`not_exists_vote_count` column's value from the bathroom DB](../bathroom_db.md#table-schema)
-             - [Color](../text.md#color) is [this color](#non-verified-color) with its brightness value multipled by [this factor](#bathroom-information-panel-existence-vote-bar-text-color-brightness-mult-factor)
+    - Expand the rectangular panel's height over [this duration] with quadratic easing to reveal the following elements, which are all clipped by the bounds of the rectangular panel, position starts from under the buffer under the bathroom icon where the [arrow icon](../resources.md#arrow-icon) used to be:
+       - A horizontally centered horizontal bar that is [this wide](#bathroom-information-panel-existence-vote-bar-width) representing how close the <bathroom-id>'s [`existence_value` column value](../bathroom_db.md#table-schema) is to the [deletion start threshold](../bathroom_db_existence_voting.md.md#bathroom-existence-value-deletion-start-threshold)
+          - The left side of the bar is [this color](#verified-color) and length is determined by (the <bathroom-id>'s [`existence_value` column value](../bathroom_db.md#table-schema) minus the [deletion start threshold](../bathroom_db_existence_voting.md.md#bathroom-existence-value-deletion-start-threshold)) divided by (the absolute value of the [deletion start threshold](../bathroom_db_existence_voting.md#bathroom-existence-value-deletion-start-threshold) multiplied by 2)
+             - The length should be normalized to range [0.0 to 1.0]
+          - The right side of the bar is [this color](#non-verified-color) and is the base of the bar, with the length being whatever is not covered by the left side of the bar
        - 2 [buttons](../components/viewport2d_button.md) in the same row:
           - Left [button](../components/viewport2d_button.md) has the following properties:
              - Set [x position](../components/viewport2d_button.md#x-position) and [y position](../components/viewport2d_button.md#y-position) so that it is in the correct position
@@ -123,8 +116,7 @@
              - [Outline thickness](../components/viewport2d_button.md#outline-thickness) is 0 (no outline)
              - [Dropshadow descriptor](../components/viewport2d_button.md#drop-shadow) is [this drop shadow descriptor](./dropshadow_descriptor.md)
              - [Click callback](../components/viewport2d_button.md#on-click-callback) is the following:
-                - Increment the [`exists_vote_count` column of the bathroom DB](../bathroom_db.md#table-schema)
-                   - This is rate limited on the serverside with [this rate limit](../server_rate_limits.md#updating-bathrooms)
+                - Call [vote for bathroom existence](../bathroom_db_existence_voting.md#vote-for-bathroom-existence) on the server
                 - Until the update to successfully written to the serverside DB:
                    - Replace the text on the real vote [button](../components/viewport2d_button.md) with a horizontally centered [loading spinner](../components/loading_spinner.md) with the following properties:
                       - [X position](../components/loading_spinner.md#x-position) and [y position](../components/loading_spinner.md#y-position) are set so that it will be in the center of the real vote [button](../components/viewport2d_button.md)
@@ -132,7 +124,7 @@
                       - [Base color](../components/loading_spinner.md#base-color) is [this color](#loading-spinner-base-color)
                       - [Radius](../components/loading_spinner.md#radius) is [this size](#button-loading-spinner-radius)
                 - Once the update is successfully written to the serverside DB:
-                   - Immediately update the bathroom information panel to reflect the [`exists_vote_count` and `not_exists_vote_count` columns from the bathroom DB](../bathroom_db.md#table-schema)
+                   - Immediately update the bathroom information panel to reflect the [`existence_value` column from the bathroom DB](../bathroom_db.md#table-schema)
                    - Update its corresponding [bathroom map marker](../bathroom_db_reading.md#bathroom-marker) immediately on the client's map
           - Right [button](../components/viewport2d_button.md) has the following properties:
              - Set [x position](../components/viewport2d_button.md#x-position) and [y position](../components/viewport2d_button.md#y-position) so that it is in the correct position
@@ -146,8 +138,7 @@
              - [Outline thickness](../components/viewport2d_button.md#outline-thickness) is 0 (no outline)
              - [Dropshadow descriptor](../components/viewport2d_button.md#drop-shadow) is [this drop shadow descriptor](./dropshadow_descriptor.md)
              - [Click callback](../components/viewport2d_button.md#on-click-callback) is the following:
-                - Increment the [`not_exists_vote_count` column of the bathroom DB](../bathroom_db.md#table-schema)
-                   - This is rate limited on the serverside with [this rate limit](../server_rate_limits.md#updating-bathrooms)
+                - Call [vote against bathroom existence](../bathroom_db_existence_voting.md#vote-against-bathroom-existence) on the server
                 - Until the update to successfully written to the serverside DB:
                    - Replace the text on the real vote [button](../components/viewport2d_button.md) with a horizontally centered [loading spinner](../components/loading_spinner.md) with the following properties:
                       - [X position](../components/loading_spinner.md#x-position) and [y position](../components/loading_spinner.md#y-position) are set so that it will be in the center of the real vote [button](../components/viewport2d_button.md)
@@ -155,7 +146,7 @@
                       - [Base color](../components/loading_spinner.md#base-color) is [this color](#loading-spinner-base-color)
                       - [Radius](../components/loading_spinner.md#radius) is [this size](#button-loading-spinner-radius)
                 - Once the update is successfully written to the serverside DB:
-                   - Immediately update the bathroom information panel to reflect the [`exists_vote_count` and `not_exists_vote_count` columns from the bathroom DB](../bathroom_db.md#table-schema)
+                   - Immediately update the bathroom information panel to reflect the [`existence_value` column from the bathroom DB](../bathroom_db.md#table-schema)
                    - Update its corresponding [bathroom map marker](../bathroom_db_reading.md#bathroom-marker) immediately on the client's map
     - When the rectangular panel is interacted with again while expanded:
        - Collapse the rectangular panel over [this duration] with quadratic easing to hide the expanded elements

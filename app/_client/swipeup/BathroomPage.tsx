@@ -9,7 +9,7 @@ import {
   incrementBathroomRating,
   readBathroomById,
 } from "../Bathroom";
-import { deriveVerifyStatusFromExistenceVotes } from "../../_shared/BathroomDataPrimary";
+import { deriveVerifyStatusFromExistenceValue } from "../../_shared/BathroomDataPrimary";
 import {
   BathroomPage as BathroomPageConsts,
   BathroomRemoteDB,
@@ -29,8 +29,7 @@ import {
   type BathroomRatingCounts,
 } from "../pure/bathroom/BathroomRating";
 import {
-  bathroomExistenceVoteCountsFromRow,
-  type BathroomExistenceVoteCounts,
+  bathroomExistenceValueFromRow,
   type BathroomExistenceVoteSide,
 } from "../pure/bathroom/BathroomInformation";
 import { bathroomPageDropdownWidthPx, bathroomPageDropdownXPx } from "../pure/dropdown-menu/DropdownMenuLayout";
@@ -179,8 +178,7 @@ export function BathroomPage() {
   const [ratingCounts, setRatingCounts] = useState<BathroomRatingCounts | null>(
     null,
   );
-  const [existenceVoteCounts, setExistenceVoteCounts] =
-    useState<BathroomExistenceVoteCounts | null>(null);
+  const [existenceValue, setExistenceValue] = useState<number | null>(null);
   const [draftRating, setDraftRating] = useState(0);
   const [isPostingRating, setIsPostingRating] = useState(false);
   const [votingSide, setVotingSide] = useState<BathroomExistenceVoteSide | null>(
@@ -204,7 +202,7 @@ export function BathroomPage() {
     if (selectedBathroomId == null) {
       setLoadState({ status: "idle" });
       setRatingCounts(null);
-      setExistenceVoteCounts(null);
+      setExistenceValue(null);
       setDraftRating(0);
       setIsPostingRating(false);
       setVotingSide(null);
@@ -214,7 +212,7 @@ export function BathroomPage() {
     let cancelled = false;
     setLoadState({ status: "loading" });
     setRatingCounts(null);
-    setExistenceVoteCounts(null);
+    setExistenceValue(null);
     setDraftRating(0);
     setIsPostingRating(false);
     setVotingSide(null);
@@ -235,7 +233,7 @@ export function BathroomPage() {
         }
         setLoadState({ status: "loaded", row: result.val });
         setRatingCounts(bathroomRatingCountsFromFullRow(result.val));
-        setExistenceVoteCounts(bathroomExistenceVoteCountsFromRow(result.val));
+        setExistenceValue(bathroomExistenceValueFromRow(result.val));
         return;
       }
 
@@ -262,12 +260,9 @@ export function BathroomPage() {
   const loadedRow = loadState.status === "loaded" ? loadState.row : null;
   const bathroomId = loadedRow?.id ?? selectedBathroomId ?? 0;
   const verifyStatus =
-    existenceVoteCounts === null
+    existenceValue === null
       ? "pending"
-      : deriveVerifyStatusFromExistenceVotes(
-          existenceVoteCounts.forCount,
-          existenceVoteCounts.againstCount,
-        );
+      : deriveVerifyStatusFromExistenceValue(existenceValue);
 
   const sideMarginPx = SwipeUpMainMenuConsts.MARGIN_SIDE_PX;
   const dropdownWidthPx = bathroomPageDropdownWidthPx(widthPx, sideMarginPx);
@@ -309,7 +304,7 @@ export function BathroomPage() {
     );
   }
 
-  if (loadState.status !== "loaded" || ratingCounts == null || existenceVoteCounts == null) {
+  if (loadState.status !== "loaded" || ratingCounts == null || existenceValue == null) {
     return null;
   }
 
@@ -404,7 +399,7 @@ export function BathroomPage() {
       <BathroomInformationPanel
         verifyStatus={verifyStatus}
         widthPx={informationPanelWidthPx}
-        voteCounts={existenceVoteCounts}
+        existenceValue={existenceValue}
         votingSide={votingSide}
         onVote={(side) => {
           if (votingSide !== null) {
@@ -432,7 +427,7 @@ export function BathroomPage() {
               return;
             }
 
-            setExistenceVoteCounts(bathroomExistenceVoteCountsFromRow(result.val));
+            setExistenceValue(bathroomExistenceValueFromRow(result.val));
             await applyBathroomViewportUpsert(result.val);
             setVotingSide(null);
           })();

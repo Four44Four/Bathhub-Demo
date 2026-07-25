@@ -51,6 +51,19 @@ describe("classifyEndpointFailure", () => {
     ).toEqual({ kind: "unreachable", detail: "econnrefused" });
   });
 
+  test("classifyEndpointFailure maps AbortError and TimeoutError to timed out", () => {
+    expect(
+      classifyEndpointFailure(Object.assign(new Error("aborted"), { name: "AbortError" })),
+    ).toEqual({ kind: "unreachable", detail: "timed out" });
+    expect(
+      classifyEndpointFailure(
+        Object.assign(new Error("The operation was aborted due to timeout"), {
+          name: "TimeoutError",
+        }),
+      ),
+    ).toEqual({ kind: "unreachable", detail: "timed out" });
+  });
+
   test("classifyEndpointFailure maps redis auth errors to unauthenticated", () => {
     expect(
       classifyEndpointFailure(

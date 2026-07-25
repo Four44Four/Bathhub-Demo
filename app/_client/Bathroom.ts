@@ -80,8 +80,7 @@ export async function applyBathroomViewportUpsert(
     | "id"
     | "latitude"
     | "longitude"
-    | "exists_vote_count"
-    | "not_exists_vote_count"
+    | "existence_value"
     | "version"
   >,
 ): Promise<void> {

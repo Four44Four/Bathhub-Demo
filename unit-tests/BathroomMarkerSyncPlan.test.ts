@@ -25,8 +25,7 @@ function entry(
   return {
     latitude: 47.61,
     longitude: -122.34,
-    exists_vote_count: 0,
-    not_exists_vote_count: 0,
+    existence_value: 0,
     verify_status: "pending",
     version: 1,
     loadedFromCache: true,
@@ -75,8 +74,7 @@ describe("BathroomMarkerSyncPlan", () => {
         id: 1,
         latitude: 47.61,
         longitude: -122.34,
-        exists_vote_count: 1,
-        not_exists_vote_count: 0,
+        existence_value: 1,
         verify_status: "verified",
         version: 1,
       },
@@ -101,14 +99,13 @@ describe("BathroomMarkerSyncPlan", () => {
   });
 
   test("plans recreate when verify_status changes", () => {
-    const current = [entry({ id: 1, verify_status: "verified", exists_vote_count: 2 })];
+    const current = [entry({ id: 1, verify_status: "verified", existence_value: 2 })];
     const previous = createRenderedBathroomMap([
       {
         id: 1,
         latitude: 47.61,
         longitude: -122.34,
-        exists_vote_count: 0,
-        not_exists_vote_count: 0,
+        existence_value: 0,
         verify_status: "pending",
         version: 1,
       },
@@ -183,8 +180,7 @@ describe("BathroomMarkerSyncPlan", () => {
         id: 1,
         latitude: 47.61,
         longitude: -122.34,
-        exists_vote_count: 0,
-        not_exists_vote_count: 0,
+        existence_value: 0,
         verify_status: "pending",
         version: 1,
       },

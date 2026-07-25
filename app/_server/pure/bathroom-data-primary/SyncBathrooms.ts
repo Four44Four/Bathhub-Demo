@@ -16,8 +16,7 @@ export type BathroomRemoteRowSummary = {
   version: number;
   latitude: number;
   longitude: number;
-  exists_vote_count: number;
-  not_exists_vote_count: number;
+  existence_value: number;
 };
 
 export type SyncBathroomRpcParams = {
@@ -53,8 +52,8 @@ export function buildSyncBathroomRpcParams(
   };
 }
 
-function isVoteCount(value: unknown): value is number {
-  return typeof value === "number" && Number.isFinite(value) && value >= 0;
+function isExistenceValue(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value);
 }
 
 function parseSyncUpsert(item: unknown): BathroomSyncUpsert | null {
@@ -68,8 +67,7 @@ function parseSyncUpsert(item: unknown): BathroomSyncUpsert | null {
     typeof row.latitude !== "number" ||
     typeof row.longitude !== "number" ||
     typeof row.version !== "number" ||
-    !isVoteCount(row.exists_vote_count) ||
-    !isVoteCount(row.not_exists_vote_count)
+    !isExistenceValue(row.existence_value)
   ) {
     return null;
   }
@@ -78,8 +76,7 @@ function parseSyncUpsert(item: unknown): BathroomSyncUpsert | null {
     id: row.id,
     latitude: row.latitude,
     longitude: row.longitude,
-    exists_vote_count: row.exists_vote_count,
-    not_exists_vote_count: row.not_exists_vote_count,
+    existence_value: row.existence_value,
     version: row.version,
   };
 }
@@ -102,8 +99,7 @@ export function computeBathroomSyncDiff(
         id: row.id,
         latitude: row.latitude,
         longitude: row.longitude,
-        exists_vote_count: row.exists_vote_count,
-        not_exists_vote_count: row.not_exists_vote_count,
+        existence_value: row.existence_value,
         version: row.version,
       });
     }

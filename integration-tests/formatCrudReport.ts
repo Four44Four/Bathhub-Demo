@@ -1,14 +1,13 @@
 import {
   type BathroomDataPrimaryRow,
-  deriveVerifyStatusFromExistenceVotes,
+  deriveVerifyStatusFromExistenceValue,
 } from "../app/_shared/BathroomDataPrimary";
 
 export type InputCoordinate = {
   label: string;
   latitude: number;
   longitude: number;
-  exists_vote_count: number;
-  not_exists_vote_count: number;
+  existence_value: number;
 };
 
 export type FailedRowReport = {
@@ -36,15 +35,13 @@ const INPUT_COLUMNS = [
   "label",
   "latitude",
   "longitude",
-  "exists_vote_count",
-  "not_exists_vote_count",
+  "existence_value",
 ] as const;
 const OUTPUT_COLUMNS = [
   "id",
   "latitude",
   "longitude",
-  "exists_vote_count",
-  "not_exists_vote_count",
+  "existence_value",
   "verify_status",
   "temp_data",
   "created_at",
@@ -92,8 +89,7 @@ function inputRows(inputs: InputCoordinate[]): string[][] {
     input.label,
     input.latitude.toFixed(6),
     input.longitude.toFixed(6),
-    String(input.exists_vote_count),
-    String(input.not_exists_vote_count),
+    String(input.existence_value),
   ]);
 }
 
@@ -102,12 +98,8 @@ function outputRows(rows: BathroomDataPrimaryRow[]): string[][] {
     String(row.id),
     row.latitude.toFixed(6),
     row.longitude.toFixed(6),
-    String(row.exists_vote_count),
-    String(row.not_exists_vote_count),
-    deriveVerifyStatusFromExistenceVotes(
-      row.exists_vote_count,
-      row.not_exists_vote_count,
-    ),
+    String(row.existence_value),
+    deriveVerifyStatusFromExistenceValue(row.existence_value),
     row.temp_data,
     row.created_at,
     String(row.version),
@@ -122,10 +114,7 @@ function failedRows(failures: FailedRowReport[]): string[][] {
     failure.row === null ? "-" : failure.row.longitude.toFixed(6),
     failure.row === null
       ? "-"
-      : deriveVerifyStatusFromExistenceVotes(
-          failure.row.exists_vote_count,
-          failure.row.not_exists_vote_count,
-        ),
+      : deriveVerifyStatusFromExistenceValue(failure.row.existence_value),
     failure.errors.join("; "),
   ]);
 }

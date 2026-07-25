@@ -63,7 +63,7 @@
 # Bathroom marker
  - A 3D billboard map marker that is located on the location of a bathroom record
     - Bottom middle edge is on the point of the Globe where the bathroom is located
- - If the bathroom is verified (its `exists_vote_count` column is greater than its `not_exists_vote_count` column):
+ - If the bathroom is verified (its `existence_value` column is greater than 0.0):
     - It's image is the [verified bathroom marker image](./resources.md#verified-bathroom-marker-image)
  - Else:
     - It's image is the [pending verify bathroom marker image](./resources.md#pending-verify-bathroom-marker-image)
@@ -83,15 +83,13 @@
       - location as type `BLOB`
       - remote_id as type `BIGINT`
       - version as type `BIGINT`
-      - exists_vote_count as type `BIGINT`
-      - not_exists_vote_count as type `BIGINT`
+      - exists_value as type `REAL`
 - Whenever a (new/updated) Bathroom is retrieved:
    - Upsert it to the local SQLite Geopackage DB
       - Convert the location from a Postgis GEOGRAPHY type to a GPKG Geometry BLOB
       - Store the `id` column
       - Store the `version` column
-      - Store the `exists_vote_count` column
-      - Store the `not_exists_vote_count` column
+      - Store the `existence_value` column
 - The local cache will be an in-memory DB in write-ahead logging mode that will sync changes to the disk in the background as new bathroom entries are upserted or deleted
    - Changes to DB should happen to in-memory DB first and then it will cascade to disk back-up eventually
 - When the server sends back down bathroom entries in a UPSERT response:

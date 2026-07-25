@@ -3,7 +3,7 @@ import {
   type BathroomDataPrimaryRow,
   type BathroomSyncUpsert,
   type VerifyStatus,
-  deriveVerifyStatusFromExistenceVotes,
+  deriveVerifyStatusFromExistenceValue,
 } from "../../../_shared/BathroomDataPrimary";
 
 export type CachedBathroomRecord = {
@@ -14,8 +14,7 @@ export type CachedBathroomRecord = {
   version: number;
   temp_data: string;
   created_at: string;
-  exists_vote_count?: number;
-  not_exists_vote_count?: number;
+  existence_value?: number;
   rating_1_count?: number;
   rating_2_count?: number;
   rating_3_count?: number;
@@ -24,15 +23,17 @@ export type CachedBathroomRecord = {
 };
 
 function verifyStatusFromRow(
-  row: Pick<
-    BathroomDataPrimaryRow,
-    "exists_vote_count" | "not_exists_vote_count"
-  >,
+  row: Pick<BathroomDataPrimaryRow, "existence_value">,
 ): VerifyStatus {
-  return deriveVerifyStatusFromExistenceVotes(
-    row.exists_vote_count,
-    row.not_exists_vote_count,
-  );
+  return deriveVerifyStatusFromExistenceValue(row.existence_value);
+}
+
+function isExistenceValue(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value);
+}
+
+function isNonNegativeCount(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0;
 }
 
 export function parseBathroomDataPrimaryRowFromCache(
@@ -47,10 +48,7 @@ export function parseBathroomDataPrimaryRowFromCache(
     typeof candidate.id !== "number" ||
     typeof candidate.latitude !== "number" ||
     typeof candidate.longitude !== "number" ||
-    typeof candidate.exists_vote_count !== "number" ||
-    candidate.exists_vote_count < 0 ||
-    typeof candidate.not_exists_vote_count !== "number" ||
-    candidate.not_exists_vote_count < 0 ||
+    !isExistenceValue(candidate.existence_value) ||
     typeof candidate.temp_data !== "string" ||
     typeof candidate.created_at !== "string" ||
     typeof candidate.version !== "number"
@@ -62,8 +60,7 @@ export function parseBathroomDataPrimaryRowFromCache(
     id: candidate.id,
     latitude: candidate.latitude,
     longitude: candidate.longitude,
-    exists_vote_count: candidate.exists_vote_count,
-    not_exists_vote_count: candidate.not_exists_vote_count,
+    existence_value: candidate.existence_value,
     temp_data: candidate.temp_data,
     created_at: candidate.created_at,
     version: candidate.version,
@@ -81,8 +78,7 @@ export function bathroomFullRowToCachedRecord(
     version: row.version,
     temp_data: row.temp_data,
     created_at: row.created_at,
-    exists_vote_count: row.exists_vote_count,
-    not_exists_vote_count: row.not_exists_vote_count,
+    existence_value: row.existence_value,
     rating_1_count: row.rating_1_count,
     rating_2_count: row.rating_2_count,
     rating_3_count: row.rating_3_count,
@@ -100,8 +96,7 @@ export function cachedBathroomRecordToFullRow(
     typeof record.rating_3_count !== "number" ||
     typeof record.rating_4_count !== "number" ||
     typeof record.rating_5_count !== "number" ||
-    typeof record.exists_vote_count !== "number" ||
-    typeof record.not_exists_vote_count !== "number"
+    !isExistenceValue(record.existence_value)
   ) {
     return null;
   }
@@ -110,8 +105,7 @@ export function cachedBathroomRecordToFullRow(
     id: record.id,
     latitude: record.latitude,
     longitude: record.longitude,
-    exists_vote_count: record.exists_vote_count,
-    not_exists_vote_count: record.not_exists_vote_count,
+    existence_value: record.existence_value,
     temp_data: record.temp_data,
     created_at: record.created_at,
     version: record.version,
@@ -134,8 +128,7 @@ export function bathroomRowToCachedRecord(
     version: row.version,
     temp_data: row.temp_data,
     created_at: row.created_at,
-    exists_vote_count: row.exists_vote_count,
-    not_exists_vote_count: row.not_exists_vote_count,
+    existence_value: row.existence_value,
   };
 }
 
@@ -151,8 +144,7 @@ export function bathroomSyncUpsertToCachedRecord(
     version: row.version,
     temp_data: existing?.temp_data ?? "",
     created_at: existing?.created_at ?? "",
-    exists_vote_count: row.exists_vote_count,
-    not_exists_vote_count: row.not_exists_vote_count,
+    existence_value: row.existence_value,
   };
 }
 
@@ -169,8 +161,7 @@ export function nearestBathroomLocationToCachedRecord(row: {
     version: 0,
     temp_data: "",
     created_at: "",
-    exists_vote_count: 0,
-    not_exists_vote_count: 0,
+    existence_value: 0,
   };
 }
 
@@ -208,9 +199,14 @@ export function parseCachedBathroomRecord(
     return null;
   }
 
-  const optionalCounts = {
-    exists_vote_count: candidate.exists_vote_count,
-    not_exists_vote_count: candidate.not_exists_vote_count,
+  if (
+    candidate.existence_value !== undefined &&
+    !isExistenceValue(candidate.existence_value)
+  ) {
+    return null;
+  }
+
+  const optionalRatingCounts = {
     rating_1_count: candidate.rating_1_count,
     rating_2_count: candidate.rating_2_count,
     rating_3_count: candidate.rating_3_count,
@@ -218,8 +214,8 @@ export function parseCachedBathroomRecord(
     rating_5_count: candidate.rating_5_count,
   };
 
-  for (const value of Object.values(optionalCounts)) {
-    if (value !== undefined && (typeof value !== "number" || value < 0)) {
+  for (const value of Object.values(optionalRatingCounts)) {
+    if (value !== undefined && !isNonNegativeCount(value)) {
       return null;
     }
   }
@@ -232,6 +228,7 @@ export function parseCachedBathroomRecord(
     version: candidate.version,
     temp_data: candidate.temp_data,
     created_at: candidate.created_at,
-    ...optionalCounts,
+    existence_value: candidate.existence_value,
+    ...optionalRatingCounts,
   };
 }

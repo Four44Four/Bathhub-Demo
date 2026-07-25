@@ -11,24 +11,19 @@ import {
 } from "../app/_client/pure/bathroom/BathroomViewportQuery";
 import {
   type BathroomViewportEntry,
-  deriveVerifyStatusFromExistenceVotes,
+  deriveVerifyStatusFromExistenceValue,
 } from "../app/_shared/BathroomDataPrimary";
 
 function viewportEntry(
   overrides: Partial<BathroomViewportEntry> & Pick<BathroomViewportEntry, "id">,
 ): BathroomViewportEntry {
-  const exists_vote_count = overrides.exists_vote_count ?? 0;
-  const not_exists_vote_count = overrides.not_exists_vote_count ?? 0;
+  const existence_value = overrides.existence_value ?? 0;
   return {
     latitude: 0,
     longitude: 0,
     version: 0,
-    exists_vote_count,
-    not_exists_vote_count,
-    verify_status: deriveVerifyStatusFromExistenceVotes(
-      exists_vote_count,
-      not_exists_vote_count,
-    ),
+    existence_value,
+    verify_status: deriveVerifyStatusFromExistenceValue(existence_value),
     ...overrides,
   };
 }
@@ -66,7 +61,7 @@ describe("Bathroom viewport pure helpers", () => {
           id: 2,
           latitude: 3,
           longitude: 4,
-          exists_vote_count: 2,
+          existence_value: 2,
           version: 1,
         }),
       ],
@@ -96,7 +91,7 @@ describe("Bathroom viewport pure helpers", () => {
           id: 1,
           latitude: 1,
           longitude: 2,
-          exists_vote_count: 2,
+          existence_value: 2,
           version: 2,
         }),
       ],
@@ -113,7 +108,7 @@ describe("Bathroom viewport pure helpers", () => {
         id: 1,
         latitude: 1,
         longitude: 2,
-        exists_vote_count: 2,
+        existence_value: 2,
         version: 1,
       }),
     ]);
@@ -125,7 +120,7 @@ describe("Bathroom viewport pure helpers", () => {
           id: 1,
           latitude: 1.1,
           longitude: 2.1,
-          exists_vote_count: 2,
+          existence_value: 2,
           version: 1,
         }),
         viewportEntry({
@@ -148,7 +143,7 @@ describe("Bathroom viewport pure helpers", () => {
         id: 1,
         latitude: 1,
         longitude: 2,
-        exists_vote_count: 0,
+        existence_value: 0,
         version: 1,
       }),
     ]);
@@ -160,7 +155,7 @@ describe("Bathroom viewport pure helpers", () => {
         id: 1,
         latitude: 1,
         longitude: 2,
-        exists_vote_count: 2,
+        existence_value: 2,
         version: 2,
       }),
     );

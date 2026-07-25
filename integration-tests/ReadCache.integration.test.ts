@@ -261,8 +261,7 @@ describe("Redis-backed serverside read cache", () => {
     expect(cached).not.toBeNull();
     expect(parseCachedBathroomRecord(cached!)).toMatchObject({
       id: row.id,
-      exists_vote_count: row.exists_vote_count + 1,
-      not_exists_vote_count: row.not_exists_vote_count,
+      existence_value: row.existence_value + 1,
       version: row.version + 1,
       verify_status: "verified",
     });

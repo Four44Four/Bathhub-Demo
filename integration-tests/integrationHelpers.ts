@@ -6,7 +6,7 @@ import {
   type BathroomSyncResponse,
   type BathroomViewportEntry,
   type ViewportBounds,
-  deriveVerifyStatusFromExistenceVotes,
+  deriveVerifyStatusFromExistenceValue,
 } from "../app/_shared/BathroomDataPrimary";
 import { BathroomMapMarker } from "../app/_client/ComponentConstants";
 import { type BathroomLocalDbPort } from "../app/_client/local-db/LocalDbPort";
@@ -285,10 +285,7 @@ export function expectViewportEntryMatchesRow(
   expect(nearlyEqual(entry?.latitude ?? 0, row.latitude)).toBe(true);
   expect(nearlyEqual(entry?.longitude ?? 0, row.longitude)).toBe(true);
   expect(entry?.verify_status).toBe(
-    deriveVerifyStatusFromExistenceVotes(
-      row.exists_vote_count,
-      row.not_exists_vote_count,
-    ),
+    deriveVerifyStatusFromExistenceValue(row.existence_value),
   );
   expect(entry?.version).toBe(row.version);
 }
@@ -303,18 +300,13 @@ export function expectClientCacheEntry(
 export function viewportEntry(
   overrides: Partial<BathroomViewportEntry> & Pick<BathroomViewportEntry, "id">,
 ): BathroomViewportEntry {
-  const exists_vote_count = overrides.exists_vote_count ?? 0;
-  const not_exists_vote_count = overrides.not_exists_vote_count ?? 0;
+  const existence_value = overrides.existence_value ?? 0;
   return {
     latitude: 0,
     longitude: 0,
     version: 0,
-    exists_vote_count,
-    not_exists_vote_count,
-    verify_status: deriveVerifyStatusFromExistenceVotes(
-      exists_vote_count,
-      not_exists_vote_count,
-    ),
+    existence_value,
+    verify_status: deriveVerifyStatusFromExistenceValue(existence_value),
     ...overrides,
   };
 }
@@ -327,8 +319,7 @@ export function viewportEntryFromRow(
     id: row.id,
     latitude: row.latitude,
     longitude: row.longitude,
-    exists_vote_count: row.exists_vote_count,
-    not_exists_vote_count: row.not_exists_vote_count,
+    existence_value: row.existence_value,
     version: row.version,
     ...overrides,
   });

@@ -91,12 +91,10 @@ describe("bathroom_data_primary H3 cell RPC against local Supabase", () => {
       expect.arrayContaining([baseRow.id, neighborRow.id]),
     );
     expect(rows.find((row) => row.id === baseRow.id)).toMatchObject({
-      exists_vote_count: 0,
-      not_exists_vote_count: 0,
+      existence_value: 0,
     });
     expect(rows.find((row) => row.id === neighborRow.id)).toMatchObject({
-      exists_vote_count: 0,
-      not_exists_vote_count: 0,
+      existence_value: 0,
     });
     expect(rows.some((row) => row.cell === emptyCell)).toBe(false);
   });

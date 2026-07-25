@@ -37,12 +37,16 @@ export function buildReadBathroomByIdRpcParams(
   return { p_id: id };
 }
 
-function isVoteCount(value: unknown): value is number {
+function isNonNegativeCount(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value) && value >= 0;
 }
 
+function isExistenceValue(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value);
+}
+
 function isRatingCount(value: unknown): value is number {
-  return isVoteCount(value);
+  return isNonNegativeCount(value);
 }
 
 /** Parses a full bathroom row returned by {@link READ_BATHROOM_BY_ID_RPC_NAME}. */
@@ -58,8 +62,7 @@ export function parseBathroomDataPrimaryFullRow(
     typeof candidate.id !== "number" ||
     typeof candidate.latitude !== "number" ||
     typeof candidate.longitude !== "number" ||
-    !isVoteCount(candidate.exists_vote_count) ||
-    !isVoteCount(candidate.not_exists_vote_count) ||
+    !isExistenceValue(candidate.existence_value) ||
     typeof candidate.temp_data !== "string" ||
     typeof candidate.created_at !== "string" ||
     typeof candidate.version !== "number" ||
@@ -76,8 +79,7 @@ export function parseBathroomDataPrimaryFullRow(
     id: candidate.id,
     latitude: candidate.latitude,
     longitude: candidate.longitude,
-    exists_vote_count: candidate.exists_vote_count,
-    not_exists_vote_count: candidate.not_exists_vote_count,
+    existence_value: candidate.existence_value,
     temp_data: candidate.temp_data,
     created_at: candidate.created_at,
     version: candidate.version,

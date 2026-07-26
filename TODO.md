@@ -1,8 +1,3 @@
-# Sprint 2 (basic backend)
- - Add rating system on bathrooms (stars 1-5)
- - Add existence voting system on bathrooms
-    - New status for bathroom marker: Pending deletion
-
 # Sprint 3 (accounts)
  - Add account system
     - Restrict destructive Bathroom DB operations to authenticated users

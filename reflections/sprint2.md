@@ -1,0 +1,57 @@
+# Overview
+ - Created the backend database using Supabase
+ - Initially started out using a cloud hosted Supabase, but transitioned into using a locally hosted one later
+ - Also created the Redis layer for it
+    - Initially was added to enable rate limiting, but I figured that since it was here already, why not use it for caching as well ?
+ - Implemented the SQLite local user setting DB + SQLite Geopackage bathroom map marker caching for reading bathrooms on the map
+    - The SQLite Geopackage process went kind of smoothly, but I didn't design it with explicit future schema changes in mind, and that may have unintended future consequences...
+    - The SQLite local user setting DB had a lot more thought put into it and an entire schema updating + versioning + rollback system was put in place for it
+       - I specifically put a lot more effort into designing this system to be more resilient as the data couldn't simply be completely deleted; it needed to be gracefully updated to a newer schema without mutating the underlying data
+       - Later, this level of attention was also brought back to the backend Supbase DB
+ - There was also a fair amount of UI redesigning done, especially for the swipe-up menu, which was really just designed in 5 minutes in the previous sprint
+    - Now that the swipe-up menu was going to have multiple pages, it needed to actually have a good looking UI
+ - The entire specifications directory was reorganized and each one turned from a .txt file to a markdown file to facilitate better organization and more specificity, especially for UI elements
+    - In the prior sprint, the specifications were just a giant pile of bullet point lists that referred to other parts simply by name, but without any deterministic coherence
+       - The same component or system could be referred to in several different ways, and there was no way to effectively jump back to the original definition of that thing
+       - This was solved through using markdown and actually linking the places where a component or system is used so that I could always jump back to the original definition
+    - The specifications also gives me a perfect opportunity to use my future knowledge graphing program, as they are quite interconnected and organized now due to a week or 2 of pure reorganization
+    - I wonder if there is a better way of organizing the information in the specifications, specifically if I should make it more specific or less specific in which places...
+ - Finally, there was the massive amount of backend Supabase DB migrations that were made as artifacts of extending the bathroom primary data in the process of implementing each bathroom's page
+    - At least it wasn't as much of a headache as ensuring that the local user settings DB did not get corrupted during migrations
+ - Also, I should note that towards the last few commits before this one, the rounded corners for the viewport stopped working (specifically when Cesium is loaded in and active)
+    - This doesn't seem to occur on the deployment of the previous sprint, and I don't remember it being an issue until the last several commits here
+    - An attempt to fix it was made a few commits ago, but it was by using SVGs to cover up the corners until a better solution is found
+       - The commit in question is: 17bd5a1b87d3e4e45aa504eb56caa674cecdcbba
+    - I'm quite sure that covering it up is not the only solution, so this should be investigated later
+
+# Agentic Experience
+ - The entire process was a slog.
+ - Designing the backend meant that I had to get the gist of it right before I actually ran anything, as I always risked blowing up the backend/local DB whenever one of my agents creates a incorrect migration
+    - As a result, I had to focus a lot on ensuring that even if an incorrect migration was made, it would not permanently corrupt the target DB
+       - This resulted in a lot of time dedicated to researching what were best practices for safe DB migrations
+ - I also decided to tackle the problem of not being able to understand my specifications due to the lack of organization in the specifications directory, which likely was confusing the agents a good deal too
+    - I specifically reorganized the UI to pool all shared components in one directory so that the agents could not implement a completely different object for a button every time it was mentioned
+       - There were actually 3 different loading spinners implemented just based on the fact that I respecified them in 3 separate places, but I think this was fixed after I centralized them into one single component definition and then had the 3 loading spinners just reference that one
+ - Towards the end of the sprint, when a lot of non-straightforward bugs such as the HeiGit API (ORS) being down and the phone viewport rounded corners disappearing, I threw a lot of the "smarter" models like GPT 5.6 Sol and Opus 5 at the problem, but most of the time, they did not end up creating satisfying solutions
+    - The HeiGit API issue turned out to actually be an outage, and many of the models (even the "dumber" ones like Cursor Grok 4.5) properly identified it as an upstream issue
+    - The viewport corners issue is still ongoing and I'll likely find a way to fix it in the future
+ - The planning for things like the bathroom existence voting took place outside of Cursor, as I needed to figure out exactly how it worked and I could not risk my agents cooking up their own solutions
+    - I don't read the output of my agents after they're finished making changes, as it's usually a wall of text (Claude REALLY likes doing this) and I can't be assed to sit through all of that when I'm on a time-crunch
+       - Even if I did sit through an read through all of it, I would miss cruical details from the sheer volume of noise information that I would read through
+       - I would miss the full breadth of what was decided on when agents make design decisions for me
+       - A better solution would be to give me criticism on what my design decisions are lacking in a dedicated section in a format that is not a wall of text
+       - As long as I am in control of the design of my system, I can have the agents do whatever is necessary to implement it
+ - The amount of unit tests and integration tests is so big that it can take several minutes sometimes to run them, which has caused quite a bit of slow-down when the agents have to iterate over the tests when making changes
+    - I find this as a necessary evil of using agents to write all the code and me not reading the code
+    - If I can't know what is actually implemented from reading it, the next best thing is to make the testing coverage so large and holistic that critical application bugs don't occur
+       - Obviously this won't stop all bugs, but at least the application will be functional at its core, even if it's a bit inefficient due to the over-engineering that some models (AHEM Opus) tend to do
+
+# Future Plans
+ - With the foundational backend and DB stuff in place, the account system and all the complicated stuff that comes with it is next
+ - I predict that it will be a bit difficult to implement as the entire backend was created without accounts in mind
+ - But at least I have a plan for what things users with account can do and what users without accounts can't do
+ - The specifics behind how accounts work are still a work-in-progress
+    - Especially the bathroom existence voting weighing based on "account trust"
+       - I already identified what could be the possible ways that the bathroom voting system could be abused in, but I have yet to identify what methods can be used to weed out "untrustworthy accounts"
+ - Security and endpoint hardening will become a salient issue as the account system is put in place
+    - I'll finally be able to dig into what RLS is for PostgreSQL to enforce some of these security restrictions at the database level

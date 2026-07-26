@@ -16,6 +16,7 @@ import {
 } from "../ComponentConstants";
 import {
   registerBathroomViewportUpsertHandler,
+  registerBathroomMapMarkerRerenderHandler,
   registerForceBathroomViewportSyncHandler,
   syncBathroomsInGlobeViewport,
 } from "../Bathroom";
@@ -40,6 +41,8 @@ import {
   runBathroomViewportLocalSync,
   runBathroomViewportRemoteSync,
 } from "../pure/bathroom/BathroomViewportSyncPipeline";
+import { filterRenderedBathroomsForMapDisplay } from "../pure/bathroom/BathroomMapMarkerVisibility";
+import { getActiveUserSettings } from "../user-settings/UserSettingsMemoryStore";
 import { planLocalViewportSyncSchedule } from "../pure/bathroom/BathroomLocalSyncDelay";
 import {
   initialRemoteSyncGateState,
@@ -142,7 +145,10 @@ export function BathroomViewportSync({ globeRef }: BathroomViewportSyncProps) {
     }
 
     markersRef.current.sync({
-      current: renderedBathroomsToArray(renderedRef.current),
+      current: filterRenderedBathroomsForMapDisplay(
+        renderedBathroomsToArray(renderedRef.current),
+        getActiveUserSettings(),
+      ),
       previous: previousRendered,
       viewportCenter: globe.getViewportCenterLatLon(),
       viewportBounds,
@@ -338,6 +344,11 @@ export function BathroomViewportSync({ globeRef }: BathroomViewportSyncProps) {
     const unregisterViewportUpsert = registerBathroomViewportUpsertHandler(
       applyViewportUpsert,
     );
+    const unregisterMarkerRerender = registerBathroomMapMarkerRerenderHandler(
+      () => {
+        syncMarkersFromRendered();
+      },
+    );
 
     let cancelled = false;
     const token = ++markersViewerTokenRef.current;
@@ -357,6 +368,7 @@ export function BathroomViewportSync({ globeRef }: BathroomViewportSyncProps) {
       cancelled = true;
       unregisterForceSync();
       unregisterViewportUpsert();
+      unregisterMarkerRerender();
       markersRef.current?.destroy();
       markersRef.current = null;
     };

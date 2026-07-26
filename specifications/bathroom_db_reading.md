@@ -23,6 +23,10 @@
 - Maintain a separate datastructure for all currently rendered found bathrooms
    - This should have the `id`s of the bathrooms as keys so that duplicate bathrooms from the local DB and the remote UPSERT response are deduplicated
    - Each one of these will be displayed as a [bathroom marker](#bathroom-marker)
+   - If [the show non-verified bathrooms on map user setting](./user_settings.md#show-non-verified-bathrooms-on-map) is `false`:
+      - **Don't** render [bathroom map markers](#bathroom-marker) that have an [`existence_value` column value](#localized-caching) of 0.0 or below
+   - If [the show pending-deletions bathrooms on map user setting](./user_settings.md#show-pending-deletion-bathrooms-on-map) is `false`:
+      - **Don't** render [bathroom map markers](#bathroom-marker) that have a [`deletion_wait_started_flag` column value](#localized-caching) that is not 0
 - Every time the client moves the viewport/Globe and the zoom level is close enough:
    - Find all bathrooms in the local SQLite Geopackage DB that fall within the viewport bounds
    - Save the current contents of the rendered found bathrooms datastructure
@@ -83,16 +87,21 @@
       - The interface will be implemented with whatever SQLite driver exists for the native app implementation language
    - Local cache table name: bathroom_data_primary_cache
    - SCHEMA for local cache table (not including Geopackage mandatory tables):
-      - location as type `BLOB`
-      - remote_id as type `BIGINT`
-      - version as type `BIGINT`
-      - exists_value as type `REAL`
+      - `location` as type `BLOB`
+      - `remote_id` as type `BIGINT`
+      - `version` as type `BIGINT`
+      - `existence_value` as type `REAL`
+      - `deletion_wait_started_flag` as type `INTEGER` with restriction of only having values 0 and 1
 - Whenever a (new/updated) Bathroom is retrieved:
    - Upsert it to the local SQLite Geopackage DB
       - Convert the location from a Postgis GEOGRAPHY type to a GPKG Geometry BLOB
       - Store the `id` column
       - Store the `version` column
       - Store the `existence_value` column
+      - If the `deletion_wait_started_timestamp` column is `NULL`:
+         - Store `deletion_wait_started_flag` column on local cache DB as 0
+      - Else:
+         - Store `deletion_wait_started_flag` column on local cache DB as 1
 - The local cache will be an in-memory DB in write-ahead logging mode that will sync changes to the disk in the background as new bathroom entries are upserted or deleted
    - Changes to DB should happen to in-memory DB first and then it will cascade to disk back-up eventually
 - When the server sends back down bathroom entries in a UPSERT response:

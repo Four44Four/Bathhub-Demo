@@ -11,6 +11,7 @@ import type {
 import { USER_SETTINGS_SCHEMA_MIGRATIONS } from "../app/_shared/user-settings/migrations";
 import { USER_SETTINGS_MIGRATION_V0_TO_V1 } from "../app/_shared/user-settings/migrations/v0-to-v1";
 import { USER_SETTINGS_MIGRATION_V1_TO_V2 } from "../app/_shared/user-settings/migrations/v1-to-v2";
+import { USER_SETTINGS_MIGRATION_V2_TO_V3 } from "../app/_shared/user-settings/migrations/v2-to-v3";
 import {
   USER_SETTINGS_DEFAULTS,
   USER_SETTINGS_MAX_SCHEMA_VERSION,
@@ -107,6 +108,8 @@ const DATA_PRESERVATION_MIGRATION_PAIRS = SEQUENTIAL_MIGRATION_PAIRS.filter(
 const CUSTOM_SETTINGS_FOR_MIGRATION_TEST: UserSettingsRow = {
   globe_movement_smooth: false,
   camera_init_surface_offset_m: 3200,
+  show_non_verified_bathrooms_on_map: false,
+  show_pending_deletion_bathrooms_on_map: false,
   find_nearest_bathroom_max_dist_m: 750,
   find_nearest_bathroom_min_rating: 2.5,
 };
@@ -117,16 +120,25 @@ const CUSTOM_SETTINGS_SCHEMA_V1_FOR_MIGRATION_TEST: UserSettingsRowSchemaV1 = {
   find_nearest_bathroom_max_dist_m: 750,
 };
 
+const CUSTOM_SETTINGS_SCHEMA_V2_FOR_MIGRATION_TEST = {
+  globe_movement_smooth: false,
+  camera_init_surface_offset_m: 3200,
+  find_nearest_bathroom_max_dist_m: 750,
+  find_nearest_bathroom_min_rating: 2.5,
+} as const;
+
 type RawUserSettingsSqliteRow = {
   globe_movement_smooth: number;
   camera_init_surface_offset_m: number;
   find_nearest_bathroom_max_dist_m: number;
   find_nearest_bathroom_min_rating: number;
+  show_non_verified_bathrooms_on_map?: number;
+  show_pending_deletion_bathrooms_on_map?: number;
 };
 
 function userSettingsRowToRawSqlite(
   settings: UserSettingsRow | UserSettingsRowSchemaV1,
-): RawUserSettingsSqliteRow | Omit<RawUserSettingsSqliteRow, "find_nearest_bathroom_min_rating"> {
+): RawUserSettingsSqliteRow | Omit<RawUserSettingsSqliteRow, "find_nearest_bathroom_min_rating" | "show_non_verified_bathrooms_on_map" | "show_pending_deletion_bathrooms_on_map"> {
   return {
     globe_movement_smooth: settings.globe_movement_smooth ? 1 : 0,
     camera_init_surface_offset_m: settings.camera_init_surface_offset_m,
@@ -135,6 +147,14 @@ function userSettingsRowToRawSqlite(
       ? {
           find_nearest_bathroom_min_rating:
             settings.find_nearest_bathroom_min_rating,
+        }
+      : {}),
+    ...("show_non_verified_bathrooms_on_map" in settings
+      ? {
+          show_non_verified_bathrooms_on_map:
+            settings.show_non_verified_bathrooms_on_map ? 1 : 0,
+          show_pending_deletion_bathrooms_on_map:
+            settings.show_pending_deletion_bathrooms_on_map ? 1 : 0,
         }
       : {}),
   };
@@ -151,15 +171,28 @@ function readRawSettingsRow(
     .map((row) => row.name)
     .filter((name): name is string => typeof name === "string");
   const hasMinRating = columns.includes("find_nearest_bathroom_min_rating");
-  const selectSql = hasMinRating
+  const hasMapVisibility =
+    columns.includes("show_non_verified_bathrooms_on_map") &&
+    columns.includes("show_pending_deletion_bathrooms_on_map");
+  const selectSql = hasMapVisibility
     ? `SELECT
+      globe_movement_smooth,
+      camera_init_surface_offset_m,
+      show_non_verified_bathrooms_on_map,
+      show_pending_deletion_bathrooms_on_map,
+      find_nearest_bathroom_max_dist_m,
+      find_nearest_bathroom_min_rating
+    FROM ${USER_SETTINGS_TABLE_NAME}
+    WHERE id = 1`
+    : hasMinRating
+      ? `SELECT
       globe_movement_smooth,
       camera_init_surface_offset_m,
       find_nearest_bathroom_max_dist_m,
       find_nearest_bathroom_min_rating
     FROM ${USER_SETTINGS_TABLE_NAME}
     WHERE id = 1`
-    : `SELECT
+      : `SELECT
       globe_movement_smooth,
       camera_init_surface_offset_m,
       find_nearest_bathroom_max_dist_m
@@ -180,10 +213,22 @@ function readRawSettingsRow(
   if (!hasMinRating) {
     return base;
   }
-  return {
+  const withMinRating = {
     ...base,
     find_nearest_bathroom_min_rating: Number(
       row.find_nearest_bathroom_min_rating,
+    ),
+  };
+  if (!hasMapVisibility) {
+    return withMinRating;
+  }
+  return {
+    ...withMinRating,
+    show_non_verified_bathrooms_on_map: Number(
+      row.show_non_verified_bathrooms_on_map,
+    ),
+    show_pending_deletion_bathrooms_on_map: Number(
+      row.show_pending_deletion_bathrooms_on_map,
     ),
   };
 }
@@ -194,8 +239,13 @@ async function expectUserSettingsTableContains(
 ): Promise<void> {
   const sqliteDb = await db.getSqliteDbForTests();
   const raw = readRawSettingsRow(sqliteDb);
-  if ("find_nearest_bathroom_min_rating" in expected) {
+  if ("show_non_verified_bathrooms_on_map" in expected) {
     expect(await db.readSettingsFromDb()).toEqual(expected);
+    expect(raw).toEqual(userSettingsRowToRawSqlite(expected));
+    return;
+  }
+
+  if ("find_nearest_bathroom_min_rating" in expected) {
     expect(raw).toEqual(userSettingsRowToRawSqlite(expected));
     return;
   }
@@ -265,11 +315,9 @@ describe("UserSettingsDbSqlite — real sqlite-wasm layer (user_settings spec §
         let settingsBeforeMigration: UserSettingsRow | UserSettingsRowSchemaV1 | null =
           null;
         if (fromVersion > 0) {
-          settingsBeforeMigration =
-            fromVersion === 1
-              ? CUSTOM_SETTINGS_SCHEMA_V1_FOR_MIGRATION_TEST
-              : CUSTOM_SETTINGS_FOR_MIGRATION_TEST;
           if (fromVersion === 1) {
+            settingsBeforeMigration =
+              CUSTOM_SETTINGS_SCHEMA_V1_FOR_MIGRATION_TEST;
             const sqliteDb = await db.getSqliteDbForTests();
             sqliteDb.exec(
               `UPDATE ${USER_SETTINGS_TABLE_NAME}
@@ -285,10 +333,28 @@ describe("UserSettingsDbSqlite — real sqlite-wasm layer (user_settings spec §
                 ],
               },
             );
-          } else {
-            await db.saveSettingsToDb(
-              settingsBeforeMigration as UserSettingsRow,
+          } else if (fromVersion === 2) {
+            settingsBeforeMigration = CUSTOM_SETTINGS_SCHEMA_V2_FOR_MIGRATION_TEST;
+            const sqliteDb = await db.getSqliteDbForTests();
+            sqliteDb.exec(
+              `UPDATE ${USER_SETTINGS_TABLE_NAME}
+               SET globe_movement_smooth = ?,
+                   camera_init_surface_offset_m = ?,
+                   find_nearest_bathroom_max_dist_m = ?,
+                   find_nearest_bathroom_min_rating = ?
+               WHERE id = 1`,
+              {
+                bind: [
+                  settingsBeforeMigration.globe_movement_smooth ? 1 : 0,
+                  settingsBeforeMigration.camera_init_surface_offset_m,
+                  settingsBeforeMigration.find_nearest_bathroom_max_dist_m,
+                  settingsBeforeMigration.find_nearest_bathroom_min_rating,
+                ],
+              },
             );
+          } else {
+            settingsBeforeMigration = CUSTOM_SETTINGS_FOR_MIGRATION_TEST;
+            await db.saveSettingsToDb(settingsBeforeMigration);
           }
           await expectUserSettingsTableContains(db, settingsBeforeMigration);
         }
@@ -332,7 +398,9 @@ describe("UserSettingsDbSqlite — real sqlite-wasm layer (user_settings spec §
           const settingsBeforeMigration =
             fromVersion === 1
               ? CUSTOM_SETTINGS_SCHEMA_V1_FOR_MIGRATION_TEST
-              : CUSTOM_SETTINGS_FOR_MIGRATION_TEST;
+              : fromVersion === 2
+                ? CUSTOM_SETTINGS_SCHEMA_V2_FOR_MIGRATION_TEST
+                : CUSTOM_SETTINGS_FOR_MIGRATION_TEST;
           if (fromVersion === 1) {
             const sqliteDb = await db.getSqliteDbForTests();
             sqliteDb.exec(
@@ -346,6 +414,24 @@ describe("UserSettingsDbSqlite — real sqlite-wasm layer (user_settings spec §
                   settingsBeforeMigration.globe_movement_smooth ? 1 : 0,
                   settingsBeforeMigration.camera_init_surface_offset_m,
                   settingsBeforeMigration.find_nearest_bathroom_max_dist_m,
+                ],
+              },
+            );
+          } else if (fromVersion === 2) {
+            const sqliteDb = await db.getSqliteDbForTests();
+            sqliteDb.exec(
+              `UPDATE ${USER_SETTINGS_TABLE_NAME}
+               SET globe_movement_smooth = ?,
+                   camera_init_surface_offset_m = ?,
+                   find_nearest_bathroom_max_dist_m = ?,
+                   find_nearest_bathroom_min_rating = ?
+               WHERE id = 1`,
+              {
+                bind: [
+                  settingsBeforeMigration.globe_movement_smooth ? 1 : 0,
+                  settingsBeforeMigration.camera_init_surface_offset_m,
+                  settingsBeforeMigration.find_nearest_bathroom_max_dist_m,
+                  settingsBeforeMigration.find_nearest_bathroom_min_rating,
                 ],
               },
             );
@@ -471,10 +557,26 @@ describe("UserSettingsDbSqlite — real sqlite-wasm layer (user_settings spec §
 
     test("repeat forward migration aborts on duplicate column and leaves schema unchanged", async () => {
       const db = await initDbAtSchemaVersion(2);
-      const settingsBeforeRepeat: UserSettingsRow = {
-        ...CUSTOM_SETTINGS_FOR_MIGRATION_TEST,
+      const settingsBeforeRepeat = {
+        ...CUSTOM_SETTINGS_SCHEMA_V2_FOR_MIGRATION_TEST,
       };
-      await db.saveSettingsToDb(settingsBeforeRepeat);
+      const sqliteDb = await db.getSqliteDbForTests();
+      sqliteDb.exec(
+        `UPDATE ${USER_SETTINGS_TABLE_NAME}
+         SET globe_movement_smooth = ?,
+             camera_init_surface_offset_m = ?,
+             find_nearest_bathroom_max_dist_m = ?,
+             find_nearest_bathroom_min_rating = ?
+         WHERE id = 1`,
+        {
+          bind: [
+            settingsBeforeRepeat.globe_movement_smooth ? 1 : 0,
+            settingsBeforeRepeat.camera_init_surface_offset_m,
+            settingsBeforeRepeat.find_nearest_bathroom_max_dist_m,
+            settingsBeforeRepeat.find_nearest_bathroom_min_rating,
+          ],
+        },
+      );
       await expectUserSettingsTableContains(db, settingsBeforeRepeat);
 
       await expect(
@@ -486,10 +588,41 @@ describe("UserSettingsDbSqlite — real sqlite-wasm layer (user_settings spec §
     });
   });
 
+  describe("v2→v3 migration", () => {
+    test("forward migration adds map visibility columns and persists SCHEMA_VERSION=3", async () => {
+      const db = await initDbAtSchemaVersion(2);
+      await runSequentialMigrationStep(db, 2);
+
+      expect(await db.getPersistentSchemaVersion()).toBe(3);
+      await expectUserSettingsTableContains(
+        db,
+        USER_SETTINGS_MIGRATION_V2_TO_V3.defaults,
+      );
+    });
+
+    test("repeat forward migration aborts on duplicate column and leaves schema unchanged", async () => {
+      const db = await initDbAtSchemaVersion(3);
+      const settingsBeforeRepeat: UserSettingsRow = {
+        ...CUSTOM_SETTINGS_FOR_MIGRATION_TEST,
+      };
+      await db.saveSettingsToDb(settingsBeforeRepeat);
+      await expectUserSettingsTableContains(db, settingsBeforeRepeat);
+
+      await expect(
+        db.runForwardMigration(USER_SETTINGS_MIGRATION_V2_TO_V3.forwardSql),
+      ).rejects.toThrow(/duplicate column name/i);
+
+      expect(await db.getPersistentSchemaVersion()).toBe(3);
+      await expectUserSettingsTableContains(db, settingsBeforeRepeat);
+    });
+  });
+
   describe("saveSettingsToDb / readSettingsFromDb round-trip", () => {
     const customSettings: UserSettingsRow = {
       globe_movement_smooth: false,
       camera_init_surface_offset_m: 3200,
+      show_non_verified_bathrooms_on_map: false,
+      show_pending_deletion_bathrooms_on_map: true,
       find_nearest_bathroom_max_dist_m: 750,
       find_nearest_bathroom_min_rating: 3.5,
     };
@@ -599,6 +732,16 @@ describe("UserSettingsDbSqlite — real sqlite-wasm layer (user_settings spec §
         ),
       ).toThrow();
     });
+
+    test("rejects invalid show_non_verified_bathrooms_on_map values via direct SQL", async () => {
+      const db = await initMigratedDb();
+      const sqliteDb = await db.getSqliteDbForTests();
+      expect(() =>
+        sqliteDb.exec(
+          `UPDATE ${USER_SETTINGS_TABLE_NAME} SET show_non_verified_bathrooms_on_map = 2 WHERE id = 1`,
+        ),
+      ).toThrow();
+    });
   });
 
   describe("SCHEMA_VERSION parsing", () => {
@@ -630,6 +773,8 @@ describe("UserSettingsDbSqlite — real sqlite-wasm layer (user_settings spec §
       const savedSettings: UserSettingsRow = {
         globe_movement_smooth: false,
         camera_init_surface_offset_m: 4200,
+        show_non_verified_bathrooms_on_map: true,
+        show_pending_deletion_bathrooms_on_map: false,
         find_nearest_bathroom_max_dist_m: 1200,
         find_nearest_bathroom_min_rating: 1.5,
       };

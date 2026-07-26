@@ -1,14 +1,20 @@
-import type { UserSettingsColumnName } from "./UserSettingsSchema";
+import type {
+  UserSettingsBooleanColumnName,
+  UserSettingsColumnName,
+} from "./UserSettingsSchema";
 
 export type UserSettingsBooleanItem = {
   type: "boolean";
-  column: Extract<UserSettingsColumnName, "globe_movement_smooth">;
+  column: UserSettingsBooleanColumnName;
   label: string;
 };
 
 export type UserSettingsIntSliderItem = {
   type: "slider-int";
-  column: Exclude<UserSettingsColumnName, "globe_movement_smooth">;
+  column: Extract<
+    UserSettingsColumnName,
+    "camera_init_surface_offset_m" | "find_nearest_bathroom_max_dist_m"
+  >;
   label: string;
   min: number;
   max: number;
@@ -16,7 +22,7 @@ export type UserSettingsIntSliderItem = {
 
 export type UserSettingsFloatSliderItem = {
   type: "slider-float";
-  column: Exclude<UserSettingsColumnName, "globe_movement_smooth">;
+  column: Extract<UserSettingsColumnName, "find_nearest_bathroom_min_rating">;
   label: string;
   min: number;
   max: number;
@@ -35,7 +41,7 @@ export type UserSettingsPageItem =
   | UserSettingsSubpageItem;
 
 /** Boolean setting columns referenced by page definitions. */
-export type UserSettingsBooleanColumnName = UserSettingsBooleanItem["column"];
+export type { UserSettingsBooleanColumnName };
 
 /** Numeric slider columns referenced by page definitions. */
 export type UserSettingsNumericColumnName =
@@ -71,7 +77,7 @@ export const USER_SETTINGS_PAGES: Record<
       {
         type: "slider-float",
         column: "find_nearest_bathroom_min_rating",
-        label: "Find nearest bathrrom min. rating",
+        label: "Find nearest bathroom min. rating",
         min: 0,
         max: 5,
       },
@@ -92,6 +98,16 @@ export const USER_SETTINGS_PAGES: Record<
         label: "Init camera height (meters)",
         min: 500,
         max: 10000,
+      },
+      {
+        type: "boolean",
+        column: "show_non_verified_bathrooms_on_map",
+        label: "Show non-verified bathrooms on map",
+      },
+      {
+        type: "boolean",
+        column: "show_pending_deletion_bathrooms_on_map",
+        label: "Show pending deletion bathrooms on map",
       },
       {
         type: "subpage",

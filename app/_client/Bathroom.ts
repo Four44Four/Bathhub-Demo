@@ -36,6 +36,7 @@ let forceBathroomViewportSyncHandler: (() => void) | null = null;
 let bathroomViewportUpsertHandler:
   | ((entry: BathroomViewportEntry) => Promise<void> | void)
   | null = null;
+let bathroomMapMarkerRerenderHandler: (() => void) | null = null;
 
 /** Registers the callback that renders bathrooms returned from a viewport refresh. */
 export function registerBathroomViewportRenderHandler(
@@ -59,6 +60,23 @@ export function registerForceBathroomViewportSyncHandler(
       forceBathroomViewportSyncHandler = null;
     }
   };
+}
+
+/** Registers a callback to resync visible bathroom map markers from rendered state. */
+export function registerBathroomMapMarkerRerenderHandler(
+  handler: () => void,
+): () => void {
+  bathroomMapMarkerRerenderHandler = handler;
+  return () => {
+    if (bathroomMapMarkerRerenderHandler === handler) {
+      bathroomMapMarkerRerenderHandler = null;
+    }
+  };
+}
+
+/** Re-evaluates which rendered bathrooms are visible on the map (e.g. after visibility settings change). */
+export function requestBathroomMapMarkerRerender(): void {
+  bathroomMapMarkerRerenderHandler?.();
 }
 
 /** Registers immediate local-cache + map-marker updates for one bathroom upsert. */

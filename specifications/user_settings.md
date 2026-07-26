@@ -250,6 +250,7 @@
  - SQL Name: globe_movement_smooth
  - SQL Type: BOOLEAN
  - Other SQL Restrictions: Value can only be 0 or 1
+ - Default value: `true` (1)
 ## Initial camera height
  - Setting type: [Number slider](#number-slider-setting)
     - Integer variant
@@ -259,6 +260,25 @@
  - SQL Name: camera_init_surface_offset_m
  - SQL Type: INTEGER
  - Other SQL Restrictions: N/A
+ - Default value: 1500
+## Show non-verified bathrooms on map
+ - Setting type: [Boolean](#boolean-setting)
+ - Client name: Show non-verified bathrooms on map
+ - SQL name: show_non_verified_bathrooms_on_map
+ - SQL type: BOOLEAN
+ - Other SQL Restrictions: Value can only be 0 or 1
+ - Default value: `true` (1)
+ - Toggle callback:
+    - Rerender all [currently rendered bathrooms map markers](./bathroom_db_reading.md#description)
+## Show pending deletion bathrooms on map
+ - Setting type: [Boolean](#boolean-setting)
+ - Client name: Show pending deletion bathrooms on map
+ - SQL name: show_pending_deletion_bathrooms_on_map
+ - SQL type: BOOLEAN
+ - Other SQL Restrictions: Value can only be 0 or 1
+ - Default value: `true` (1)
+ - Toggle callback:
+    - Rerender all [currently rendered bathrooms map markers](./bathroom_db_reading.md#description)
 
 ## Bathroom settings subsettings page
  - Setting type: [Subsettings page](#subpage-setting)
@@ -271,15 +291,17 @@
  - SQL Name: find_nearest_bathroom_max_dist_m
  - SQL Type: INTEGER
  - Other SQL Restrictions: N/A
+ - Default value: 5000
 ### Find nearest bathroom minimum rating
  - Setting type: [Number slider](#number-slider-setting)
     - Float variant
- - Client name: Find nearest bathrrom min. rating
+ - Client name: Find nearest bathroom min. rating
  - Min: 0.0
  - Max: 5.0
  - SQL Name: find_nearest_bathroom_min_rating
  - SQL Type: REAL
  - Other SQL Restrictions: N/A
+ - Default value: 2.5
 
 # Integration tests
  - Migrations between every sequential pair of user setting schema versions should be tested

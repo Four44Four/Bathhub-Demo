@@ -52,6 +52,10 @@ import {
 } from "./UserSettingsSchemaMigrationRunner";
 import { USER_SETTINGS_FRONTEND_SCHEMA_VERSION } from "./UserSettingsSchemaVersion";
 import { useReportRateLimitViolation } from "../pure/rate-limit/useReportRateLimitViolation";
+import { requestBathroomMapMarkerRerender } from "../Bathroom";
+import {
+  bathroomMapVisibilitySettingsChanged,
+} from "@/app/_shared/user-settings/UserSettingsMapMarkerCallbacks";
 
 export type UserSettingsBootstrapPhase =
   | "loading"
@@ -220,12 +224,20 @@ export function UserSettingsProvider({ children }: UserSettingsProviderProps) {
 
   const savePendingChanges = useCallback(async () => {
     if (pendingSettings == null || schemaUpdateHasErrored) return;
+    const previousSettings = getActiveUserSettings();
+    const mapVisibilityChanged = bathroomMapVisibilitySettingsChanged(
+      previousSettings,
+      pendingSettings,
+    );
     dispatchUi({ type: "save_start" });
     try {
       const db = getUserSettingsDb();
       await saveActiveUserSettingsToPersistentDb(db, pendingSettings);
       setActiveUserSettings(pendingSettings);
       refreshFromMemory();
+      if (mapVisibilityChanged) {
+        requestBathroomMapMarkerRerender();
+      }
       dispatchUi({ type: "save_success" });
     } finally {
       dispatchUi({ type: "save_end" });

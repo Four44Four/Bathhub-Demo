@@ -40,6 +40,8 @@ export function createDefaultUserSettingsDbSnapshotReader(db: SqliteDb) {
         `SELECT
           globe_movement_smooth,
           camera_init_surface_offset_m,
+          show_non_verified_bathrooms_on_map,
+          show_pending_deletion_bathrooms_on_map,
           find_nearest_bathroom_max_dist_m,
           find_nearest_bathroom_min_rating
         FROM ${USER_SETTINGS_TABLE_NAME}
@@ -52,6 +54,10 @@ export function createDefaultUserSettingsDbSnapshotReader(db: SqliteDb) {
       return {
         globe_movement_smooth: row.globe_movement_smooth === 1,
         camera_init_surface_offset_m: Number(row.camera_init_surface_offset_m),
+        show_non_verified_bathrooms_on_map:
+          row.show_non_verified_bathrooms_on_map === 1,
+        show_pending_deletion_bathrooms_on_map:
+          row.show_pending_deletion_bathrooms_on_map === 1,
         find_nearest_bathroom_max_dist_m: Number(
           row.find_nearest_bathroom_max_dist_m,
         ),

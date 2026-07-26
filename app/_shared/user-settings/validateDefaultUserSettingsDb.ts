@@ -33,6 +33,10 @@ export function validateDefaultUserSettingsDb(
       input.expectedDefaults.globe_movement_smooth &&
     input.settings.camera_init_surface_offset_m ===
       input.expectedDefaults.camera_init_surface_offset_m &&
+    input.settings.show_non_verified_bathrooms_on_map ===
+      input.expectedDefaults.show_non_verified_bathrooms_on_map &&
+    input.settings.show_pending_deletion_bathrooms_on_map ===
+      input.expectedDefaults.show_pending_deletion_bathrooms_on_map &&
     input.settings.find_nearest_bathroom_max_dist_m ===
       input.expectedDefaults.find_nearest_bathroom_max_dist_m &&
     input.settings.find_nearest_bathroom_min_rating ===

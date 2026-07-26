@@ -6,6 +6,7 @@ import {
 } from "../app/_shared/user-settings/migrations/v0-to-v1";
 import { USER_SETTINGS_SCHEMA_MIGRATIONS } from "../app/_shared/user-settings/migrations";
 import { USER_SETTINGS_MIGRATION_V1_TO_V2_DEFAULTS } from "../app/_shared/user-settings/migrations/v1-to-v2";
+import { USER_SETTINGS_MIGRATION_V2_TO_V3_DEFAULTS } from "../app/_shared/user-settings/migrations/v2-to-v3";
 
 describe("resolveUserSettingsSchemaMigration", () => {
   test("rejects versions below 0 or above max", () => {
@@ -15,24 +16,24 @@ describe("resolveUserSettingsSchemaMigration", () => {
       ok: false,
       error: "invalid_version",
       message:
-        "Invalid user settings schema version: -1. Valid range is 0 to 2.",
+        "Invalid user settings schema version: -1. Valid range is 0 to 3.",
     });
+    expect(
+      resolveUserSettingsSchemaMigration(4, USER_SETTINGS_SCHEMA_MIGRATIONS),
+    ).toEqual({
+      ok: false,
+      error: "invalid_version",
+      message: "Invalid user settings schema version: 4. Valid range is 0 to 3.",
+    });
+  });
+
+  test("reports already at max when requesting from version 3", () => {
     expect(
       resolveUserSettingsSchemaMigration(3, USER_SETTINGS_SCHEMA_MIGRATIONS),
     ).toEqual({
       ok: false,
-      error: "invalid_version",
-      message: "Invalid user settings schema version: 3. Valid range is 0 to 2.",
-    });
-  });
-
-  test("reports already at max when requesting from version 2", () => {
-    expect(
-      resolveUserSettingsSchemaMigration(2, USER_SETTINGS_SCHEMA_MIGRATIONS),
-    ).toEqual({
-      ok: false,
       error: "already_at_max",
-      message: "Client is already at the maximum user settings schema version (2).",
+      message: "Client is already at the maximum user settings schema version (3).",
     });
   });
 
@@ -69,6 +70,26 @@ describe("resolveUserSettingsSchemaMigration", () => {
     expect(result.defaults).toEqual(USER_SETTINGS_MIGRATION_V1_TO_V2_DEFAULTS);
     expect(result.forwardSql.join("\n")).toContain(
       "find_nearest_bathroom_min_rating",
+    );
+    expect(result.forwardSql.join("\n")).toContain("SCHEMA_VERSION");
+  });
+
+  test("returns v2 to v3 migration scripts", () => {
+    const result = resolveUserSettingsSchemaMigration(
+      2,
+      USER_SETTINGS_SCHEMA_MIGRATIONS,
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    expect(result.fromVersion).toBe(2);
+    expect(result.toVersion).toBe(3);
+    expect(result.defaults).toEqual(USER_SETTINGS_MIGRATION_V2_TO_V3_DEFAULTS);
+    expect(result.forwardSql.join("\n")).toContain(
+      "show_non_verified_bathrooms_on_map",
+    );
+    expect(result.forwardSql.join("\n")).toContain(
+      "show_pending_deletion_bathrooms_on_map",
     );
     expect(result.forwardSql.join("\n")).toContain("SCHEMA_VERSION");
   });

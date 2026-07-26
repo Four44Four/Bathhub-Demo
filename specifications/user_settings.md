@@ -285,7 +285,7 @@
 ### Find nearest bathroom maximum distance
  - Setting type: [Number slider](#number-slider-setting)
     - Integer variant
- - Client name: Find nearest bathroom max. distance (meters)
+ - Client name: Max. distance (meters)
  - Min: 0
  - Max: 10000
  - SQL Name: find_nearest_bathroom_max_dist_m
@@ -295,7 +295,7 @@
 ### Find nearest bathroom minimum rating
  - Setting type: [Number slider](#number-slider-setting)
     - Float variant
- - Client name: Find nearest bathroom min. rating
+ - Client name: Min. rating
  - Min: 0.0
  - Max: 5.0
  - SQL Name: find_nearest_bathroom_min_rating
@@ -304,14 +304,14 @@
  - Default value: 2.5
 ### Find nearest bathroom factor non-verified bathrooms
  - Setting type: [Boolean](#boolean-setting)
- - Client name: Find nearest bathroom factor non-verified
+ - Client name: Factor non-verified
  - SQL name: find_nearest_bathroom_factor_non_verified
  - SQL type: BOOLEAN
  - Other SQL Restrictions: Value can only be 0 or 1
  - Default value: `true` (1)
 ### Find nearest bathroom factor pending deletion bathrooms
  - Setting type: [Boolean](#boolean-setting)
- - Client name: Find nearest bathroom factor pending-deletion
+ - Client name: Factor pending-deletion
  - SQL name: find_nearest_bathroom_factor_pending_deletion
  - SQL type: BOOLEAN
  - Other SQL Restrictions: Value can only be 0 or 1

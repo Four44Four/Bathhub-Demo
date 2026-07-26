@@ -25,7 +25,7 @@ import {
 import { TextWeight, type Rect } from "../../Utils";
 import { PositionalAlertSide } from "../AlertSystem";
 
-import { Alerts as AlertConsts } from "../../ComponentConstants";
+import { Alerts as AlertConsts, PhoneViewport as PhoneViewportConsts } from "../../ComponentConstants";
 
 /** Gap from the anchor's top/bottom edge to the tail face pointing at the anchor (px). */
 export const POS_ALERT_MARGIN_PX = 2;
@@ -125,6 +125,7 @@ export function PositionalAlert({
     return positionalAlertClipPathInset(
       positionalAlertVisualBounds(placement, bubbleSize.width, renderedBubbleHeightPx),
       clipRect,
+      PhoneViewportConsts.CORNER_RADIUS_PX,
     );
   }, [bubbleSize.width, clipRect, placement, renderedBubbleHeightPx]);
 

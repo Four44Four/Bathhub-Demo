@@ -324,6 +324,7 @@ function HomeContent({
             width={GLOBE_VIEWPORT_WIDTH}
             height={GLOBE_VIEWPORT_HEIGHT}
             zoomIndicatorRootRef={globeRootRef}
+            phoneViewportClipRef={phoneFrameRef}
             onZoomIndicatorPulse={(x, y) => {
               setZoomIndicator((z) => ({ x, y, pulse: z.pulse + 1 }));
             }}

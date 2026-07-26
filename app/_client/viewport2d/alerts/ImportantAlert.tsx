@@ -2,9 +2,10 @@
 
 import { useState, type CSSProperties } from "react";
 
-import { Alerts as AlertConsts, Menus as MenuConsts } from "../../ComponentConstants";
+import { Alerts as AlertConsts, Menus as MenuConsts, PhoneViewport as PhoneViewportConsts } from "../../ComponentConstants";
 import type { ImportantAlertButton } from "../../pure/viewport2d/AlertSystemState";
 import { createTextDescriptor } from "../../pure/Text";
+import { phoneViewportFullRoundedClipPath } from "../../pure/PhoneViewportClip";
 import { Button } from "../Button";
 import { TextWeight } from "../../Utils";
 
@@ -84,10 +85,12 @@ export function ImportantAlert({
     : AlertConsts.NEGATIVE_ACCENT_COLOR;
 
   const backdropStyle: CSSProperties = {
-    position: "fixed",
+    // Absolute inside the phone frame (portaled); fixed would cover the browser chrome.
+    position: "absolute",
     inset: 0,
     zIndex: 30000,
     backgroundColor: MenuConsts.BACKDROP_COLOR,
+    clipPath: phoneViewportFullRoundedClipPath(PhoneViewportConsts.CORNER_RADIUS_PX),
     display: "flex",
     alignItems: "center",
     justifyContent: "center",

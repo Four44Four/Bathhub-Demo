@@ -13,6 +13,7 @@ import {
   Menus,
   NearestBathroom,
   Path,
+  PhoneViewport,
   Shared,
   SwipeMenu,
   SwipeUpMainMenuButton,
@@ -154,6 +155,12 @@ describe("component constants match their specifications", () => {
       REQUEST_TIMEOUT_MS: 15_000,
     });
     expect(Menus.BACKDROP_COLOR).toBe("rgba(0, 0, 0, 0.62)");
+    expect(PhoneViewport).toMatchObject({
+      CORNER_RADIUS_PX: 14,
+      OUTLINE_COLOR: "#20232D",
+      CORNER_COVER_COLOR: "#1C1D22",
+      CORNER_COVER_Z_INDEX: 40000,
+    });
   });
 
   test("bathroom-reading and geolocation constants match their specs", () => {

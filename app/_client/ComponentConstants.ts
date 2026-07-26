@@ -325,6 +325,20 @@ export const Menus = {
     BACKDROP_COLOR: "rgba(0, 0, 0, 0.62)",
 } as const;
 
+/** Virtual phone frame chrome (see root layout phone viewport). */
+export const PhoneViewport = {
+    CORNER_RADIUS_PX: 14,
+    /** Outline around the phone frame; matches layout side-grid foreground. */
+    OUTLINE_COLOR: "#20232D",
+    /**
+     * Paints over WebGL pixels that leak past rounded corners on Firefox.
+     * Matches the layout body side background (grid base color).
+     */
+    CORNER_COVER_COLOR: "#1C1D22",
+    /** Above major-alert backdrop (30000) so leaked canvas corners stay covered. */
+    CORNER_COVER_Z_INDEX: 40000,
+} as const;
+
 export const SchemaLoadingScreen = {
     /** Milliseconds for the slide-down dismiss animation. */
     ANIMATE_OUT_MS: 500,

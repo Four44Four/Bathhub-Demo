@@ -15,8 +15,15 @@ import {
   Globe as GlobeConsts,
   MapMarker as MapMarkerConsts,
   Path as PathConsts,
+  PhoneViewport as PhoneViewportConsts,
 } from "../ComponentConstants";
 import { composeCssFilters, blackMonoIconCssFilter } from "../pure/svg/BlackMonoIconCssFilter";
+import {
+  phoneFrameCornerRadii,
+  applyRoundedClipElementStyles,
+  roundedInsetClipPath,
+} from "../pure/PhoneViewportClip";
+import { rectPxFromDomRect } from "../pure/viewport2d/PositionalAlertLayout";
 import { loadCesium } from "./loadCesium";
 import * as Utils from "../Utils";
 import { type Point } from "../../_shared/Utils";
@@ -41,6 +48,40 @@ import { useSwipeMenuBlocksViewport } from "../swipeup/SwipeMenuInteraction";
 
 /** Set to true once `VIEWPORT_DETECT_IDLE_MS` elapses without mouse or pointer input; cleared when input resumes. */
 let isClientIdle = false;
+
+/**
+ * Round-clip the Cesium canvas and its immediate wrappers. Ancestor overflow
+ * clips are unreliable for WebGL in Firefox; styles must sit on these nodes.
+ */
+function applyPhoneViewportCesiumClip(
+  viewer: CesiumTypes.Viewer,
+  clipFrame: HTMLElement | null,
+  mount: HTMLElement,
+  radiusPx: number = PhoneViewportConsts.CORNER_RADIUS_PX,
+): void {
+  const canvas = viewer.scene.canvas;
+  if (clipFrame == null) {
+    canvas.style.clipPath = "";
+    canvas.style.borderRadius = "";
+    return;
+  }
+  const frame = rectPxFromDomRect(clipFrame.getBoundingClientRect());
+  const element = rectPxFromDomRect(canvas.getBoundingClientRect());
+  const radii = phoneFrameCornerRadii(frame, element, radiusPx);
+
+  applyRoundedClipElementStyles(mount, radii);
+  const widget = canvas.parentElement;
+  if (widget instanceof HTMLElement) {
+    applyRoundedClipElementStyles(widget, radii);
+  }
+  const cesiumViewer = widget?.parentElement;
+  if (cesiumViewer instanceof HTMLElement) {
+    applyRoundedClipElementStyles(cesiumViewer, radii);
+  }
+  applyRoundedClipElementStyles(canvas, radii);
+  // Keep an explicit clip-path on the canvas even if border-radius is ignored.
+  canvas.style.clipPath = roundedInsetClipPath(radii);
+}
 
 type ViewportChangeListener = () => void;
 const viewportChangeListeners = new Set<ViewportChangeListener>();
@@ -244,6 +285,11 @@ type GlobeViewportProps = {
    */
   zoomIndicatorRootRef?: RefObject<HTMLElement | null>;
   /**
+   * Phone frame element used to round-clip the WebGL canvas (Firefox does not
+   * honor a distant ancestor's overflow + border-radius on composited canvases).
+   */
+  phoneViewportClipRef?: RefObject<HTMLElement | null>;
+  /**
    * Called when a zoom-in gesture occurs; coordinates are CSS pixels relative to `zoomIndicatorRootRef` (or the internal container).
    */
   onZoomIndicatorPulse?: (x: number, y: number) => void;
@@ -269,6 +315,7 @@ export function GlobeViewport({
   width,
   height,
   zoomIndicatorRootRef,
+  phoneViewportClipRef,
   onZoomIndicatorPulse,
   onMapMarkerUserLatLonChange,
   onBathroomMarkerClick,
@@ -276,6 +323,8 @@ export function GlobeViewport({
 }: GlobeViewportProps) {
   const mountRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const phoneViewportClipRefStable = useRef(phoneViewportClipRef);
+  phoneViewportClipRefStable.current = phoneViewportClipRef;
   const blocksViewportPointer = useSwipeMenuBlocksViewport();
   const blocksViewportPointerRef = useRef(blocksViewportPointer);
   blocksViewportPointerRef.current = blocksViewportPointer;
@@ -571,6 +620,16 @@ export function GlobeViewport({
       }
       viewer.resize();
       viewer.forceResize?.();
+      const syncCesiumClip = () => {
+        applyPhoneViewportCesiumClip(
+          viewer,
+          phoneViewportClipRefStable.current?.current ?? null,
+          mount,
+        );
+      };
+      syncCesiumClip();
+      // Cesium may finish canvas layout a frame later; re-apply so radii aren't zero.
+      requestAnimationFrame(syncCesiumClip);
 
       // Hide Cesium credit text (requested). Note: this may violate attribution requirements.
       try {
@@ -1114,6 +1173,13 @@ export function GlobeViewport({
       const ro = new ResizeObserver(() => {
         viewer?.resize();
         viewer?.forceResize();
+        if (viewer) {
+          applyPhoneViewportCesiumClip(
+            viewer,
+            phoneViewportClipRefStable.current?.current ?? null,
+            mount,
+          );
+        }
         pathHandle.rebuildActivePath();
         viewer?.scene.requestRender();
       });

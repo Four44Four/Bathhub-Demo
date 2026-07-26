@@ -69,6 +69,28 @@ describe("PositionalAlertLayout", () => {
     );
   });
 
+  test("positionalAlertClipPathInset appends round radii at coinciding phone corners", () => {
+    // Bubble overhangs the bottom-left of the phone so the clip region shares that corner.
+    const bounds = { left: -10, top: 20, width: 120, height: 40 };
+    const phone = { left: 0, top: 0, width: 200, height: 40 };
+    expect(positionalAlertClipPathInset(bounds, phone, 14)).toBe(
+      "inset(0px 0px 20px 10px round 0px 0px 0px 14px)",
+    );
+  });
+
+  test("positionalAlertClipPathInset with radius stays undefined when fully inside and away from corners", () => {
+    const bounds = { left: 40, top: 40, width: 100, height: 40 };
+    const phone = { left: 0, top: 0, width: 400, height: 800 };
+    expect(positionalAlertClipPathInset(bounds, phone, 14)).toBeUndefined();
+  });
+
+  test("positionalAlertClipPathInset with radius rounds when bubble fills the phone", () => {
+    const phone = { left: 0, top: 0, width: 200, height: 400 };
+    expect(positionalAlertClipPathInset(phone, phone, 14)).toBe(
+      "inset(0px 0px 0px 0px round 14px 14px 14px 14px)",
+    );
+  });
+
   test("rectPxInsetByBorder shrinks a border box by border widths", () => {
     expect(
       rectPxInsetByBorder(

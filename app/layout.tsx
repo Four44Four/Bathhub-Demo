@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { PhoneViewportFrame } from "./_client/PhoneViewportFrame";
 
 export const SIDE_BG_COLOR = "#1C1D22";
 export const SIDE_FG_COLOR = "#20232D";
@@ -38,23 +39,9 @@ export default function RootLayout({
           width: "100vw",
         }}
       >
-        <div
-          className="relative overflow-hidden shadow-2xl"
-          style={{
-            aspectRatio: "9 / 16",
-            // Always fit the full phone height inside the browser viewport (no scrolling).
-            // Use dynamic viewport units to avoid mobile browser URL bar causing scroll.
-            height: "min(100dvh, calc(100vw * 16 / 9))",
-            width: "min(100vw, calc(100dvh * 9 / 16))",
-            maxWidth: "100vw",
-            maxHeight: "100dvh",
-            backgroundColor: middleBg,
-            borderRadius: 14,
-            outline: `1px solid ${sideFg}`,
-          }}
-        >
-          <div className="w-full h-full">{children}</div>
-        </div>
+        <PhoneViewportFrame backgroundColor={middleBg}>
+          {children}
+        </PhoneViewportFrame>
       </body>
     </html>
   );

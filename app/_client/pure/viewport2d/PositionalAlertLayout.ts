@@ -1,5 +1,9 @@
 import { PositionalAlertSide } from "../../viewport2d/AlertSystem";
 import { type Rect, type RectBorderWidths } from "../../Utils";
+import {
+  phoneFrameCornerRadii,
+  type CornerRadiiPx,
+} from "../PhoneViewportClip";
 
 export function rectPxFromDomRect(rect: DOMRect): Rect {
   return {
@@ -60,13 +64,38 @@ function clampBubbleLeftInClip(
   return Math.min(maxLeft, Math.max(minLeft, centerX - half));
 }
 
+function intersectionRect(a: Rect, b: Rect): Rect {
+  const left = Math.max(a.left, b.left);
+  const top = Math.max(a.top, b.top);
+  const right = Math.min(a.left + a.width, b.left + b.width);
+  const bottom = Math.min(a.top + a.height, b.top + b.height);
+  return {
+    left,
+    top,
+    width: Math.max(0, right - left),
+    height: Math.max(0, bottom - top),
+  };
+}
+
+function cornerRadiiAreZero(radii: CornerRadiiPx): boolean {
+  return (
+    radii.topLeft === 0 &&
+    radii.topRight === 0 &&
+    radii.bottomRight === 0 &&
+    radii.bottomLeft === 0
+  );
+}
+
 /**
  * CSS `clip-path: inset(...)` trimming `bounds` to `clipRect` (viewport px).
- * Returns undefined when `bounds` is fully inside `clipRect`.
+ * When `cornerRadiusPx` is set, appends `round ...` using radii only where the
+ * clipped region coincides with `clipRect` corners.
+ * Returns undefined when `bounds` is fully inside `clipRect` and no round applies.
  */
 export function positionalAlertClipPathInset(
   bounds: Rect,
   clipRect: Rect,
+  cornerRadiusPx?: number,
 ): string | undefined {
   const boundsRight = bounds.left + bounds.width;
   const boundsBottom = bounds.top + bounds.height;
@@ -78,10 +107,33 @@ export function positionalAlertClipPathInset(
   const insetRight = Math.max(0, boundsRight - clipRight);
   const insetBottom = Math.max(0, boundsBottom - clipBottom);
 
-  if (insetTop === 0 && insetLeft === 0 && insetRight === 0 && insetBottom === 0) {
+  const radii =
+    cornerRadiusPx != null && cornerRadiusPx > 0
+      ? phoneFrameCornerRadii(
+          clipRect,
+          intersectionRect(bounds, clipRect),
+          cornerRadiusPx,
+        )
+      : {
+          topLeft: 0,
+          topRight: 0,
+          bottomRight: 0,
+          bottomLeft: 0,
+        };
+
+  const hasInsets =
+    insetTop !== 0 ||
+    insetLeft !== 0 ||
+    insetRight !== 0 ||
+    insetBottom !== 0;
+  if (!hasInsets && cornerRadiiAreZero(radii)) {
     return undefined;
   }
-  return `inset(${insetTop}px ${insetRight}px ${insetBottom}px ${insetLeft}px)`;
+
+  const roundSuffix = cornerRadiiAreZero(radii)
+    ? ""
+    : ` round ${radii.topLeft}px ${radii.topRight}px ${radii.bottomRight}px ${radii.bottomLeft}px`;
+  return `inset(${insetTop}px ${insetRight}px ${insetBottom}px ${insetLeft}px${roundSuffix})`;
 }
 
 /** Visual bounds of the bubble plus its tail in viewport coordinates. */

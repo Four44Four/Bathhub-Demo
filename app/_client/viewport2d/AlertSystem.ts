@@ -104,15 +104,28 @@ function AlertSystemOverlay({
   positional,
   important,
   clipRect,
+  phoneViewportElement,
   onDismissPositional,
   onDismissImportant,
 }: {
   positional: PositionalAlertRuntime[];
   important: ImportantAlertRecord | null;
   clipRect: Rect | null;
+  phoneViewportElement: HTMLElement | null;
   onDismissPositional: (id: string) => void;
   onDismissImportant: () => void;
 }) {
+  const importantAlert =
+    important != null
+      ? createElement(ImportantAlert, {
+          key: "important",
+          message: important.message,
+          positive: important.positive,
+          buttons: important.buttons,
+          onDismissImportant,
+        })
+      : null;
+
   return createElement(
     Fragment,
     null,
@@ -126,14 +139,8 @@ function AlertSystemOverlay({
         onDismiss: () => onDismissPositional(entry.id),
       }),
     ),
-    important
-      ? createElement(ImportantAlert, {
-          key: "important",
-          message: important.message,
-          positive: important.positive,
-          buttons: important.buttons,
-          onDismissImportant,
-        })
+    phoneViewportElement != null && importantAlert != null
+      ? createPortal(importantAlert, phoneViewportElement)
       : null,
   );
 }
@@ -298,6 +305,7 @@ export function AlertSystemProvider({
       positional: positionalRuntime,
       important: state.important,
       clipRect,
+      phoneViewportElement,
       onDismissPositional: dismissPositionalAlert,
       onDismissImportant: dismissImportantAlert,
     }),

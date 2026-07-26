@@ -2,10 +2,6 @@
 
 import { BathroomLocalDB } from "../../ComponentConstants";
 import { type BathroomLocalDbPort } from "../LocalDbPort";
-import {
-  readGpkgBytesFromFileHandle,
-  writeGpkgBytesToDiskBackup,
-} from "./GpkgFileBackup";
 import { isSqliteDatabaseBytes } from "../../pure/bathroom/SqliteDatabaseBytes";
 import {
   deleteGpkgFromOpfs,
@@ -27,9 +23,6 @@ async function readOnDiskGpkgBytes(): Promise<Uint8Array | null> {
     if (isSqliteDatabaseBytes(fromOpfs)) return fromOpfs;
     await deleteGpkgFromOpfs(BATHROOM_GPKG_FILENAME);
   }
-
-  const fromHandle = await readGpkgBytesFromFileHandle();
-  if (fromHandle && isSqliteDatabaseBytes(fromHandle)) return fromHandle;
   return null;
 }
 
@@ -48,7 +41,6 @@ async function flushDiskBackup(db: SqliteDb, sqlite3: SqliteWasm): Promise<void>
     const bytes = sqlite3.capi.sqlite3_js_db_export(db);
     if (!bytes || bytes.byteLength === 0) return;
     await writeGpkgBytesToOpfs(bytes, BATHROOM_GPKG_FILENAME);
-    await writeGpkgBytesToDiskBackup(bytes);
   } catch {
     // Disk backup is best-effort for the web demo.
   }

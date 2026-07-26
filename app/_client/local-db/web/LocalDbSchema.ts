@@ -56,7 +56,9 @@ CREATE TABLE IF NOT EXISTS ${BATHROOM_LOCAL_CACHE_TABLE_NAME} (
   location BLOB NOT NULL,
   version INTEGER NOT NULL,
   exists_value REAL NOT NULL,
-  deletion_wait_started_timestamp TEXT,
+  deletion_wait_started_flag INTEGER NOT NULL DEFAULT 0 CHECK (
+    deletion_wait_started_flag IN (0, 1)
+  ),
   updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 );
 

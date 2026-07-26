@@ -9,5 +9,9 @@ export function cloneUserSettingsRow(row: UserSettingsRow): UserSettingsRow {
       row.show_pending_deletion_bathrooms_on_map,
     find_nearest_bathroom_max_dist_m: row.find_nearest_bathroom_max_dist_m,
     find_nearest_bathroom_min_rating: row.find_nearest_bathroom_min_rating,
+    find_nearest_bathroom_factor_non_verified:
+      row.find_nearest_bathroom_factor_non_verified,
+    find_nearest_bathroom_factor_pending_deletion:
+      row.find_nearest_bathroom_factor_pending_deletion,
   };
 }

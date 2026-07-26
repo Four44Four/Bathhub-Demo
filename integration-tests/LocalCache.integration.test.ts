@@ -329,7 +329,7 @@ describe("bathroom local SQLite cache sync against local Supabase", () => {
     expect(isLocalCacheSchemaReady(tableNames, cacheColumns)).toBe(true);
   });
 
-  test("init upgrades a legacy cache DB that lacks deletion_wait_started_timestamp", async () => {
+  test("init upgrades a legacy cache DB that lacks deletion_wait_started_flag", async () => {
     const sqlite3 = await loadSqliteWasmModule();
     const legacyDb = new sqlite3.oo1.DB(":memory:");
     legacyDb.exec(`
@@ -381,7 +381,7 @@ describe("bathroom local SQLite cache sync against local Supabase", () => {
         `SELECT name FROM pragma_table_info('${BATHROOM_LOCAL_CACHE_TABLE_NAME}')`,
       )
       .map((row) => row.name);
-    expect(legacyColumns).not.toContain("deletion_wait_started_timestamp");
+    expect(legacyColumns).not.toContain("deletion_wait_started_flag");
 
     const legacyBytes = sqlite3.capi.sqlite3_js_db_export(legacyDb);
     const upgradedDb = createBathroomLocalDbSqlite({
@@ -397,7 +397,8 @@ describe("bathroom local SQLite cache sync against local Supabase", () => {
         `SELECT name FROM pragma_table_info('${BATHROOM_LOCAL_CACHE_TABLE_NAME}')`,
       )
       .map((row) => row.name);
-    expect(upgradedColumns).toContain("deletion_wait_started_timestamp");
+    expect(upgradedColumns).toContain("deletion_wait_started_flag");
+    expect(upgradedColumns).not.toContain("deletion_wait_started_timestamp");
   });
 
   test("viewport sync hydrates empty SQLite cache from server upserts using seeded coords", async () => {

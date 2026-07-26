@@ -40,7 +40,11 @@ export function validateDefaultUserSettingsDb(
     input.settings.find_nearest_bathroom_max_dist_m ===
       input.expectedDefaults.find_nearest_bathroom_max_dist_m &&
     input.settings.find_nearest_bathroom_min_rating ===
-      input.expectedDefaults.find_nearest_bathroom_min_rating;
+      input.expectedDefaults.find_nearest_bathroom_min_rating &&
+    input.settings.find_nearest_bathroom_factor_non_verified ===
+      input.expectedDefaults.find_nearest_bathroom_factor_non_verified &&
+    input.settings.find_nearest_bathroom_factor_pending_deletion ===
+      input.expectedDefaults.find_nearest_bathroom_factor_pending_deletion;
 
   if (!settingsMatch) {
     return {

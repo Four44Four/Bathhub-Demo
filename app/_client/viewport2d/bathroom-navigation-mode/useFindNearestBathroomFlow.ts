@@ -75,11 +75,25 @@ export function useFindNearestBathroomFlow({
     const minRating =
       settings?.find_nearest_bathroom_min_rating ??
       USER_SETTINGS_DEFAULTS.find_nearest_bathroom_min_rating;
+    const factorNonVerified =
+      settings?.find_nearest_bathroom_factor_non_verified ??
+      USER_SETTINGS_DEFAULTS.find_nearest_bathroom_factor_non_verified;
+    const factorPendingDeletion =
+      settings?.find_nearest_bathroom_factor_pending_deletion ??
+      USER_SETTINGS_DEFAULTS.find_nearest_bathroom_factor_pending_deletion;
 
     const result = await runAbortableTimeout(
       (signal) =>
         requestFindNearestBathroom(
-          { location: startPos, constraints: { maxDistanceM, minRating } },
+          {
+            location: startPos,
+            constraints: {
+              maxDistanceM,
+              minRating,
+              factorNonVerified,
+              factorPendingDeletion,
+            },
+          },
           signal,
         ),
       NearestBathroomConsts.FIND_NEAREST_BATHROOM_REQUEST_TIMEOUT_MS,
@@ -141,6 +155,8 @@ export function useFindNearestBathroomFlow({
     setRequestState,
     settings?.find_nearest_bathroom_max_dist_m,
     settings?.find_nearest_bathroom_min_rating,
+    settings?.find_nearest_bathroom_factor_non_verified,
+    settings?.find_nearest_bathroom_factor_pending_deletion,
     showImportantAlert,
     reportRateLimitViolation,
   ]);

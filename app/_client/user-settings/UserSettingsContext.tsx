@@ -39,6 +39,7 @@ import { getUserSettingsDb } from "../user-settings-db/web/UserSettingsDbWeb";
 import {
   getActiveUserSettings,
   setActiveUserSettings,
+  setBathroomMapVisibilityPreview,
 } from "./UserSettingsMemoryStore";
 import {
   attemptUserSettingsSchemaBootstrap,
@@ -55,6 +56,8 @@ import { useReportRateLimitViolation } from "../pure/rate-limit/useReportRateLim
 import { requestBathroomMapMarkerRerender } from "../Bathroom";
 import {
   bathroomMapVisibilitySettingsChanged,
+  isBathroomMapVisibilitySettingColumn,
+  pickBathroomMapVisibilitySettings,
 } from "@/app/_shared/user-settings/UserSettingsMapMarkerCallbacks";
 
 export type UserSettingsBootstrapPhase =
@@ -210,8 +213,17 @@ export function UserSettingsProvider({ children }: UserSettingsProviderProps) {
     (column: UserSettingsBooleanColumnName, value: boolean) => {
       if (!shouldAllowPendingSettingsMutation(schemaUpdateHasErrored)) return;
       dispatchUi({ type: "set_pending_boolean", column, value });
+      if (isBathroomMapVisibilitySettingColumn(column)) {
+        const currentPending = pendingSettings ?? getActiveUserSettings();
+        const nextVisibility = pickBathroomMapVisibilitySettings({
+          ...currentPending,
+          [column]: value,
+        });
+        setBathroomMapVisibilityPreview(nextVisibility);
+        requestBathroomMapMarkerRerender();
+      }
     },
-    [schemaUpdateHasErrored],
+    [pendingSettings, schemaUpdateHasErrored],
   );
 
   const setPendingInt = useCallback(
@@ -238,6 +250,7 @@ export function UserSettingsProvider({ children }: UserSettingsProviderProps) {
       if (mapVisibilityChanged) {
         requestBathroomMapMarkerRerender();
       }
+      setBathroomMapVisibilityPreview(null);
       dispatchUi({ type: "save_success" });
     } finally {
       dispatchUi({ type: "save_end" });
@@ -245,6 +258,7 @@ export function UserSettingsProvider({ children }: UserSettingsProviderProps) {
   }, [pendingSettings, refreshFromMemory, schemaUpdateHasErrored]);
 
   const openSettings = useCallback(() => {
+    setBathroomMapVisibilityPreview(null);
     dispatchUi({
       type: "open",
       settings: cloneUserSettingsRow(getActiveUserSettings()),
@@ -252,6 +266,8 @@ export function UserSettingsProvider({ children }: UserSettingsProviderProps) {
   }, []);
 
   const closeSettingsWithoutSave = useCallback(() => {
+    setBathroomMapVisibilityPreview(null);
+    requestBathroomMapMarkerRerender();
     dispatchUi({ type: "close_without_save" });
   }, []);
 

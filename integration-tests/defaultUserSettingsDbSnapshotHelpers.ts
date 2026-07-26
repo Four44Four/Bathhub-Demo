@@ -43,7 +43,9 @@ export function createDefaultUserSettingsDbSnapshotReader(db: SqliteDb) {
           show_non_verified_bathrooms_on_map,
           show_pending_deletion_bathrooms_on_map,
           find_nearest_bathroom_max_dist_m,
-          find_nearest_bathroom_min_rating
+          find_nearest_bathroom_min_rating,
+          find_nearest_bathroom_factor_non_verified,
+          find_nearest_bathroom_factor_pending_deletion
         FROM ${USER_SETTINGS_TABLE_NAME}
         WHERE id = 1`,
       );
@@ -64,6 +66,10 @@ export function createDefaultUserSettingsDbSnapshotReader(db: SqliteDb) {
         find_nearest_bathroom_min_rating: Number(
           row.find_nearest_bathroom_min_rating,
         ),
+        find_nearest_bathroom_factor_non_verified:
+          row.find_nearest_bathroom_factor_non_verified === 1,
+        find_nearest_bathroom_factor_pending_deletion:
+          row.find_nearest_bathroom_factor_pending_deletion === 1,
       };
     },
   };

@@ -1,4 +1,8 @@
-import { bathroomMapVisibilitySettingsChanged } from "../app/_shared/user-settings/UserSettingsMapMarkerCallbacks";
+import {
+  bathroomMapVisibilitySettingsChanged,
+  isBathroomMapVisibilitySettingColumn,
+  pickBathroomMapVisibilitySettings,
+} from "../app/_shared/user-settings/UserSettingsMapMarkerCallbacks";
 import { USER_SETTINGS_DEFAULTS } from "../app/_shared/user-settings/UserSettingsSchema";
 
 describe("bathroomMapVisibilitySettingsChanged", () => {
@@ -36,5 +40,30 @@ describe("bathroomMapVisibilitySettingsChanged", () => {
         camera_init_surface_offset_m: 2500,
       }),
     ).toBe(false);
+  });
+});
+
+describe("isBathroomMapVisibilitySettingColumn", () => {
+  test("identifies map visibility boolean columns", () => {
+    expect(
+      isBathroomMapVisibilitySettingColumn("show_non_verified_bathrooms_on_map"),
+    ).toBe(true);
+    expect(
+      isBathroomMapVisibilitySettingColumn(
+        "show_pending_deletion_bathrooms_on_map",
+      ),
+    ).toBe(true);
+    expect(isBathroomMapVisibilitySettingColumn("globe_movement_smooth")).toBe(
+      false,
+    );
+  });
+});
+
+describe("pickBathroomMapVisibilitySettings", () => {
+  test("returns only map visibility fields", () => {
+    expect(pickBathroomMapVisibilitySettings(USER_SETTINGS_DEFAULTS)).toEqual({
+      show_non_verified_bathrooms_on_map: true,
+      show_pending_deletion_bathrooms_on_map: true,
+    });
   });
 });

@@ -1,8 +1,10 @@
 import {
   bathroomDataPrimaryRowToViewportEntry,
   bathroomSyncUpsertToViewportEntry,
+  deletionWaitStartedFlagFromTimestamp,
   deriveVerifyStatusFromBathroomFields,
   deriveVerifyStatusFromExistenceValue,
+  isBathroomPendingDeletionFromFlag,
 } from "../app/_shared/BathroomDataPrimary";
 
 describe("BathroomDataPrimary shared helpers", () => {
@@ -10,6 +12,19 @@ describe("BathroomDataPrimary shared helpers", () => {
     expect(deriveVerifyStatusFromExistenceValue(2)).toBe("verified");
     expect(deriveVerifyStatusFromExistenceValue(0)).toBe("pending");
     expect(deriveVerifyStatusFromExistenceValue(-1)).toBe("pending");
+  });
+
+  test("deletionWaitStartedFlagFromTimestamp maps timestamps to 0/1", () => {
+    expect(deletionWaitStartedFlagFromTimestamp(null)).toBe(0);
+    expect(deletionWaitStartedFlagFromTimestamp("2026-01-01T00:00:00.000Z")).toBe(
+      1,
+    );
+  });
+
+  test("isBathroomPendingDeletionFromFlag treats only 1 as pending deletion", () => {
+    expect(isBathroomPendingDeletionFromFlag(0)).toBe(false);
+    expect(isBathroomPendingDeletionFromFlag(1)).toBe(true);
+    expect(isBathroomPendingDeletionFromFlag(null)).toBe(false);
   });
 
   test("deriveVerifyStatusFromBathroomFields marks pending deletion first", () => {

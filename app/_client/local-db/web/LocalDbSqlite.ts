@@ -3,7 +3,9 @@ import {
   type BathroomClientCacheEntry,
   type BathroomViewportEntry,
   type ViewportBounds,
+  deletionWaitStartedFlagFromTimestamp,
   deriveVerifyStatusFromBathroomFields,
+  isBathroomPendingDeletionFromFlag,
 } from "../../../_shared/BathroomDataPrimary";
 import { isCacheEntryExpired } from "../../pure/bathroom/CacheExpiration";
 import { isLocalCacheSchemaReady } from "../../pure/bathroom/LocalCacheSchema";
@@ -87,19 +89,45 @@ function listCacheTableColumns(db: SqliteDb): string[] {
 
 function ensureLocalCacheSchema(db: SqliteDb): void {
   if (isLocalCacheSchemaReady(listTableNames(db))) {
-    ensureDeletionWaitColumn(db);
+    ensureDeletionWaitFlagColumn(db);
     return;
   }
   db.exec(BATHROOM_LOCAL_DB_SCHEMA_SQL);
 }
 
-function ensureDeletionWaitColumn(db: SqliteDb): void {
+function ensureDeletionWaitFlagColumn(db: SqliteDb): void {
   const columns = listCacheTableColumns(db);
-  if (!columns.includes("deletion_wait_started_timestamp")) {
-    db.exec(
-      `ALTER TABLE ${BATHROOM_LOCAL_CACHE_TABLE_NAME} ADD COLUMN deletion_wait_started_timestamp TEXT`,
-    );
+  if (columns.includes("deletion_wait_started_flag")) {
+    return;
   }
+
+  if (columns.includes("deletion_wait_started_timestamp")) {
+    db.exec(
+      `ALTER TABLE ${BATHROOM_LOCAL_CACHE_TABLE_NAME}
+       ADD COLUMN deletion_wait_started_flag INTEGER NOT NULL DEFAULT 0 CHECK (
+         deletion_wait_started_flag IN (0, 1)
+       )`,
+    );
+    db.exec(
+      `UPDATE ${BATHROOM_LOCAL_CACHE_TABLE_NAME}
+       SET deletion_wait_started_flag = CASE
+         WHEN deletion_wait_started_timestamp IS NULL THEN 0
+         ELSE 1
+       END`,
+    );
+    db.exec(
+      `ALTER TABLE ${BATHROOM_LOCAL_CACHE_TABLE_NAME}
+       DROP COLUMN deletion_wait_started_timestamp`,
+    );
+    return;
+  }
+
+  db.exec(
+    `ALTER TABLE ${BATHROOM_LOCAL_CACHE_TABLE_NAME}
+     ADD COLUMN deletion_wait_started_flag INTEGER NOT NULL DEFAULT 0 CHECK (
+       deletion_wait_started_flag IN (0, 1)
+     )`,
+  );
 }
 
 export function loadGpkgBytesIntoMemoryDb(
@@ -206,19 +234,24 @@ function rowToViewportEntry(row: Record<string, unknown>): BathroomViewportEntry
   }
 
   const { latitude, longitude } = decodeGpkgPointWgs84(location);
-  const deletionWaitStartedTimestamp =
-    typeof row.deletion_wait_started_timestamp === "string"
-      ? row.deletion_wait_started_timestamp
-      : null;
+  const deletionWaitStartedFlag =
+    typeof row.deletion_wait_started_flag === "number"
+      ? row.deletion_wait_started_flag
+      : 0;
+  const pendingDeletion = isBathroomPendingDeletionFromFlag(
+    deletionWaitStartedFlag,
+  );
   return {
     id: row.remote_id,
     latitude,
     longitude,
     existence_value: row.exists_value,
-    deletion_wait_started_timestamp: deletionWaitStartedTimestamp,
+    deletion_wait_started_timestamp: pendingDeletion
+      ? "pending-deletion"
+      : null,
     verify_status: deriveVerifyStatusFromBathroomFields(
       row.exists_value,
-      deletionWaitStartedTimestamp,
+      pendingDeletion ? "pending-deletion" : null,
     ),
     version: row.version,
   };
@@ -271,6 +304,10 @@ export function createBathroomLocalDbSqlite(
           if (onDiskBytes && isSqliteDatabaseBytes(onDiskBytes)) {
             try {
               loadGpkgBytesIntoMemoryDb(sqlite3, memoryDb, onDiskBytes);
+              if (!isLocalCacheSchemaReady(listTableNames(memoryDb))) {
+                throw new Error("Bathroom cache gpkg schema is incomplete.");
+              }
+              ensureLocalCacheSchema(memoryDb);
               if (
                 !isLocalCacheSchemaReady(
                   listTableNames(memoryDb),
@@ -308,7 +345,7 @@ export function createBathroomLocalDbSqlite(
     async getInBounds(bounds: ViewportBounds): Promise<BathroomViewportEntry[]> {
       const { db: activeDb } = await ensureDb();
       const rows = activeDb.selectObjects(
-        `SELECT c.remote_id, c.location, c.version, c.exists_value, c.deletion_wait_started_timestamp
+        `SELECT c.remote_id, c.location, c.version, c.exists_value, c.deletion_wait_started_flag
          FROM ${BATHROOM_LOCAL_CACHE_TABLE_NAME} c
          INNER JOIN ${RTREE_TABLE_NAME} r ON c.remote_id = r.remote_id
          WHERE r.max_x >= ? AND r.min_x <= ? AND r.max_y >= ? AND r.min_y <= ?`,
@@ -368,13 +405,13 @@ export function createBathroomLocalDbSqlite(
         const location = encodeGpkgPointWgs84(entry.longitude, entry.latitude);
         activeDb.exec(
           `INSERT INTO ${BATHROOM_LOCAL_CACHE_TABLE_NAME} (
-             remote_id, location, version, exists_value, deletion_wait_started_timestamp, updated_at
+             remote_id, location, version, exists_value, deletion_wait_started_flag, updated_at
            ) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
            ON CONFLICT(remote_id) DO UPDATE SET
              location = excluded.location,
              version = excluded.version,
              exists_value = excluded.exists_value,
-             deletion_wait_started_timestamp = excluded.deletion_wait_started_timestamp,
+             deletion_wait_started_flag = excluded.deletion_wait_started_flag,
              updated_at = excluded.updated_at`,
           {
             bind: [
@@ -382,7 +419,9 @@ export function createBathroomLocalDbSqlite(
               location,
               entry.version,
               entry.existence_value,
-              entry.deletion_wait_started_timestamp,
+              deletionWaitStartedFlagFromTimestamp(
+                entry.deletion_wait_started_timestamp,
+              ),
             ],
           },
         );

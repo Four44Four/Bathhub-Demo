@@ -19,6 +19,8 @@ export const FIND_NEAREST_INVALID_MIN_RATING_MESSAGE =
 export type FindNearestBathroomConstraints = {
   maxDistanceM: number;
   minRating: number;
+  factorNonVerified: boolean;
+  factorPendingDeletion: boolean;
 };
 
 export type FindNearestBathroomRpcRow = NearestBathroomLocation;
@@ -28,6 +30,8 @@ export type FindNearestBathroomRpcParams = {
   p_longitude: number;
   p_max_distance_m: number;
   p_min_rating: number;
+  p_factor_non_verified: boolean;
+  p_factor_pending_deletion: boolean;
 };
 
 export type FindNearestBathroomRpcResult = {
@@ -108,5 +112,7 @@ export function buildFindNearestBathroomRpcParams(
     p_longitude: location.longitude,
     p_max_distance_m: constraints.maxDistanceM,
     p_min_rating: constraints.minRating,
+    p_factor_non_verified: constraints.factorNonVerified,
+    p_factor_pending_deletion: constraints.factorPendingDeletion,
   };
 }

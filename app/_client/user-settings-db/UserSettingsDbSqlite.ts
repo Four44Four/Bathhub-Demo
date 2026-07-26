@@ -76,6 +76,10 @@ function rowToUserSettings(row: Record<string, unknown>): UserSettingsRow {
       row.show_pending_deletion_bathrooms_on_map === 1,
     find_nearest_bathroom_max_dist_m: Number(row.find_nearest_bathroom_max_dist_m),
     find_nearest_bathroom_min_rating: Number(row.find_nearest_bathroom_min_rating),
+    find_nearest_bathroom_factor_non_verified:
+      row.find_nearest_bathroom_factor_non_verified === 1,
+    find_nearest_bathroom_factor_pending_deletion:
+      row.find_nearest_bathroom_factor_pending_deletion === 1,
   };
 }
 
@@ -87,7 +91,9 @@ function readSettingsRow(db: SqliteDb): UserSettingsRow {
       show_non_verified_bathrooms_on_map,
       show_pending_deletion_bathrooms_on_map,
       find_nearest_bathroom_max_dist_m,
-      find_nearest_bathroom_min_rating
+      find_nearest_bathroom_min_rating,
+      find_nearest_bathroom_factor_non_verified,
+      find_nearest_bathroom_factor_pending_deletion
     FROM ${USER_SETTINGS_TABLE_NAME}
     WHERE id = 1`,
   );
@@ -228,7 +234,9 @@ export function createUserSettingsDbSqlite(
              show_non_verified_bathrooms_on_map = ?,
              show_pending_deletion_bathrooms_on_map = ?,
              find_nearest_bathroom_max_dist_m = ?,
-             find_nearest_bathroom_min_rating = ?
+             find_nearest_bathroom_min_rating = ?,
+             find_nearest_bathroom_factor_non_verified = ?,
+             find_nearest_bathroom_factor_pending_deletion = ?
          WHERE id = 1`,
         {
           bind: [
@@ -238,6 +246,8 @@ export function createUserSettingsDbSqlite(
             settings.show_pending_deletion_bathrooms_on_map ? 1 : 0,
             settings.find_nearest_bathroom_max_dist_m,
             settings.find_nearest_bathroom_min_rating,
+            settings.find_nearest_bathroom_factor_non_verified ? 1 : 0,
+            settings.find_nearest_bathroom_factor_pending_deletion ? 1 : 0,
           ],
         },
       );

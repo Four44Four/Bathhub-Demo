@@ -5,6 +5,7 @@ import {
 import { USER_SETTINGS_MIGRATION_V0_TO_V1 } from "../app/_shared/user-settings/migrations/v0-to-v1";
 import { USER_SETTINGS_MIGRATION_V1_TO_V2 } from "../app/_shared/user-settings/migrations/v1-to-v2";
 import { USER_SETTINGS_MIGRATION_V2_TO_V3 } from "../app/_shared/user-settings/migrations/v2-to-v3";
+import { USER_SETTINGS_MIGRATION_V3_TO_V4 } from "../app/_shared/user-settings/migrations/v3-to-v4";
 import type { UserSettingsDbPort } from "../app/_client/user-settings-db/UserSettingsDbSqlite";
 import { USER_SETTINGS_FRONTEND_SCHEMA_VERSION } from "../app/_client/user-settings/UserSettingsSchemaVersion";
 import {
@@ -77,6 +78,15 @@ function mockMigrationForVersion(fromVersion: number) {
       toVersion: 3,
       forwardSql: USER_SETTINGS_MIGRATION_V2_TO_V3.forwardSql,
       defaults: USER_SETTINGS_MIGRATION_V2_TO_V3.defaults,
+    };
+  }
+  if (fromVersion === 3) {
+    return {
+      ok: true as const,
+      fromVersion: 3,
+      toVersion: 4,
+      forwardSql: USER_SETTINGS_MIGRATION_V3_TO_V4.forwardSql,
+      defaults: USER_SETTINGS_MIGRATION_V3_TO_V4.defaults,
     };
   }
   throw new Error(`Unexpected migration from version ${fromVersion}`);
@@ -164,6 +174,7 @@ describe("UserSettingsSchemaMigrationRunner", () => {
     expect(deps.getMigration).toHaveBeenCalledWith(0);
     expect(deps.getMigration).toHaveBeenCalledWith(1);
     expect(deps.getMigration).toHaveBeenCalledWith(2);
+    expect(deps.getMigration).toHaveBeenCalledWith(3);
     expect(schemaVersion).toBe(USER_SETTINGS_FRONTEND_SCHEMA_VERSION);
   });
 
@@ -177,6 +188,8 @@ describe("UserSettingsSchemaMigrationRunner", () => {
         show_pending_deletion_bathrooms_on_map: true,
         find_nearest_bathroom_max_dist_m: 567,
         find_nearest_bathroom_min_rating: 2,
+        find_nearest_bathroom_factor_non_verified: false,
+        find_nearest_bathroom_factor_pending_deletion: true,
       })),
     });
 
@@ -195,9 +208,11 @@ describe("UserSettingsSchemaMigrationRunner", () => {
       show_pending_deletion_bathrooms_on_map: true,
       find_nearest_bathroom_max_dist_m: 567,
       find_nearest_bathroom_min_rating: 2,
+      find_nearest_bathroom_factor_non_verified: false,
+      find_nearest_bathroom_factor_pending_deletion: true,
     };
     const db = createMockDb({
-      getPersistentSchemaVersion: jest.fn(async () => 3),
+      getPersistentSchemaVersion: jest.fn(async () => 4),
       readSettingsFromDb: jest.fn(async () => customSettings),
     });
 
@@ -207,7 +222,7 @@ describe("UserSettingsSchemaMigrationRunner", () => {
 
   test("saveActiveUserSettingsToPersistentDb writes pending values to SQLite and memory only when saved", async () => {
     const db = createMockDb({
-      getPersistentSchemaVersion: jest.fn(async () => 3),
+      getPersistentSchemaVersion: jest.fn(async () => 4),
     });
     const pending: UserSettingsRow = {
       ...USER_SETTINGS_DEFAULTS,
@@ -232,7 +247,7 @@ describe("attemptUserSettingsSchemaBootstrap", () => {
 
   test("finishes ready without migrating when schema versions already match", async () => {
     const db = createMockDb({
-      getPersistentSchemaVersion: jest.fn(async () => 3),
+      getPersistentSchemaVersion: jest.fn(async () => 4),
     });
     const finishReady = jest.fn(async () => {});
 

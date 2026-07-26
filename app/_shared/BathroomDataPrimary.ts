@@ -67,6 +67,20 @@ export function isBathroomPendingDeletion(
   return deletionWaitStartedTimestamp != null;
 }
 
+/** Local cache flag derived from a remote deletion-wait timestamp. */
+export function deletionWaitStartedFlagFromTimestamp(
+  deletionWaitStartedTimestamp: string | null | undefined,
+): 0 | 1 {
+  return isBathroomPendingDeletion(deletionWaitStartedTimestamp) ? 1 : 0;
+}
+
+/** Whether a local-cache deletion-wait flag marks pending deletion. */
+export function isBathroomPendingDeletionFromFlag(
+  deletionWaitStartedFlag: number | null | undefined,
+): boolean {
+  return deletionWaitStartedFlag === 1;
+}
+
 /** Derives marker/cache verify status from existence_value. */
 export function deriveVerifyStatusFromExistenceValue(
   existenceValue: number,

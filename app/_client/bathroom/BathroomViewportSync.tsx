@@ -42,7 +42,7 @@ import {
   runBathroomViewportRemoteSync,
 } from "../pure/bathroom/BathroomViewportSyncPipeline";
 import { filterRenderedBathroomsForMapDisplay } from "../pure/bathroom/BathroomMapMarkerVisibility";
-import { getActiveUserSettings } from "../user-settings/UserSettingsMemoryStore";
+import { getBathroomMapMarkerVisibilitySettings } from "../user-settings/UserSettingsMemoryStore";
 import { planLocalViewportSyncSchedule } from "../pure/bathroom/BathroomLocalSyncDelay";
 import {
   initialRemoteSyncGateState,
@@ -147,7 +147,7 @@ export function BathroomViewportSync({ globeRef }: BathroomViewportSyncProps) {
     markersRef.current.sync({
       current: filterRenderedBathroomsForMapDisplay(
         renderedBathroomsToArray(renderedRef.current),
-        getActiveUserSettings(),
+        getBathroomMapMarkerVisibilitySettings(),
       ),
       previous: previousRendered,
       viewportCenter: globe.getViewportCenterLatLon(),

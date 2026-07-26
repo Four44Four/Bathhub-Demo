@@ -85,6 +85,10 @@
           - Bathrooms farther than [the find nearest bathroom maximum distance](./user_settings.md#find-nearest-bathroom-maximum-distance) from the provided user location will be excluded from consideration
           - Bathrooms with an average rating under [the find nearest bathroom bathroom minimum rating](./user_settings.md#find-nearest-bathroom-minimum-rating) will be excluded from consideration 
              - Calculate the average rating of a bathroom using the [rating_*_count columns](./bathroom_db.md#table-schema) in the formula (`rating_1_count` * 1 + `rating_2_count` * 2 + `rating_3_count` * 3 + `rating_4_count` * 4 + `rating_5_count` * 5) / (`rating_1_count` + `rating_2_count` + `rating_3_count` + `rating_4_count` + `rating_5_count`)
+          - If [user setting for factoring in non-verified bathrooms in find nearest bathrooms](./user_settings.md#find-nearest-bathroom-factor-non-verified-bathrooms) is `false`:
+             - Exclude all bathrooms that have a [`existence_value` column](./bathroom_db.md#table-schema) value of 0.0 or below from consideration
+          - If [user setting for factoring in pending-deletion bathrooms in find nearest bathrooms](./user_settings.md#find-nearest-bathroom-factor-pending-deletion-bathrooms) is `false`:
+             - Exclude all bathrooms that have a [`deletion_wait_started_timestamp` column](./bathroom_db.md#table-schema) value that is non-`NULL` from consideration
        - Send the id and location of the nearest bathroom back to the client
     - If an error occurs while finding a bathroom:
        - Send back the error to the client

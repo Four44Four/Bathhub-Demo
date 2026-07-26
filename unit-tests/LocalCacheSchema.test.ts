@@ -21,7 +21,7 @@ describe("LocalCacheSchema", () => {
     ).toEqual(["rtree_bathroom_data_primary_cache_location"]);
   });
 
-  test("missingRequiredLocalCacheColumns reports absent exists_value column", () => {
+  test("missingRequiredLocalCacheColumns reports absent cache columns", () => {
     expect(missingRequiredLocalCacheColumns([])).toEqual([
       ...REQUIRED_LOCAL_CACHE_COLUMNS,
     ]);
@@ -32,7 +32,7 @@ describe("LocalCacheSchema", () => {
         "version",
         "verify_status",
       ]),
-    ).toEqual(["exists_value"]);
+    ).toEqual(["exists_value", "deletion_wait_started_flag"]);
   });
 
   test("isLocalCacheSchemaReady is true only when every required table exists", () => {
@@ -44,7 +44,7 @@ describe("LocalCacheSchema", () => {
     );
   });
 
-  test("isLocalCacheSchemaReady requires exists_value column on the cache table", () => {
+  test("isLocalCacheSchemaReady requires cache table columns", () => {
     expect(
       isLocalCacheSchemaReady(
         [...REQUIRED_LOCAL_CACHE_TABLES],

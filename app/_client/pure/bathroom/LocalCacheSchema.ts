@@ -22,6 +22,7 @@ export const REQUIRED_LOCAL_CACHE_COLUMNS = [
   "location",
   "version",
   "exists_value",
+  "deletion_wait_started_flag",
 ] as const;
 
 export type RequiredLocalCacheTable =

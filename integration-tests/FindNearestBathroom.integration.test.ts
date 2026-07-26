@@ -1,3 +1,5 @@
+import { spawnSync } from "node:child_process";
+
 import { createClient } from "@supabase/supabase-js";
 
 import {
@@ -28,12 +30,74 @@ const ISOLATED_OCEAN_FAR = { latitude: -4.55, longitude: -9.55 } as const;
 /** Separate patch so boundary tests do not pick up seeded London or prior rows. */
 const ISOLATED_BOUNDARY_ORIGIN = { latitude: -5.2, longitude: -10.1 } as const;
 
-const createdBathroomIds: number[] = [];
+const DEFAULT_FIND_NEAREST_CONSTRAINTS = {
+  maxDistanceM: 20_000,
+  minRating: 0,
+  factorNonVerified: true,
+  factorPendingDeletion: true,
+} as const;
 
 async function createTrackedBathroom(latitude: number, longitude: number) {
   const row = await bathroomDbCreate(latitude, longitude);
   createdBathroomIds.push(row.id);
   return row;
+}
+
+function requireLocalPostgresUrl(): string {
+  const raw = process.env.SUPABASE_DB_URL;
+  if (raw === undefined || raw.length === 0) {
+    throw new Error(
+      "SUPABASE_DB_URL is required for FindNearestBathroom factor filter tests",
+    );
+  }
+
+  const parsed = new URL(raw);
+  if (!["127.0.0.1", "localhost", "::1"].includes(parsed.hostname)) {
+    throw new Error(`SUPABASE_DB_URL must point at local Postgres, got ${raw}`);
+  }
+  return raw;
+}
+
+function runPsql(databaseUrl: string, query: string): void {
+  const result = spawnSync(
+    "psql",
+    [
+      databaseUrl,
+      "--no-psqlrc",
+      "--set=ON_ERROR_STOP=1",
+      "--command",
+      query,
+    ],
+    { encoding: "utf8" },
+  );
+
+  if (result.error !== undefined) {
+    throw result.error;
+  }
+  if (result.status !== 0) {
+    throw new Error(
+      `psql exited with status ${result.status}: ${result.stderr.trim()}`,
+    );
+  }
+}
+
+function setBathroomExistenceValue(id: number, existenceValue: number): void {
+  runPsql(
+    requireLocalPostgresUrl(),
+    `UPDATE bathroom_data_primary SET existence_value = ${existenceValue} WHERE id = ${id};`,
+  );
+}
+
+function setBathroomDeletionWaitStartedTimestamp(
+  id: number,
+  timestamp: string | null,
+): void {
+  const value =
+    timestamp === null ? "NULL" : `'${timestamp.replace(/'/g, "''")}'::timestamp`;
+  runPsql(
+    requireLocalPostgresUrl(),
+    `UPDATE bathroom_data_primary SET deletion_wait_started_timestamp = ${value} WHERE id = ${id};`,
+  );
 }
 
 describe("find nearest bathroom against local Supabase", () => {
@@ -77,8 +141,8 @@ describe("find nearest bathroom against local Supabase", () => {
     );
 
     const result = await bathroomDbFindNearest(origin, {
+      ...DEFAULT_FIND_NEAREST_CONSTRAINTS,
       maxDistanceM: 20_000,
-      minRating: 0,
     });
     expect(result).not.toBeNull();
     expect(result?.id).toBe(near.id);
@@ -89,7 +153,7 @@ describe("find nearest bathroom against local Supabase", () => {
   test("returns null when no bathroom is within max distance", async () => {
     const result = await bathroomDbFindNearest(
       { latitude: -81, longitude: 1 },
-      { maxDistanceM: 100, minRating: 0 },
+      { ...DEFAULT_FIND_NEAREST_CONSTRAINTS, maxDistanceM: 100 },
     );
     expect(result).toBeNull();
   });
@@ -102,14 +166,14 @@ describe("find nearest bathroom against local Supabase", () => {
     );
 
     const within = await bathroomDbFindNearest(origin, {
+      ...DEFAULT_FIND_NEAREST_CONSTRAINTS,
       maxDistanceM: 500,
-      minRating: 0,
     });
     expect(within?.id).toBe(bathroom.id);
 
     const outside = await bathroomDbFindNearest(origin, {
+      ...DEFAULT_FIND_NEAREST_CONSTRAINTS,
       maxDistanceM: 1,
-      minRating: 0,
     });
     expect(outside).toBeNull();
   });
@@ -129,23 +193,76 @@ describe("find nearest bathroom against local Supabase", () => {
     await bathroomDbIncrementRating(fartherHighRated.id, 5);
     await bathroomDbIncrementRating(fartherHighRated.id, 4);
 
-    const closest = await bathroomDbFindNearest(origin, {
-      maxDistanceM: 20_000,
-      minRating: 0,
-    });
+    const closest = await bathroomDbFindNearest(origin, DEFAULT_FIND_NEAREST_CONSTRAINTS);
     expect(closest?.id).toBe(closeLowRated.id);
 
     const highRatedOnly = await bathroomDbFindNearest(origin, {
-      maxDistanceM: 20_000,
+      ...DEFAULT_FIND_NEAREST_CONSTRAINTS,
       minRating: 4,
     });
     expect(highRatedOnly?.id).toBe(fartherHighRated.id);
 
     const tooStrict = await bathroomDbFindNearest(origin, {
-      maxDistanceM: 20_000,
+      ...DEFAULT_FIND_NEAREST_CONSTRAINTS,
       minRating: 5,
     });
     expect(tooStrict).toBeNull();
+  });
+
+  test("excludes non-verified bathrooms when factor non-verified is false", async () => {
+    const origin = { latitude: -4.7, longitude: -9.7 } as const;
+    const closeUnverified = await createTrackedBathroom(
+      origin.latitude + 0.0001,
+      origin.longitude + 0.0001,
+    );
+    const fartherVerified = await createTrackedBathroom(
+      origin.latitude + 0.002,
+      origin.longitude + 0.002,
+    );
+
+    setBathroomExistenceValue(closeUnverified.id, 0);
+    setBathroomExistenceValue(fartherVerified.id, 1);
+
+    const includingUnverified = await bathroomDbFindNearest(
+      origin,
+      DEFAULT_FIND_NEAREST_CONSTRAINTS,
+    );
+    expect(includingUnverified?.id).toBe(closeUnverified.id);
+
+    const verifiedOnly = await bathroomDbFindNearest(origin, {
+      ...DEFAULT_FIND_NEAREST_CONSTRAINTS,
+      factorNonVerified: false,
+    });
+    expect(verifiedOnly?.id).toBe(fartherVerified.id);
+  });
+
+  test("excludes pending-deletion bathrooms when factor pending-deletion is false", async () => {
+    const origin = { latitude: -4.8, longitude: -9.8 } as const;
+    const closePendingDeletion = await createTrackedBathroom(
+      origin.latitude + 0.0001,
+      origin.longitude + 0.0001,
+    );
+    const fartherActive = await createTrackedBathroom(
+      origin.latitude + 0.002,
+      origin.longitude + 0.002,
+    );
+
+    setBathroomDeletionWaitStartedTimestamp(
+      closePendingDeletion.id,
+      "2026-01-01T00:00:00.000Z",
+    );
+
+    const includingPendingDeletion = await bathroomDbFindNearest(
+      origin,
+      DEFAULT_FIND_NEAREST_CONSTRAINTS,
+    );
+    expect(includingPendingDeletion?.id).toBe(closePendingDeletion.id);
+
+    const activeOnly = await bathroomDbFindNearest(origin, {
+      ...DEFAULT_FIND_NEAREST_CONSTRAINTS,
+      factorPendingDeletion: false,
+    });
+    expect(activeOnly?.id).toBe(fartherActive.id);
   });
 
   describe("error paths", () => {
@@ -153,7 +270,7 @@ describe("find nearest bathroom against local Supabase", () => {
       await expect(
         bathroomDbFindNearest(
           { latitude: Number.NaN, longitude: 0 },
-          { maxDistanceM: 1_000, minRating: 0 },
+          { ...DEFAULT_FIND_NEAREST_CONSTRAINTS, maxDistanceM: 1_000 },
         ),
       ).rejects.toThrow(FIND_NEAREST_BATHROOM_ERROR_CONTEXT);
     });
@@ -161,8 +278,8 @@ describe("find nearest bathroom against local Supabase", () => {
     test("bathroomDbFindNearest rejects negative max distance from RPC validation", async () => {
       await expect(
         bathroomDbFindNearest(ISOLATED_OCEAN_ORIGIN, {
+          ...DEFAULT_FIND_NEAREST_CONSTRAINTS,
           maxDistanceM: -1,
-          minRating: 0,
         }),
       ).rejects.toThrow(FIND_NEAREST_BATHROOM_ERROR_CONTEXT);
     });
@@ -170,7 +287,7 @@ describe("find nearest bathroom against local Supabase", () => {
     test("bathroomDbFindNearest rejects invalid min rating from RPC validation", async () => {
       await expect(
         bathroomDbFindNearest(ISOLATED_OCEAN_ORIGIN, {
-          maxDistanceM: 1_000,
+          ...DEFAULT_FIND_NEAREST_CONSTRAINTS,
           minRating: 6,
         }),
       ).rejects.toThrow(FIND_NEAREST_BATHROOM_ERROR_CONTEXT);

@@ -81,6 +81,16 @@ export const USER_SETTINGS_PAGES: Record<
         min: 0,
         max: 5,
       },
+      {
+        type: "boolean",
+        column: "find_nearest_bathroom_factor_non_verified",
+        label: "Find nearest bathroom factor non-verified",
+      },
+      {
+        type: "boolean",
+        column: "find_nearest_bathroom_factor_pending_deletion",
+        label: "Find nearest bathroom factor pending-deletion",
+      },
     ],
   },
   root: {

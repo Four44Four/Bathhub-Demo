@@ -302,6 +302,20 @@
  - SQL Type: REAL
  - Other SQL Restrictions: N/A
  - Default value: 2.5
+### Find nearest bathroom factor non-verified bathrooms
+ - Setting type: [Boolean](#boolean-setting)
+ - Client name: Find nearest bathroom factor non-verified
+ - SQL name: find_nearest_bathroom_factor_non_verified
+ - SQL type: BOOLEAN
+ - Other SQL Restrictions: Value can only be 0 or 1
+ - Default value: `true` (1)
+### Find nearest bathroom factor pending deletion bathrooms
+ - Setting type: [Boolean](#boolean-setting)
+ - Client name: Find nearest bathroom factor pending-deletion
+ - SQL name: find_nearest_bathroom_factor_pending_deletion
+ - SQL type: BOOLEAN
+ - Other SQL Restrictions: Value can only be 0 or 1
+ - Default value: `false` (0)
 
 # Integration tests
  - Migrations between every sequential pair of user setting schema versions should be tested

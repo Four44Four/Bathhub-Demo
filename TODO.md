@@ -6,6 +6,7 @@
     - Accounts start with a low reputation score
     - Accounts build reputation score by using app & not engaging in "suspicious activities"
     - Reputation score weighs vote amount
+    - Rate limits are keyed by account ID instead of IP
  - Add comments system on bathrooms
  - Setup S3 for Supabase
  - Add media upload system on bathrooms

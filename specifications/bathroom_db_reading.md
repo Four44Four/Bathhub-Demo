@@ -111,9 +111,13 @@
 - When a bathroom is upserted:
    - Evict the first bathroom that has stayed in the cache for longer than [this amount of time](#local-cache-db-expiry-time)
       - Check if the oldest updated bathroom entry in the local cache DB is beyond that time from the current time and evict it if so
-- When the client "opens the app":
-   - When as a web-app demo: this means when the website is visited
-   - When as a native app: this means when the app is actually opened
-   - The local cache DB will be checked for if the correct tables (for Geopackage as well) are created_at
-      - If not, create them
-   - Then load up the local cache DB as an in-memory DB that is writing to a on-disk gpkg file
+ - If the SQLite bathroom local cache DB on the disk does not match the expected schema:
+    - Delete the local cache DB on disk
+    - Recreate the local cache DB with the correct schema
+    - This is safe to do for the bathroom local cache DB as it permanent data should not be stored on it
+ - When the client "opens the app":
+    - When as a web-app demo: this means when the website is visited
+    - When as a native app: this means when the app is actually opened
+    - The local cache DB will be checked for if the correct tables (for Geopackage as well) are created_at
+       - If not, create them
+    - Then load up the local cache DB as an in-memory DB that is writing to a on-disk gpkg file

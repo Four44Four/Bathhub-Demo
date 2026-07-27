@@ -5,6 +5,7 @@
     - Block accounts below a certain reputation score from voting on bathrooms
     - Accounts start with a low reputation score
     - Accounts build reputation score by using app & not engaging in "suspicious activities"
+    - Reputation score weighs vote amount
  - Add comments system on bathrooms
  - Setup S3 for Supabase
  - Add media upload system on bathrooms

@@ -1,4 +1,9 @@
-FROM node:24.15.0-alpine AS base
+# Production image. At runtime, dotenvx decrypts .env.production.vault and
+# injects process env (see RUN.md for vault contents and run styles).
+# Decrypt with docker run --env-file pointing at .env.keys
+# (DOTENV_PRIVATE_KEY_PRODUCTION_VAULT for .env.production.vault).
+
+FROM node:26.5.1-alpine AS base
 FROM base AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
@@ -23,6 +28,7 @@ RUN addgroup --system --gid 1001 nodejs \
 COPY --from=build --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=build --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=build --chown=nextjs:nodejs /app/public ./public
+# Encrypted runtime env — not build-time ARG/ENV.
 COPY --chown=nextjs:nodejs .env.production.vault ./
 USER nextjs
 EXPOSE 3000

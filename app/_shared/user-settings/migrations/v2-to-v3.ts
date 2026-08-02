@@ -2,14 +2,25 @@ import {
   USER_SETTINGS_DEFAULTS,
   USER_SETTINGS_SCHEMA_VERSION_META_KEY,
   USER_SETTINGS_TABLE_NAME,
-  type UserSettingsRow,
+  type UserSettingsRowSchemaV3,
 } from "../UserSettingsSchema";
 import type { UserSettingsSchemaMigrationScripts } from "../UserSettingsSchemaMigration";
 
 /** Defaults snapshotted for schema version 3 (target of the 2→3 migration). */
-export const USER_SETTINGS_MIGRATION_V2_TO_V3_DEFAULTS: UserSettingsRow = {
-  ...USER_SETTINGS_DEFAULTS,
-};
+export const USER_SETTINGS_MIGRATION_V2_TO_V3_DEFAULTS: UserSettingsRowSchemaV3 =
+  {
+    globe_movement_smooth: USER_SETTINGS_DEFAULTS.globe_movement_smooth,
+    camera_init_surface_offset_m:
+      USER_SETTINGS_DEFAULTS.camera_init_surface_offset_m,
+    show_non_verified_bathrooms_on_map:
+      USER_SETTINGS_DEFAULTS.show_non_verified_bathrooms_on_map,
+    show_pending_deletion_bathrooms_on_map:
+      USER_SETTINGS_DEFAULTS.show_pending_deletion_bathrooms_on_map,
+    find_nearest_bathroom_max_dist_m:
+      USER_SETTINGS_DEFAULTS.find_nearest_bathroom_max_dist_m,
+    find_nearest_bathroom_min_rating:
+      USER_SETTINGS_DEFAULTS.find_nearest_bathroom_min_rating,
+  };
 
 const {
   show_non_verified_bathrooms_on_map,

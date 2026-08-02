@@ -1,5 +1,5 @@
 -- Extend nearest-bathroom lookup with verification and pending-deletion factor filters.
--- Server schema version 14.
+-- Server schema version 23.
 
 DROP FUNCTION IF EXISTS get_nearest_bathroom_data_primary(
     double precision,
@@ -92,6 +92,6 @@ GRANT EXECUTE ON FUNCTION get_nearest_bathroom_data_primary(
 ) TO anon, authenticated, service_role;
 
 INSERT INTO server_db_schema_version (singleton, version)
-VALUES (TRUE, 14)
+VALUES (TRUE, 23)
 ON CONFLICT (singleton) DO UPDATE
 SET version = EXCLUDED.version;

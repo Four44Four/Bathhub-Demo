@@ -14,7 +14,7 @@ const NON_RERUNNABLE_MIGRATION_FILENAMES = new Set([
   "20260717000000_bathroom_data_primary_existence_votes.sql",
   "20260718000000_bathroom_data_primary_increment_existence_vote_rpc.sql",
 ]);
-const EXPECTED_LATEST_SCHEMA_VERSION = 22;
+const EXPECTED_LATEST_SCHEMA_VERSION = 23;
 const EXPECTED_RATING_COLUMNS = 5;
 const EXPECTED_RPC_COUNT = 10;
 
@@ -171,6 +171,7 @@ describe("server PostgreSQL migration reruns", () => {
       "20260728000000_bathroom_data_primary_pending_deletion_reading.sql",
       "20260729000000_bathroom_data_primary_read_rpcs_deletion_wait.sql",
       "20260730000000_bathroom_data_primary_vote_against_deletion_wait_noop.sql",
+      "20260731000000_bathroom_nearest_rpc_factor_filters.sql",
     ]);
 
     const before = readServerSchemaState(databaseUrl);

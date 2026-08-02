@@ -3,12 +3,17 @@ import {
   type UserSettingsRow,
   type UserSettingsRowSchemaV1,
   type UserSettingsRowSchemaV2,
+  type UserSettingsRowSchemaV3,
 } from "./UserSettingsSchema";
 
 export type UserSettingsSchemaMigrationScripts = {
   forwardSql: readonly string[];
   /** Defaults for the target schema version after this migration completes. */
-  defaults: UserSettingsRow | UserSettingsRowSchemaV1 | UserSettingsRowSchemaV2;
+  defaults:
+    | UserSettingsRow
+    | UserSettingsRowSchemaV1
+    | UserSettingsRowSchemaV2
+    | UserSettingsRowSchemaV3;
 };
 
 export type UserSettingsSchemaMigrationSuccess = {
@@ -16,7 +21,11 @@ export type UserSettingsSchemaMigrationSuccess = {
   fromVersion: number;
   toVersion: number;
   forwardSql: readonly string[];
-  defaults: UserSettingsRow | UserSettingsRowSchemaV1 | UserSettingsRowSchemaV2;
+  defaults:
+    | UserSettingsRow
+    | UserSettingsRowSchemaV1
+    | UserSettingsRowSchemaV2
+    | UserSettingsRowSchemaV3;
 };
 
 export type UserSettingsSchemaMigrationErrorCode =

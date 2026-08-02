@@ -37,6 +37,8 @@ const DEFAULT_FIND_NEAREST_CONSTRAINTS = {
   factorPendingDeletion: true,
 } as const;
 
+const createdBathroomIds: number[] = [];
+
 async function createTrackedBathroom(latitude: number, longitude: number) {
   const row = await bathroomDbCreate(latitude, longitude);
   createdBathroomIds.push(row.id);

@@ -621,6 +621,7 @@ export function GlobeViewport({
       viewer.resize();
       viewer.forceResize?.();
       const syncCesiumClip = () => {
+        if (!viewer) return;
         applyPhoneViewportCesiumClip(
           viewer,
           phoneViewportClipRefStable.current?.current ?? null,

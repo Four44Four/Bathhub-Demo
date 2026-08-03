@@ -56,6 +56,16 @@ From the repository root:
 
 This checks Docker for the local Redis container, verifies the Redis server responds to `redis-cli ping`, and prints the Redis URL, version, and uptime. If the container is missing or stopped, run `./local-hosting/setup-redis.sh`.
 
+## Check Both Supabase and Redis Docker Statuses
+
+From the repository root:
+
+```bash
+./local-hosting/status-data.sh
+```
+
+This checks Docker for the local Supabase and Redis containers, prints out their container IDs, and prints out statistics about their memory footprints, disk footprints, and row count (for Supabase DB).
+
 ## Stop Without Deleting Data
 
 ```bash

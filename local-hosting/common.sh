@@ -38,7 +38,20 @@ ensure_supabase_cli() {
   fi
 
   echo "local-hosting: Supabase CLI is required but was not found at node_modules/.bin/supabase" >&2
-  echo "local-hosting: run 'npm install' from the repo root (supabase is a devDependency)" >&2
+  printf "local-hosting: install supabase locally with npm install supabase? [y/N] "
+  read -r install_answer
+  case "$(printf '%s' "$install_answer" | tr '[:upper:]' '[:lower:]')" in
+    y|yes)
+      echo "local-hosting: installing supabase in $WORKSPACE_DIR ..."
+      (cd "$WORKSPACE_DIR" && npm install supabase)
+      if [[ -x "$local_cli" ]]; then
+        SUPABASE_CMD="$local_cli"
+        return 0
+      fi
+      ;;
+  esac
+
+  echo "local-hosting: run 'npm install supabase' from the repository root ($WORKSPACE_DIR)" >&2
   exit 1
 }
 

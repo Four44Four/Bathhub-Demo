@@ -32,6 +32,7 @@ import { UserSettingsProvider } from "./_client/user-settings/UserSettingsContex
 import { UserSettingsBootstrapGate } from "./_client/user-settings/UserSettingsBootstrapGate";
 import { UserSettingsDangerBand } from "./_client/user-settings/UserSettingsDangerBand";
 import { UserSettingsOverlay } from "./_client/user-settings/UserSettingsOverlay";
+import { AccountSessionProvider } from "./_client/accounts/AccountSessionContext";
 import { AlertSystemProvider } from "./_client/viewport2d/AlertSystem";
 import {
   AddBathroomMode,
@@ -403,6 +404,7 @@ export default function Home() {
 
   return (
     <AlertSystemProvider phoneViewportRef={phoneFrameRef}>
+      <AccountSessionProvider>
       <AddBathroomModeProvider>
         <BathroomNavigationModeProvider>
           <ClientGeoProvider>
@@ -422,6 +424,7 @@ export default function Home() {
           </ClientGeoProvider>
         </BathroomNavigationModeProvider>
       </AddBathroomModeProvider>
+      </AccountSessionProvider>
     </AlertSystemProvider>
   );
 }

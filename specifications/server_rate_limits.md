@@ -1,6 +1,6 @@
 # Description
  - Store all rate limits as constants in the dedicated constants file in the server directory
- - Should be per IP address
+ - Should be per IP address if user is not logged into an account or account ID if user is logged into an account
     - IP address should be valid even if application backend server is behind a proxy
  - Use Redis for keeping track of the current rate limit
     - Create a wrapper over all Redis calls to centralize Redis logic in a single directory, so that the Redis client can be switched out later if necessary without mass refactoring
@@ -13,12 +13,23 @@
        - "Violated rate limit for finding nearest bathroom" for nearest bathroom query
  - [Redis maximum memory eviction policy is least recently used](./serverside_caching.md)
 
+## Accounts
+### Creation (account)
+ - 1 per 12 hours
+### Login (account)
+ - 10 per 5 minutes
+### Reading (account)
+ - 30 per minute
+
 ## Bathrooms
 ### Creation (bathrooms)
  - 5 per minute
  - 15 per day
 ### Reading/sync with client bounds (bathrooms)
- - 100 per 30 seconds
+ - User is logged into an account:
+    - 100 per 30 seconds
+ - User is logged out of an account (rate-limiting by IP):
+    - 70 per 30 seconds
 ### Querying about nearest bathroom to coordinates (bathrooms)
  - 20 per minute
 ### Updating (bathrooms)

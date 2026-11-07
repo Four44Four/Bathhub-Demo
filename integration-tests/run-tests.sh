@@ -167,6 +167,9 @@ npx jest --config "$INTEGRATION_JEST_CONFIG" --runInBand --verbose "$SCRIPT_DIR/
 echo "run-tests: running bathroom deletion wait integration checks..."
 npx jest --config "$INTEGRATION_JEST_CONFIG" --runInBand --verbose "$SCRIPT_DIR/BathroomDeletionWait.integration.test.ts"
 
+echo "run-tests: running account RLS and reputation integration checks..."
+npx jest --config "$INTEGRATION_JEST_CONFIG" --runInBand --verbose "$SCRIPT_DIR/AccountRls.integration.test.ts"
+
 echo "run-tests: running Redis read cache integration checks..."
 npx jest --config "$INTEGRATION_JEST_CONFIG" --runInBand --verbose "$SCRIPT_DIR/ReadCache.integration.test.ts"
 

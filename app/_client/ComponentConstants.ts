@@ -229,9 +229,54 @@ export const SwipeUpMainMenuButton = {
     FULL_GRID_CELL_WIDTH: "100%",
 } as const;
 
+/** Login swipe-up page (see specifications/swipe_up_menu/login_page.md). */
+const LOGIN_PAGE_ACCENT_COLOR = "#BDBDDE";
+const LOGIN_PAGE_PASSWORD_REVEAL_ICON_SIZE_PX = 20;
+const LOGIN_PAGE_PASSWORD_REVEAL_ICON_INSET_PX = 10;
+const LOGIN_PAGE_PASSWORD_REVEAL_TEXT_GAP_PX = 8;
+
+export const LoginPage = {
+    ACCENT_COLOR: LOGIN_PAGE_ACCENT_COLOR,
+    SECONDARY_COLOR: "#FFFFFF",
+    BUTTON_BORDER_WIDTH_PX: 1,
+    BUTTON_HOVER_ANIMATION_DURATION_MS: 250,
+    BUTTON_HOVER_INTERACT_DARKENING_MULT_FACTOR: 0.7,
+    CONTENT_MIN_HEIGHT_PX: 280,
+    STACK_GAP_PX: 10,
+    PADDING_PX: 16,
+    USERNAME_PLACEHOLDER: "Username...",
+    PASSWORD_PLACEHOLDER: "Password...",
+    PASSWORD_REVEAL_ICON_SIZE_PX: LOGIN_PAGE_PASSWORD_REVEAL_ICON_SIZE_PX,
+    PASSWORD_REVEAL_ICON_INSET_PX: LOGIN_PAGE_PASSWORD_REVEAL_ICON_INSET_PX,
+    PASSWORD_FIELD_PADDING_RIGHT_PX:
+        LOGIN_PAGE_PASSWORD_REVEAL_ICON_INSET_PX +
+        LOGIN_PAGE_PASSWORD_REVEAL_ICON_SIZE_PX +
+        LOGIN_PAGE_PASSWORD_REVEAL_TEXT_GAP_PX,
+    VISIBLE_ICON: createMonoColorImage("/visible.svg", LOGIN_PAGE_ACCENT_COLOR),
+    NONVISIBLE_ICON: createMonoColorImage("/nonvisible.svg", LOGIN_PAGE_ACCENT_COLOR),
+} as const;
+
+/** Account swipe-up page (see specifications/swipe_up_menu/account_page.md). */
+export const AccountPage = {
+    TEXT_COLOR: "#B5B5C4",
+    COLUMN_SEPARATOR_LINE_WIDTH_PX: 1,
+    HIGHEST_REPUTATION_COLOR: "#A0F0A0",
+    LOWEST_REPUTATION_COLOR: "#F0A0A0",
+    REPUTATION_BAR_MIN: -20,
+    REPUTATION_BAR_MAX: 20,
+    REPUTATION_LABEL: "Reputation",
+    PROFILE_PICTURE_PATH: "/account_pfp.svg",
+    CONTENT_MIN_HEIGHT_PX: 220,
+    PADDING_PX: 16,
+    PROFILE_PICTURE_SIZE_PX: 72,
+    REPUTATION_BAR_HEIGHT_PX: 12,
+    COLUMN_GAP_PX: 16,
+} as const;
+
 /** Swipe-up main menu page (see specifications/swipe_up_menu/main_menu.md). */
 export const SwipeUpMainMenu = {
     ICON_COLOR: "#E4E4FF",
+    ACCOUNT_PROFILE_PICTURE_PATH: "/account_pfp.svg",
     GRID_COLUMNS: 4,
     GAP_PX: 8,
     MARGIN_TOP_PX: 8,

@@ -14,6 +14,8 @@ import {
   bathroomSyncUpsertToViewportEntry,
 } from "../_shared/BathroomDataPrimary";
 import * as BathroomCrud from "../_server/database/bathroom-data-primary/Crud";
+import { type OwnBathroomInteraction } from "../_server/pure/bathroom-data-primary/OwnBathroomInteraction";
+import { currentAccountAccessToken } from "./accounts/accountAccessToken";
 import { type GlobeViewportHandle } from "./globe/GlobeViewport";
 
 async function toErrorable<T>(run: () => Promise<T>): Promise<Errorable<T>> {
@@ -26,6 +28,8 @@ async function toErrorable<T>(run: () => Promise<T>): Promise<Errorable<T>> {
     };
   }
 }
+
+export type { OwnBathroomInteraction };
 
 export type BathroomViewportRenderHandler = (
   bathrooms: BathroomViewportEntry[],
@@ -119,33 +123,71 @@ export async function createBathroomAt(
   latitude: number,
   longitude: number,
 ): Promise<Errorable<BathroomDataPrimaryRow>> {
-  return BathroomCrud.bathroomDbCreate(latitude, longitude);
+  return BathroomCrud.bathroomDbCreate(
+    latitude,
+    longitude,
+    currentAccountAccessToken(),
+  );
 }
 
 export async function incrementBathroomRating(
   id: number,
   stars: number,
 ): Promise<Errorable<BathroomDataPrimaryFullRow>> {
-  return BathroomCrud.bathroomDbIncrementRating(id, stars);
+  return BathroomCrud.bathroomDbIncrementRating(
+    id,
+    stars,
+    currentAccountAccessToken(),
+  );
 }
 
 export async function incrementBathroomExistenceVote(
   id: number,
   voteForExists: boolean,
 ): Promise<Errorable<BathroomDataPrimaryFullRow>> {
-  return BathroomCrud.bathroomDbIncrementExistenceVote(id, voteForExists);
+  return BathroomCrud.bathroomDbIncrementExistenceVote(
+    id,
+    voteForExists,
+    currentAccountAccessToken(),
+  );
+}
+
+export async function readOwnBathroomInteraction(
+  id: number,
+): Promise<Errorable<OwnBathroomInteraction>> {
+  return BathroomCrud.bathroomDbReadOwnInteraction(
+    id,
+    currentAccountAccessToken(),
+  );
+}
+
+export async function clearBathroomExistenceVote(
+  id: number,
+): Promise<Errorable<BathroomDataPrimaryFullRow>> {
+  return BathroomCrud.bathroomDbClearExistenceVote(
+    id,
+    currentAccountAccessToken(),
+  );
+}
+
+export async function clearBathroomRating(
+  id: number,
+): Promise<Errorable<BathroomDataPrimaryFullRow>> {
+  return BathroomCrud.bathroomDbClearRating(id, currentAccountAccessToken());
 }
 
 export async function readBathroomsInBounds(
   bounds: ViewportBounds,
 ): Promise<Errorable<BathroomDataPrimaryRow[]>> {
-  return toErrorable(() => BathroomCrud.bathroomDbReadInBounds(bounds));
+  return toErrorable(() =>
+    BathroomCrud.bathroomDbReadInBounds(bounds, currentAccountAccessToken()),
+  );
 }
 
 export async function readBathroomById(
   id: number,
 ): Promise<Errorable<BathroomDataPrimaryFullRow>> {
-  return BathroomCrud.bathroomDbReadById(id);
+  return BathroomCrud.bathroomDbReadById(id, currentAccountAccessToken());
 }
 
 export async function syncBathroomsInBounds(
@@ -153,7 +195,11 @@ export async function syncBathroomsInBounds(
   clientCache: BathroomClientCacheEntry[],
 ): Promise<Errorable<BathroomSyncResponse>> {
   return toErrorable(() =>
-    BathroomCrud.bathroomDbSyncInBounds(bounds, clientCache),
+    BathroomCrud.bathroomDbSyncInBounds(
+      bounds,
+      clientCache,
+      currentAccountAccessToken(),
+    ),
   );
 }
 

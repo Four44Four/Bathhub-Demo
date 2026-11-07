@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef } from "react";
 import type { RefObject } from "react";
 
 import { runAbortableTimeout } from "../../pure/AbortableTimeout";
+import { currentAccountAccessToken } from "../../accounts/accountAccessToken";
 import { requestFindNearestBathroom } from "../../pure/viewport2d/FindNearestBathroomClientRequest";
 import { USER_SETTINGS_DEFAULTS } from "@/app/_shared/user-settings/UserSettingsSchema";
 import { useUserSettings } from "../../user-settings/UserSettingsContext";
@@ -95,6 +96,8 @@ export function useFindNearestBathroomFlow({
             },
           },
           signal,
+          fetch,
+          currentAccountAccessToken(),
         ),
       NearestBathroomConsts.FIND_NEAREST_BATHROOM_REQUEST_TIMEOUT_MS,
     );

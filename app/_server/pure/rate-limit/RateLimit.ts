@@ -8,12 +8,25 @@ export type RateLimitScope =
   | "bathroom-update"
   | "ors-path"
   | "user-settings-default-db"
-  | "user-settings-migration";
+  | "user-settings-migration"
+  | "account-create"
+  | "account-login"
+  | "account-profile";
 
 export type RateLimitWindowConfig = {
   readonly maxRequests: number;
   readonly windowSeconds: number;
 };
+
+/** Same scope, with a higher cap for a signed-in account than for an IP. */
+export type AuthSplitRateLimitWindows = {
+  readonly loggedIn: readonly RateLimitWindowConfig[];
+  readonly loggedOut: readonly RateLimitWindowConfig[];
+};
+
+export type RateLimitWindowSet =
+  | readonly RateLimitWindowConfig[]
+  | AuthSplitRateLimitWindows;
 
 export type RateLimitCheckResult =
   | { allowed: true }
@@ -29,12 +42,53 @@ export type RateLimitIncrement = (
   windowSeconds: number,
 ) => Promise<number>;
 
+/** True when the caller should be counted by account id rather than client IP. */
+export function hasRateLimitAccountId(
+  accountId: string | null | undefined,
+): accountId is string {
+  return accountId != null && accountId.length > 0;
+}
+
+/**
+ * Logged-in requests are counted by account id. Logged-out requests stay on the
+ * client IP, which keeps existing per-IP keys unchanged.
+ */
+export function rateLimitSubjectId(
+  accountId: string | null | undefined,
+  clientIp: string,
+): string {
+  if (hasRateLimitAccountId(accountId)) {
+    return accountId;
+  }
+  return clientIp;
+}
+
+export function isAuthSplitRateLimitWindows(
+  windows: RateLimitWindowSet,
+): windows is AuthSplitRateLimitWindows {
+  return !Array.isArray(windows);
+}
+
+/** Picks the logged-in or logged-out windows when a scope defines both. */
+export function resolveRateLimitWindows(
+  windows: RateLimitWindowSet,
+  accountId: string | null | undefined,
+): readonly RateLimitWindowConfig[] {
+  if (!isAuthSplitRateLimitWindows(windows)) {
+    return windows;
+  }
+  if (hasRateLimitAccountId(accountId)) {
+    return windows.loggedIn;
+  }
+  return windows.loggedOut;
+}
+
 export function buildRateLimitKey(
   scope: RateLimitScope,
-  clientIp: string,
+  subjectId: string,
   windowSeconds: number,
 ): string {
-  return `${REDIS_RATE_LIMIT_KEY_PREFIX}${scope}:${clientIp}:${windowSeconds}`;
+  return `${REDIS_RATE_LIMIT_KEY_PREFIX}${scope}:${subjectId}:${windowSeconds}`;
 }
 
 export function isRateLimitExceeded(
@@ -47,6 +101,12 @@ export function isRateLimitExceeded(
 export function formatRateLimitWindowLabel(windowSeconds: number): string {
   if (windowSeconds === 60) {
     return "minute";
+  }
+  if (windowSeconds === 300) {
+    return "5 minutes";
+  }
+  if (windowSeconds === 43_200) {
+    return "12 hours";
   }
   if (windowSeconds === 86_400) {
     return "day";
@@ -72,6 +132,12 @@ export function formatRateLimitScopeLabel(scope: RateLimitScope): string {
       return "default user settings database download";
     case "user-settings-migration":
       return "user settings migration scripts";
+    case "account-create":
+      return "account creation";
+    case "account-login":
+      return "account login";
+    case "account-profile":
+      return "account reading";
   }
 }
 
@@ -82,17 +148,18 @@ export function formatRateLimitExceededMessage(
 ): string {
   const scopeLabel = formatRateLimitScopeLabel(scope);
   const windowLabel = formatRateLimitWindowLabel(windowSeconds);
-  return `Rate limit exceeded: ${scopeLabel} is limited to ${maxRequests} requests per ${windowLabel}.`;
+  const requestWord = maxRequests === 1 ? "request" : "requests";
+  return `Rate limit exceeded: ${scopeLabel} is limited to ${maxRequests} ${requestWord} per ${windowLabel}.`;
 }
 
 export async function checkRateLimits(
   scope: RateLimitScope,
-  clientIp: string,
+  subjectId: string,
   windows: readonly RateLimitWindowConfig[],
   increment: RateLimitIncrement,
 ): Promise<RateLimitCheckResult> {
   for (const window of windows) {
-    const key = buildRateLimitKey(scope, clientIp, window.windowSeconds);
+    const key = buildRateLimitKey(scope, subjectId, window.windowSeconds);
     const count = await increment(key, window.windowSeconds);
     if (isRateLimitExceeded(count, window.maxRequests)) {
       return {

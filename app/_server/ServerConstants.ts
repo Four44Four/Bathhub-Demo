@@ -33,10 +33,12 @@ export const SERVER_RATE_LIMITS = {
     perDay: { maxRequests: 15, windowSeconds: 86_400 },
   },
   bathroomReadSync: {
-    per30Seconds: { maxRequests: 100, windowSeconds: 30 },
+    loggedInPer30Seconds: { maxRequests: 100, windowSeconds: 30 },
+    loggedOutPer30Seconds: { maxRequests: 70, windowSeconds: 30 },
   },
   bathroomReadById: {
-    per30Seconds: { maxRequests: 100, windowSeconds: 30 },
+    loggedInPer30Seconds: { maxRequests: 100, windowSeconds: 30 },
+    loggedOutPer30Seconds: { maxRequests: 70, windowSeconds: 30 },
   },
   bathroomFindNearest: {
     perMinute: { maxRequests: 20, windowSeconds: 60 },
@@ -58,6 +60,15 @@ export const SERVER_RATE_LIMITS = {
     perMinute: { maxRequests: 5, windowSeconds: 60 },
     // perMinute: { maxRequests: 5, windowSeconds: 60 },
     perDay: { maxRequests: 50, windowSeconds: 86_400 },
+  },
+  accountCreate: {
+    per12Hours: { maxRequests: 1, windowSeconds: 43_200 },
+  },
+  accountLogin: {
+    per5Minutes: { maxRequests: 10, windowSeconds: 300 },
+  },
+  accountProfile: {
+    perMinute: { maxRequests: 30, windowSeconds: 60 },
   },
 } as const satisfies Record<
   string,

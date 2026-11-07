@@ -18,6 +18,10 @@ export const SWIPE_UP_MAIN_MENU_DEFAULT_ROW_ITEMS: readonly SwipeUpMainMenuRowIt
       width: SwipeUpMainMenuButton.FULL_GRID_CELL_WIDTH,
       text: "Add bathroom",
     },
+    {
+      width: SwipeUpMainMenuButton.FULL_GRID_CELL_WIDTH,
+      text: "Login",
+    },
   ];
 
 export function swipeUpMainMenuGridContentWidthPx(

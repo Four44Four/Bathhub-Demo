@@ -9,6 +9,9 @@ export const RATE_LIMIT_BAND_TASK_NAMES = {
   "ors-path": "path data generation",
   "user-settings-default-db": "pulling current default DB",
   "user-settings-migration": "pulling migration scripts",
+  "account-create": "account creation",
+  "account-login": "account login",
+  "account-profile": "account reading",
 } as const;
 
 export type RateLimitBandScope = keyof typeof RATE_LIMIT_BAND_TASK_NAMES;
@@ -27,6 +30,9 @@ const RATE_LIMIT_SCOPE_LABEL_TO_BAND_TASK: Readonly<Record<string, string>> = {
     RATE_LIMIT_BAND_TASK_NAMES["user-settings-default-db"],
   "user settings migration scripts":
     RATE_LIMIT_BAND_TASK_NAMES["user-settings-migration"],
+  "account creation": RATE_LIMIT_BAND_TASK_NAMES["account-create"],
+  "account login": RATE_LIMIT_BAND_TASK_NAMES["account-login"],
+  "account reading": RATE_LIMIT_BAND_TASK_NAMES["account-profile"],
 };
 
 export function formatRateLimitViolationBandMessage(
@@ -40,8 +46,17 @@ export function isRateLimitExceededMessage(
 ): errorMsg is string {
   return (
     typeof errorMsg === "string" &&
-    errorMsg.startsWith(RATE_LIMIT_EXCEEDED_MESSAGE_PREFIX)
+    errorMsg.includes(RATE_LIMIT_EXCEEDED_MESSAGE_PREFIX)
   );
+}
+
+/** Returns the rate-limit sentence when a wrapped database or server error contains one. */
+export function unwrapRateLimitExceededMessage(message: string): string | null {
+  const index = message.indexOf(RATE_LIMIT_EXCEEDED_MESSAGE_PREFIX);
+  if (index === -1) {
+    return null;
+  }
+  return message.slice(index);
 }
 
 /**
@@ -51,11 +66,15 @@ export function isRateLimitExceededMessage(
 export function resolveRateLimitViolationBandMessage(
   errorMsg: string | undefined,
 ): string | null {
-  if (!isRateLimitExceededMessage(errorMsg)) {
+  if (errorMsg == null) {
+    return null;
+  }
+  const unwrapped = unwrapRateLimitExceededMessage(errorMsg);
+  if (unwrapped == null) {
     return null;
   }
 
-  const remainder = errorMsg
+  const remainder = unwrapped
     .slice(RATE_LIMIT_EXCEEDED_MESSAGE_PREFIX.length)
     .trimStart();
   const scopeLabelEnd = remainder.indexOf(" is limited to ");

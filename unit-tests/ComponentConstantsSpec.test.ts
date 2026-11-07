@@ -1,6 +1,7 @@
 import {
   AddBathroom,
   Alerts,
+  AccountPage,
   BathroomLocalDB,
   BathroomMapMarker,
   BathroomPage,
@@ -89,6 +90,18 @@ describe("component constants match their specifications", () => {
       PADDING_HORIZONTAL_PX: 10,
       TEXT_MARGIN_PX: 10,
       DEFAULT_MIN_HEIGHT: "0px",
+    });
+  });
+
+  test("account-page constants match account_page.md", () => {
+    expect(AccountPage).toMatchObject({
+      TEXT_COLOR: "#B5B5C4",
+      COLUMN_SEPARATOR_LINE_WIDTH_PX: 1,
+      HIGHEST_REPUTATION_COLOR: "#A0F0A0",
+      LOWEST_REPUTATION_COLOR: "#F0A0A0",
+      REPUTATION_BAR_MIN: -20,
+      REPUTATION_BAR_MAX: 20,
+      REPUTATION_LABEL: "Reputation",
     });
   });
 

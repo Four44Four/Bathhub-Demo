@@ -70,6 +70,7 @@ import {
 import { getPathBetweenPoints } from "../app/_server/Pathfind";
 import { getUserSettingsSchemaMigration } from "../app/_server/user-settings/UserSettingsSchemaMigration";
 import { RateLimitExceededError } from "../app/_server/rate-limit/enforceRateLimit";
+import { ACCOUNT_REQUIRED_ERROR } from "../app/_shared/accounts/AccountReputation";
 import { type ViewportBounds } from "../app/_shared/BathroomDataPrimary";
 
 describe("rate-limited server entrypoints", () => {
@@ -163,6 +164,31 @@ describe("rate-limited server entrypoints", () => {
     expect(mockCreateAt).not.toHaveBeenCalled();
   });
 
+  test("bathroom create action rejects a logged-out caller", async () => {
+    mockTryEnforceServerRateLimit.mockResolvedValue({ allowed: true });
+
+    await expect(bathroomDbCreate(40.7, -74.0)).resolves.toEqual({
+      val: null,
+      errorMsg: ACCOUNT_REQUIRED_ERROR,
+    });
+    expect(mockCreateAt).not.toHaveBeenCalled();
+  });
+
+  test("bathroom rating and existence votes reject a logged-out caller", async () => {
+    mockTryEnforceServerRateLimit.mockResolvedValue({ allowed: true });
+
+    await expect(bathroomDbIncrementRating(1, 4)).resolves.toEqual({
+      val: null,
+      errorMsg: ACCOUNT_REQUIRED_ERROR,
+    });
+    await expect(bathroomDbIncrementExistenceVote(1, true)).resolves.toEqual({
+      val: null,
+      errorMsg: ACCOUNT_REQUIRED_ERROR,
+    });
+    expect(mockIncrementRatingCount).not.toHaveBeenCalled();
+    expect(mockIncrementExistenceVoteCount).not.toHaveBeenCalled();
+  });
+
   test("bathroom increment rating action enforces bathroom-update scope before DB work", async () => {
     const message =
       "Rate limit exceeded: bathroom updates is limited to 20 requests per minute.";
@@ -197,7 +223,7 @@ describe("rate-limited server entrypoints", () => {
 
   test("bathroom read action enforces bathroom-read-sync scope before DB work", async () => {
     const message =
-      "Rate limit exceeded: bathroom reading and viewport sync is limited to 100 requests per 30 seconds.";
+      "Rate limit exceeded: bathroom reading and viewport sync is limited to 70 requests per 30 seconds.";
     mockTryEnforceServerRateLimit.mockResolvedValue({
       allowed: false,
       message,
@@ -216,7 +242,7 @@ describe("rate-limited server entrypoints", () => {
 
   test("bathroom read-by-id action enforces bathroom-read-by-id scope before DB work", async () => {
     const message =
-      "Rate limit exceeded: bathroom reading by id is limited to 100 requests per 30 seconds.";
+      "Rate limit exceeded: bathroom reading by id is limited to 70 requests per 30 seconds.";
     mockTryEnforceServerRateLimit.mockResolvedValue({
       allowed: false,
       message,
@@ -234,7 +260,7 @@ describe("rate-limited server entrypoints", () => {
 
   test("bathroom sync action enforces bathroom-read-sync scope before DB work", async () => {
     const message =
-      "Rate limit exceeded: bathroom reading and viewport sync is limited to 100 requests per 30 seconds.";
+      "Rate limit exceeded: bathroom reading and viewport sync is limited to 70 requests per 30 seconds.";
     mockTryEnforceServerRateLimit.mockResolvedValue({
       allowed: false,
       message,

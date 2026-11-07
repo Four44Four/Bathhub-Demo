@@ -10,8 +10,6 @@
  - Add comments system on bathrooms
  - Setup S3 for Supabase
  - Add media upload system on bathrooms
- - Selective realtime updating via SSE ???
-    - Not on by default, user needs to have an acct + meet specific criteria
 
 # Sprint 4 (offline caching)
  - Add way to save map data and all bathrooms visible in viewport

@@ -154,9 +154,25 @@
                 - Once the update is successfully written to the serverside DB:
                    - Immediately update the bathroom information panel to reflect the [`existence_value` column from the bathroom DB](../bathroom_db.md#table-schema)
                    - Update its corresponding [bathroom map marker](../bathroom_db_reading.md#bathroom-marker) immediately on the client's map
+       - When a user's account is on [cooldown](../accounts/accounts.md) after voting for a bathroom:
+          - Hide the 2 voting buttons
+          - Show a horizontally centered [button](../components/viewport2d_button.md) in their place that has:
+            - [Text](../components/viewport2d_button.md#text) is a [text discriptor](../text.md) with the following properties:
+               - [Content](../text.md#content) is "Edit vote"
+               - [Color](../text.md#color) is [this color](#text-color)
+               - [Weight](../text.md#weight) is [TextWeight.BOLD](../text_weight.md)
+            - [Fill color](../components/viewport2d_button.md#fill-color) of [this color](#button-fill-color)
+            - [Anchor element](../components/viewport2d_button.md#anchor-element) is the [swipe-up menu](./swipe_up_menu.md)
+            - [Drop shadow](../components/viewport2d_button.md#drop-shadow) is [this drop shadow descriptor](./dropshadow_descriptor.md)
+            - [Outline thickness](../components/viewport2d_button.md#outline-thickness) is 0 (no outline)
+            - [Click callback](../components/viewport2d_button.md#on-click-callback) is the following:
+              - Undo the previous vote by this user's account on this bathroom
+              - Hide this button
+              - Redisplay the 2 voting buttons in this button's place
     - When the rectangular panel is interacted with again while expanded:
        - Collapse the rectangular panel over [this duration] with quadratic easing to hide the expanded elements
        - Restore the [bathroom information panel's](#bathroom-information-panel) [arrow icon](../resources.md#arrow-icon) to its original rotation by rotating clockwise over [this duration](#bathroom-information-panel-hover-animation-duration) with quadratic easing
+ - Show an indication here if the user is logged out and cannot vote/rate bathrooms currently
 
 ## Ratings panel
  - Store the sum of [`rating_1_count`, `rating_2_count`, `rating_3_count`, `rating_4_count`, or `rating_5_count` columns of this bathroom](../bathroom_db.md#table-schema) in <total-rating-count> 
@@ -223,6 +239,21 @@
                 - Update the average star rating number to the newly calculated average
                 - Update the [star rating graphic](#star-rating-graphic) representing the average star rating number
                 - Clear the rating on the [interactive star rating graphic](#star-rating-graphic)
+       - When a user's account has rated this bathroom before:
+          - Hide the rating posting button
+          - Show a horizontally centered [button](../components/viewport2d_button.md) in their place that has:
+            - [Text](../components/viewport2d_button.md#text) is a [text discriptor](../text.md) with the following properties:
+               - [Content](../text.md#content) is "Edit post"
+               - [Color](../text.md#color) is [this color](#text-color)
+               - [Weight](../text.md#weight) is [TextWeight.BOLD](../text_weight.md)
+            - [Fill color](../components/viewport2d_button.md#fill-color) of [this color](#button-fill-color)
+            - [Anchor element](../components/viewport2d_button.md#anchor-element) is the [swipe-up menu](./swipe_up_menu.md)
+            - [Drop shadow](../components/viewport2d_button.md#drop-shadow) is [this drop shadow descriptor](./dropshadow_descriptor.md)
+            - [Outline thickness](../components/viewport2d_button.md#outline-thickness) is 0 (no outline)
+            - [Click callback](../components/viewport2d_button.md#on-click-callback) is the following:
+              - Undo the previous rating made by this user's account on this bathroom
+              - Hide this button
+              - Redisplay the rating post in this button's place
 
 # Star rating graphic
 ## Properties (star rating graphic)

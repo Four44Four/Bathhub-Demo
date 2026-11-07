@@ -14,9 +14,9 @@ const NON_RERUNNABLE_MIGRATION_FILENAMES = new Set([
   "20260717000000_bathroom_data_primary_existence_votes.sql",
   "20260718000000_bathroom_data_primary_increment_existence_vote_rpc.sql",
 ]);
-const EXPECTED_LATEST_SCHEMA_VERSION = 23;
+const EXPECTED_LATEST_SCHEMA_VERSION = 25;
 const EXPECTED_RATING_COLUMNS = 5;
-const EXPECTED_RPC_COUNT = 10;
+const EXPECTED_RPC_COUNT = 13;
 
 type ServerSchemaState = {
   schemaVersionRows: number;
@@ -26,6 +26,19 @@ type ServerSchemaState = {
   deletionWaitColumnCount: number;
   verifyStatusColumnCount: number;
   rpcCount: number;
+  authenticatedCanDeleteBathrooms: boolean;
+  bathroomDeletePolicyCount: number;
+  anonCanDecay: boolean;
+  authenticatedCanDecay: boolean;
+  anonCanDeleteExpired: boolean;
+  authenticatedCanDeleteExpired: boolean;
+  anonCanDrift: boolean;
+  authenticatedCanDrift: boolean;
+  anonCanSelectBathroomActions: boolean;
+  authenticatedCanSelectBathroomActions: boolean;
+  anonCanSelectSchemaVersion: boolean;
+  authenticatedCanSelectSchemaVersion: boolean;
+  driftCronSchedule: string;
 };
 
 function requireLocalPostgresUrl(): string {
@@ -133,8 +146,49 @@ function readServerSchemaState(databaseUrl: string): ServerSchemaState {
               'increment_bathroom_data_primary_rating_count',
               'increment_bathroom_data_primary_existence_vote_count',
               'decay_bathroom_data_primary_existence_value',
-              'delete_expired_pending_deletion_bathrooms'
+              'delete_expired_pending_deletion_bathrooms',
+              'clear_own_bathroom_existence_vote',
+              'clear_own_bathroom_rating',
+              'get_own_bathroom_interaction'
             )
+        ),
+      'authenticatedCanDeleteBathrooms',
+        has_table_privilege('authenticated', 'public.bathroom_data_primary', 'DELETE'),
+      'bathroomDeletePolicyCount',
+        (
+          SELECT COUNT(*)
+          FROM pg_policy AS policy
+          JOIN pg_class AS relation ON relation.oid = policy.polrelid
+          JOIN pg_namespace AS namespace ON namespace.oid = relation.relnamespace
+          WHERE namespace.nspname = 'public'
+            AND relation.relname = 'bathroom_data_primary'
+            AND policy.polname = 'bathroom_data_primary_delete_account'
+        ),
+      'anonCanDecay',
+        has_function_privilege('anon', 'public.decay_bathroom_data_primary_existence_value()', 'EXECUTE'),
+      'authenticatedCanDecay',
+        has_function_privilege('authenticated', 'public.decay_bathroom_data_primary_existence_value()', 'EXECUTE'),
+      'anonCanDeleteExpired',
+        has_function_privilege('anon', 'public.delete_expired_pending_deletion_bathrooms()', 'EXECUTE'),
+      'authenticatedCanDeleteExpired',
+        has_function_privilege('authenticated', 'public.delete_expired_pending_deletion_bathrooms()', 'EXECUTE'),
+      'anonCanDrift',
+        has_function_privilege('anon', 'public.drift_account_reputation_toward_zero()', 'EXECUTE'),
+      'authenticatedCanDrift',
+        has_function_privilege('authenticated', 'public.drift_account_reputation_toward_zero()', 'EXECUTE'),
+      'anonCanSelectBathroomActions',
+        has_table_privilege('anon', 'public.account_bathroom_actions', 'SELECT'),
+      'authenticatedCanSelectBathroomActions',
+        has_table_privilege('authenticated', 'public.account_bathroom_actions', 'SELECT'),
+      'anonCanSelectSchemaVersion',
+        has_table_privilege('anon', 'public.server_db_schema_version', 'SELECT'),
+      'authenticatedCanSelectSchemaVersion',
+        has_table_privilege('authenticated', 'public.server_db_schema_version', 'SELECT'),
+      'driftCronSchedule',
+        (
+          SELECT job.schedule
+          FROM cron.job AS job
+          WHERE job.jobname = 'drift_account_reputation_weekly'
         )
     )::text;
   `;
@@ -172,6 +226,8 @@ describe("server PostgreSQL migration reruns", () => {
       "20260729000000_bathroom_data_primary_read_rpcs_deletion_wait.sql",
       "20260730000000_bathroom_data_primary_vote_against_deletion_wait_noop.sql",
       "20260731000000_bathroom_nearest_rpc_factor_filters.sql",
+      "20260801000000_account_rls_and_reputation.sql",
+      "20260802000000_account_vote_rating_rules.sql",
     ]);
 
     const before = readServerSchemaState(databaseUrl);
@@ -183,6 +239,19 @@ describe("server PostgreSQL migration reruns", () => {
       deletionWaitColumnCount: 1,
       verifyStatusColumnCount: 0,
       rpcCount: EXPECTED_RPC_COUNT,
+      authenticatedCanDeleteBathrooms: false,
+      bathroomDeletePolicyCount: 0,
+      anonCanDecay: false,
+      authenticatedCanDecay: false,
+      anonCanDeleteExpired: false,
+      authenticatedCanDeleteExpired: false,
+      anonCanDrift: false,
+      authenticatedCanDrift: false,
+      anonCanSelectBathroomActions: false,
+      authenticatedCanSelectBathroomActions: false,
+      anonCanSelectSchemaVersion: false,
+      authenticatedCanSelectSchemaVersion: false,
+      driftCronSchedule: "0 0 * * 0",
     });
 
     rerunMigrations(databaseUrl, migrationPaths);

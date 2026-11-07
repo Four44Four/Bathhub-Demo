@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 
+import { accessTokenFromAuthorizationHeader } from "@/app/_server/pure/accounts/AccountAccessToken";
 import { findNearestBathroom } from "@/app/_server/FindNearestBathroom";
 import { type FindNearestBathroomRequestBody } from "@/app/_shared/find-nearest-bathroom/FindNearestBathroomApi";
 
@@ -9,7 +10,13 @@ export async function POST(request: NextRequest) {
   }
 
   const body = (await request.json()) as FindNearestBathroomRequestBody;
-  const result = await findNearestBathroom(body.location, body.constraints);
+  const accessToken = accessTokenFromAuthorizationHeader(
+    request.headers.get("authorization"),
+  );
+  const result =
+    accessToken === null
+      ? await findNearestBathroom(body.location, body.constraints)
+      : await findNearestBathroom(body.location, body.constraints, accessToken);
 
   if (request.signal.aborted) {
     return new Response(null, { status: 499 });

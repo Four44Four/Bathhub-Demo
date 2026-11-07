@@ -2,6 +2,7 @@ import {
   formatRateLimitViolationBandMessage,
   isRateLimitExceededMessage,
   resolveRateLimitViolationBandMessage,
+  unwrapRateLimitExceededMessage,
 } from "../app/_shared/rate-limit/RateLimitBandAlert";
 
 describe("RateLimitBandAlert", () => {
@@ -27,6 +28,15 @@ describe("RateLimitBandAlert", () => {
     expect(
       formatRateLimitViolationBandMessage("user-settings-migration"),
     ).toBe("Violated rate limit for pulling migration scripts");
+    expect(formatRateLimitViolationBandMessage("account-create")).toBe(
+      "Violated rate limit for account creation",
+    );
+    expect(formatRateLimitViolationBandMessage("account-login")).toBe(
+      "Violated rate limit for account login",
+    );
+    expect(formatRateLimitViolationBandMessage("account-profile")).toBe(
+      "Violated rate limit for account reading",
+    );
   });
 
   test("isRateLimitExceededMessage recognizes server denial payloads", () => {
@@ -37,6 +47,18 @@ describe("RateLimitBandAlert", () => {
     ).toBe(true);
     expect(isRateLimitExceededMessage("Something else")).toBe(false);
     expect(isRateLimitExceededMessage(undefined)).toBe(false);
+    expect(
+      unwrapRateLimitExceededMessage(
+        "Failed to increment: Rate limit exceeded: bathroom updates is limited to 20 requests per minute.",
+      ),
+    ).toBe(
+      "Rate limit exceeded: bathroom updates is limited to 20 requests per minute.",
+    );
+    expect(
+      resolveRateLimitViolationBandMessage(
+        "Failed to increment: Rate limit exceeded: bathroom updates is limited to 20 requests per minute.",
+      ),
+    ).toBe("Violated rate limit for updating bathrooms");
   });
 
   test("resolveRateLimitViolationBandMessage maps server messages to band text", () => {
@@ -47,12 +69,17 @@ describe("RateLimitBandAlert", () => {
     ).toBe("Violated rate limit for bathroom creation");
     expect(
       resolveRateLimitViolationBandMessage(
+        "Rate limit exceeded: bathroom reading and viewport sync is limited to 70 requests per 30 seconds.",
+      ),
+    ).toBe("Violated rate limit for retrieving bathrooms");
+    expect(
+      resolveRateLimitViolationBandMessage(
         "Rate limit exceeded: bathroom reading and viewport sync is limited to 100 requests per 30 seconds.",
       ),
     ).toBe("Violated rate limit for retrieving bathrooms");
     expect(
       resolveRateLimitViolationBandMessage(
-        "Rate limit exceeded: bathroom reading by id is limited to 100 requests per 30 seconds.",
+        "Rate limit exceeded: bathroom reading by id is limited to 70 requests per 30 seconds.",
       ),
     ).toBe("Violated rate limit for retrieving bathrooms");
     expect(
@@ -80,6 +107,21 @@ describe("RateLimitBandAlert", () => {
         "Rate limit exceeded: user settings migration scripts is limited to 5 requests per minute.",
       ),
     ).toBe("Violated rate limit for pulling migration scripts");
+    expect(
+      resolveRateLimitViolationBandMessage(
+        "Rate limit exceeded: account creation is limited to 1 request per 12 hours.",
+      ),
+    ).toBe("Violated rate limit for account creation");
+    expect(
+      resolveRateLimitViolationBandMessage(
+        "Rate limit exceeded: account login is limited to 10 requests per 5 minutes.",
+      ),
+    ).toBe("Violated rate limit for account login");
+    expect(
+      resolveRateLimitViolationBandMessage(
+        "Rate limit exceeded: account reading is limited to 30 requests per minute.",
+      ),
+    ).toBe("Violated rate limit for account reading");
     expect(resolveRateLimitViolationBandMessage("network error")).toBeNull();
   });
 });

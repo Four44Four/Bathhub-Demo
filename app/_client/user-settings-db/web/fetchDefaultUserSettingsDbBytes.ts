@@ -1,5 +1,6 @@
 "use client";
 
+import { currentAccountAccessToken } from "@/app/_client/accounts/accountAccessToken";
 import { USER_SETTINGS_DEFAULT_DB_API_PATH } from "@/app/_shared/user-settings/DefaultUserSettingsDbPaths";
 
 export type FetchDefaultUserSettingsDbResult =
@@ -9,8 +10,14 @@ export type FetchDefaultUserSettingsDbResult =
 
 export async function fetchDefaultUserSettingsDbBytes(): Promise<FetchDefaultUserSettingsDbResult> {
   try {
+    const accessToken = currentAccountAccessToken();
+    const headers: Record<string, string> = {};
+    if (accessToken !== null && accessToken.length > 0) {
+      headers.Authorization = `Bearer ${accessToken}`;
+    }
     const response = await fetch(USER_SETTINGS_DEFAULT_DB_API_PATH, {
       cache: "no-store",
+      headers,
     });
     if (response.status === 429) {
       return {

@@ -14,10 +14,14 @@ import { requireLocalRedis } from "./requireLocalRedis";
 
 const generatedRateLimitKeys = new Set<string>();
 
-function redisRateLimitDeps(clientIp: string): EnforceRateLimitDependencies {
+function redisRateLimitDeps(
+  clientIp: string,
+  accountId: string | null = null,
+): EnforceRateLimitDependencies {
   const redis = getRedisPort();
   return {
     getClientIp: async () => clientIp,
+    getAccountId: async () => accountId,
     incrementWithExpiry: (key, expirySeconds) => {
       generatedRateLimitKeys.add(key);
       return redis.incrementWithExpiry(key, expirySeconds);
@@ -141,6 +145,23 @@ describe("Redis-backed server rate limits", () => {
       });
     });
 
+    test("tracks a logged-in account separately from that client's IP", async () => {
+      const clientIp = "203.0.113.24";
+      const accountId = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb";
+      const accountDeps = redisRateLimitDeps(clientIp, accountId);
+      const ipDeps = redisRateLimitDeps(clientIp);
+      const { maxRequests } = SERVER_RATE_LIMITS.bathroomCreate.perMinute;
+
+      for (let i = 0; i < maxRequests; i++) {
+        await enforceRateLimit("bathroom-create", accountDeps);
+      }
+
+      await expect(enforceRateLimit("bathroom-create", accountDeps)).rejects.toBeInstanceOf(
+        RateLimitExceededError,
+      );
+      await expect(enforceRateLimit("bathroom-create", ipDeps)).resolves.toBeUndefined();
+    });
+
     test("tracks limits independently per IP", async () => {
       const limitedIpDeps = redisRateLimitDeps("203.0.113.22");
       const otherIpDeps = redisRateLimitDeps("203.0.113.23");
@@ -160,9 +181,10 @@ describe("Redis-backed server rate limits", () => {
   });
 
   describe("bathroom-read-sync", () => {
-    test("allows up to 100 requests per 30 seconds per IP", async () => {
+    test("allows up to 70 requests per 30 seconds per logged-out IP", async () => {
       const deps = redisRateLimitDeps("203.0.113.60");
-      const { maxRequests } = SERVER_RATE_LIMITS.bathroomReadSync.per30Seconds;
+      const { maxRequests } =
+        SERVER_RATE_LIMITS.bathroomReadSync.loggedOutPer30Seconds;
 
       for (let i = 0; i < maxRequests; i++) {
         await expect(
@@ -175,21 +197,93 @@ describe("Redis-backed server rate limits", () => {
       ).rejects.toMatchObject({
         name: "RateLimitExceededError",
         message:
+          "Rate limit exceeded: bathroom reading and viewport sync is limited to 70 requests per 30 seconds.",
+      });
+    });
+
+    test("allows a logged-in account 100 requests per 30 seconds after that IP is capped", async () => {
+      const clientIp = "203.0.113.64";
+      const accountId = "cccccccc-cccc-cccc-cccc-cccccccccccc";
+      const loggedOut = redisRateLimitDeps(clientIp);
+      const loggedIn = redisRateLimitDeps(clientIp, accountId);
+      const loggedOutLimit =
+        SERVER_RATE_LIMITS.bathroomReadSync.loggedOutPer30Seconds;
+      const loggedInLimit =
+        SERVER_RATE_LIMITS.bathroomReadSync.loggedInPer30Seconds;
+
+      await prefillWindowCount(
+        "bathroom-read-sync",
+        clientIp,
+        loggedOutLimit.windowSeconds,
+        loggedOutLimit.maxRequests,
+      );
+      await expect(
+        enforceRateLimit("bathroom-read-sync", loggedOut),
+      ).rejects.toBeInstanceOf(RateLimitExceededError);
+
+      const stillUnderCap = redisRateLimitDeps(
+        clientIp,
+        "cccccccc-cccc-cccc-cccc-ccccccccccc1",
+      );
+      await prefillWindowCount(
+        "bathroom-read-sync",
+        "cccccccc-cccc-cccc-cccc-ccccccccccc1",
+        loggedInLimit.windowSeconds,
+        loggedOutLimit.maxRequests,
+      );
+      await expect(
+        enforceRateLimit("bathroom-read-sync", stillUnderCap),
+      ).resolves.toBeUndefined();
+
+      await prefillWindowCount(
+        "bathroom-read-sync",
+        accountId,
+        loggedInLimit.windowSeconds,
+        loggedInLimit.maxRequests,
+      );
+      await expect(
+        enforceRateLimit("bathroom-read-sync", loggedIn),
+      ).rejects.toMatchObject({
+        name: "RateLimitExceededError",
+        message:
           "Rate limit exceeded: bathroom reading and viewport sync is limited to 100 requests per 30 seconds.",
       });
     });
   });
 
   describe("bathroom-read-by-id", () => {
-    test("allows up to 100 requests per 30 seconds per IP", async () => {
+    test("allows up to 70 requests per 30 seconds per logged-out IP", async () => {
       const deps = redisRateLimitDeps("203.0.113.63");
-      const { maxRequests } = SERVER_RATE_LIMITS.bathroomReadById.per30Seconds;
+      const { maxRequests } =
+        SERVER_RATE_LIMITS.bathroomReadById.loggedOutPer30Seconds;
 
       for (let i = 0; i < maxRequests; i++) {
         await expect(
           enforceRateLimit("bathroom-read-by-id", deps),
         ).resolves.toBeUndefined();
       }
+
+      await expect(
+        enforceRateLimit("bathroom-read-by-id", deps),
+      ).rejects.toMatchObject({
+        name: "RateLimitExceededError",
+        message:
+          "Rate limit exceeded: bathroom reading by id is limited to 70 requests per 30 seconds.",
+      });
+    });
+
+    test("allows a logged-in account 100 requests per 30 seconds", async () => {
+      const accountId = "dddddddd-dddd-dddd-dddd-dddddddddddd";
+      const deps = redisRateLimitDeps("203.0.113.65", accountId);
+      const { maxRequests, windowSeconds } =
+        SERVER_RATE_LIMITS.bathroomReadById.loggedInPer30Seconds;
+
+      await prefillWindowCount(
+        "bathroom-read-by-id",
+        accountId,
+        windowSeconds,
+        maxRequests,
+      );
 
       await expect(
         enforceRateLimit("bathroom-read-by-id", deps),
@@ -356,6 +450,69 @@ describe("Redis-backed server rate limits", () => {
         name: "RateLimitExceededError",
         message:
           "Rate limit exceeded: user settings migration scripts is limited to 50 requests per day.",
+      });
+    });
+  });
+
+  describe("account-create", () => {
+    test("allows 1 request per 12 hours per IP", async () => {
+      const deps = redisRateLimitDeps("203.0.113.72");
+
+      await expect(
+        enforceRateLimit("account-create", deps),
+      ).resolves.toBeUndefined();
+      await expect(enforceRateLimit("account-create", deps)).rejects.toMatchObject({
+        name: "RateLimitExceededError",
+        message:
+          "Rate limit exceeded: account creation is limited to 1 request per 12 hours.",
+      });
+    });
+
+    test("does not consume the login counter", async () => {
+      const clientIp = "203.0.113.74";
+      const deps = redisRateLimitDeps(clientIp);
+
+      await enforceRateLimit("account-create", deps);
+      await expect(enforceRateLimit("account-create", deps)).rejects.toBeInstanceOf(
+        RateLimitExceededError,
+      );
+      await expect(enforceRateLimit("account-login", deps)).resolves.toBeUndefined();
+    });
+  });
+
+  describe("account-login", () => {
+    test("allows up to 10 requests per 5 minutes per IP", async () => {
+      const deps = redisRateLimitDeps("203.0.113.73");
+      const { maxRequests } = SERVER_RATE_LIMITS.accountLogin.per5Minutes;
+
+      for (let i = 0; i < maxRequests; i++) {
+        await expect(enforceRateLimit("account-login", deps)).resolves.toBeUndefined();
+      }
+
+      await expect(enforceRateLimit("account-login", deps)).rejects.toMatchObject({
+        name: "RateLimitExceededError",
+        message:
+          "Rate limit exceeded: account login is limited to 10 requests per 5 minutes.",
+      });
+    });
+  });
+
+  describe("account-profile", () => {
+    test("allows up to 30 requests per minute per account", async () => {
+      const accountId = "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee";
+      const deps = redisRateLimitDeps("203.0.113.70", accountId);
+      const { maxRequests } = SERVER_RATE_LIMITS.accountProfile.perMinute;
+
+      for (let i = 0; i < maxRequests; i++) {
+        await expect(
+          enforceRateLimit("account-profile", deps),
+        ).resolves.toBeUndefined();
+      }
+
+      await expect(enforceRateLimit("account-profile", deps)).rejects.toMatchObject({
+        name: "RateLimitExceededError",
+        message:
+          "Rate limit exceeded: account reading is limited to 30 requests per minute.",
       });
     });
   });

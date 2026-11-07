@@ -34,6 +34,12 @@ enabled = false
 
 [auth]
 enabled = true
+enable_signup = true
+jwt_expiry = 3600
+
+[auth.email]
+enable_signup = true
+enable_confirmations = false
 
 [edge_runtime]
 enabled = false

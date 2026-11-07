@@ -5,11 +5,21 @@ import { createPortal } from "react-dom";
 
 import {
   applyBathroomViewportUpsert,
+  clearBathroomExistenceVote,
+  clearBathroomRating,
   incrementBathroomExistenceVote,
   incrementBathroomRating,
   readBathroomById,
+  readOwnBathroomInteraction,
+  type OwnBathroomInteraction,
 } from "../Bathroom";
 import { deriveVerifyStatusFromBathroomFields } from "../../_shared/BathroomDataPrimary";
+import {
+  ACCOUNT_REQUIRED_ERROR,
+  bathroomInteractionLockMessage,
+  REPUTATION_TOO_LOW_ERROR,
+} from "../../_shared/accounts/AccountReputation";
+import { useAccountSession } from "../accounts/AccountSessionContext";
 import {
   BathroomPage as BathroomPageConsts,
   BathroomRemoteDB,
@@ -32,6 +42,10 @@ import {
   bathroomExistenceValueFromRow,
   type BathroomExistenceVoteSide,
 } from "../pure/bathroom/BathroomInformation";
+import {
+  bathroomExistenceVoteControlMode,
+  bathroomRatingControlMode,
+} from "../pure/bathroom/BathroomAccountControls";
 import { bathroomPageDropdownWidthPx, bathroomPageDropdownXPx } from "../pure/dropdown-menu/DropdownMenuLayout";
 import {
   bathroomPageFetchFailureAlertMessage,
@@ -75,10 +89,12 @@ const RATING_BAR_COLORS = [
 ] as const;
 
 function BathroomPostButton({
+  label,
   isPosting,
   disabled,
   onClick,
 }: {
+  label: string;
   isPosting: boolean;
   disabled?: boolean;
   onClick: () => void;
@@ -147,7 +163,7 @@ function BathroomPostButton({
           radiusPx={BathroomPageConsts.BUTTON_LOADING_SPINNER_RADIUS_PX}
         />
       ) : (
-        "Post"
+        label
       )}
     </button>
   );
@@ -171,6 +187,11 @@ export function BathroomPage() {
   const wasMenuOpenAboveCollapsedRef = useRef(isMenuOpenAboveCollapsed);
   const { selectedBathroomId } = useSelectedBathroom();
   const { showImportantAlert } = useAlertSystem();
+  const { profile, refreshProfile } = useAccountSession();
+  const interactionLockMessage = bathroomInteractionLockMessage(
+    profile !== null,
+    profile?.reputationScore ?? null,
+  );
   const reportRateLimitViolation = useReportRateLimitViolation();
   const [loadState, setLoadState] = useState<BathroomPageLoadState>({
     status: "idle",
@@ -186,6 +207,10 @@ export function BathroomPage() {
   const [votingSide, setVotingSide] = useState<BathroomExistenceVoteSide | null>(
     null,
   );
+  const [ownInteraction, setOwnInteraction] =
+    useState<OwnBathroomInteraction | null>(null);
+  const [isClearingVote, setIsClearingVote] = useState(false);
+  const interactionVersionRef = useRef(0);
 
   useEffect(() => {
     const previousMenuWasOpenAboveCollapsed =
@@ -209,6 +234,9 @@ export function BathroomPage() {
       setDraftRating(0);
       setIsPostingRating(false);
       setVotingSide(null);
+      setIsClearingVote(false);
+      setOwnInteraction(null);
+      interactionVersionRef.current += 1;
       return;
     }
 
@@ -219,6 +247,9 @@ export function BathroomPage() {
     setDraftRating(0);
     setIsPostingRating(false);
     setVotingSide(null);
+    setIsClearingVote(false);
+    setOwnInteraction(null);
+    interactionVersionRef.current += 1;
 
     void (async () => {
       const result = await promiseWithTimeout(
@@ -260,6 +291,30 @@ export function BathroomPage() {
       cancelled = true;
     };
   }, [reportRateLimitViolation, selectedBathroomId, showImportantAlert]);
+
+  const accountId = profile?.accountId ?? null;
+
+  useEffect(() => {
+    if (selectedBathroomId == null || accountId == null) {
+      setOwnInteraction(null);
+      return;
+    }
+    const versionAtStart = interactionVersionRef.current;
+    let cancelled = false;
+    void (async () => {
+      const result = await readOwnBathroomInteraction(selectedBathroomId);
+      if (cancelled || versionAtStart !== interactionVersionRef.current) {
+        return;
+      }
+      if (result.val == null) {
+        return;
+      }
+      setOwnInteraction(result.val);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [accountId, selectedBathroomId]);
 
   const loadedRow = loadState.status === "loaded" ? loadState.row : null;
   const bathroomId = loadedRow?.id ?? selectedBathroomId ?? 0;
@@ -347,49 +402,115 @@ export function BathroomPage() {
     flexShrink: 0,
   };
 
+  const voteControl = bathroomExistenceVoteControlMode({
+    interactionLocked: interactionLockMessage !== null,
+    voteOnCooldown: ownInteraction?.voteOnCooldown === true,
+  });
+  const ratingControl = bathroomRatingControlMode({
+    interactionLocked: interactionLockMessage !== null,
+    hasRating: ownInteraction?.ratingStars != null,
+  });
+
   const subcomponents = [
     ...ratingBars,
     <div key="buffer" style={bufferStyle} aria-hidden="true" />,
-    <StarRatingGraphic
-      key="interactive-stars"
-      rating={draftRating}
-      interactive
-      onRatingChange={setDraftRating}
-    />,
-    <BathroomPostButton
-      key="post-button"
-      isPosting={isPostingRating}
-      disabled={draftRating <= 0}
-      onClick={() => {
-        const stars = bathroomPostRatingStars(draftRating, isPostingRating);
-        if (stars == null) {
-          return;
-        }
+    ...(ratingControl === "edit"
+      ? [
+          <BathroomPostButton
+            key="edit-post-button"
+            label="Edit post"
+            isPosting={isPostingRating}
+            onClick={() => {
+              if (isPostingRating) {
+                return;
+              }
+              setIsPostingRating(true);
+              void (async () => {
+                const result = await clearBathroomRating(bathroomId);
+                if (reportRateLimitViolation(result.errorMsg)) {
+                  setIsPostingRating(false);
+                  return;
+                }
+                if (result.val == null) {
+                  setIsPostingRating(false);
+                  showImportantAlert({
+                    message: "Error occurred while editing rating",
+                    okLabel: "Ok",
+                    positive: false,
+                  });
+                  return;
+                }
+                interactionVersionRef.current += 1;
+                setOwnInteraction((current) => ({
+                  voteForExists: current?.voteForExists ?? null,
+                  voteOnCooldown: current?.voteOnCooldown === true,
+                  ratingStars: null,
+                }));
+                setRatingCounts(bathroomRatingCountsFromFullRow(result.val));
+                setDraftRating(0);
+                setIsPostingRating(false);
+              })();
+            }}
+          />,
+        ]
+      : [
+          <StarRatingGraphic
+            key="interactive-stars"
+            rating={draftRating}
+            interactive
+            onRatingChange={setDraftRating}
+          />,
+          <BathroomPostButton
+            key="post-button"
+            label="Post"
+            isPosting={isPostingRating}
+            disabled={draftRating <= 0}
+            onClick={() => {
+              const stars = bathroomPostRatingStars(draftRating, isPostingRating);
+              if (stars == null) {
+                return;
+              }
+              if (interactionLockMessage !== null) {
+                showImportantAlert({
+                  message: interactionLockMessage,
+                  okLabel: "Ok",
+                  positive: false,
+                });
+                return;
+              }
 
-        setIsPostingRating(true);
-        void (async () => {
-          const result = await incrementBathroomRating(bathroomId, stars);
-          if (reportRateLimitViolation(result.errorMsg)) {
-            setIsPostingRating(false);
-            return;
-          }
+              setIsPostingRating(true);
+              void (async () => {
+                const result = await incrementBathroomRating(bathroomId, stars);
+                if (reportRateLimitViolation(result.errorMsg)) {
+                  setIsPostingRating(false);
+                  return;
+                }
 
-          if (result.val == null) {
-            setIsPostingRating(false);
-            showImportantAlert({
-              message: "Error occurred while posting rating",
-              okLabel: "Ok",
-              positive: false,
-            });
-            return;
-          }
+                if (result.val == null) {
+                  setIsPostingRating(false);
+                  showImportantAlert({
+                    message: "Error occurred while posting rating",
+                    okLabel: "Ok",
+                    positive: false,
+                  });
+                  return;
+                }
 
-          setRatingCounts(bathroomRatingCountsFromFullRow(result.val));
-          setDraftRating(0);
-          setIsPostingRating(false);
-        })();
-      }}
-    />,
+                interactionVersionRef.current += 1;
+                setOwnInteraction((current) => ({
+                  voteForExists: current?.voteForExists ?? null,
+                  voteOnCooldown: current?.voteOnCooldown === true,
+                  ratingStars: stars,
+                }));
+                setRatingCounts(bathroomRatingCountsFromFullRow(result.val));
+                setDraftRating(0);
+                setIsPostingRating(false);
+                void refreshProfile();
+              })();
+            }}
+          />,
+        ]),
   ];
 
   const bathroomInfoEl = (
@@ -408,7 +529,52 @@ export function BathroomPage() {
         widthPx={informationPanelWidthPx}
         existenceValue={existenceValue}
         votingSide={votingSide}
+        voteOnCooldown={voteControl === "edit"}
+        isClearingVote={isClearingVote}
+        interactionLockMessage={interactionLockMessage}
+        onClearVote={() => {
+          if (isClearingVote || votingSide !== null) {
+            return;
+          }
+          setIsClearingVote(true);
+          void (async () => {
+            const result = await clearBathroomExistenceVote(bathroomId);
+            if (reportRateLimitViolation(result.errorMsg)) {
+              setIsClearingVote(false);
+              return;
+            }
+            if (result.val == null) {
+              setIsClearingVote(false);
+              showImportantAlert({
+                message: "Error occurred while editing vote",
+                okLabel: "Ok",
+                positive: false,
+              });
+              return;
+            }
+            interactionVersionRef.current += 1;
+            setOwnInteraction((current) => ({
+              voteForExists: null,
+              voteOnCooldown: false,
+              ratingStars: current?.ratingStars ?? null,
+            }));
+            setExistenceValue(bathroomExistenceValueFromRow(result.val));
+            setDeletionWaitStartedTimestamp(
+              result.val.deletion_wait_started_timestamp,
+            );
+            await applyBathroomViewportUpsert(result.val);
+            setIsClearingVote(false);
+          })();
+        }}
         onVote={(side) => {
+          if (interactionLockMessage !== null) {
+            showImportantAlert({
+              message: interactionLockMessage,
+              okLabel: "Ok",
+              positive: false,
+            });
+            return;
+          }
           if (votingSide !== null) {
             return;
           }
@@ -426,11 +592,20 @@ export function BathroomPage() {
 
             if (result.val == null) {
               setVotingSide(null);
+              const denied =
+                result.errorMsg?.includes(ACCOUNT_REQUIRED_ERROR) === true ||
+                result.errorMsg?.includes(REPUTATION_TOO_LOW_ERROR) === true;
               showImportantAlert({
-                message: "Error occurred while posting existence vote",
+                message: denied
+                  ? (bathroomInteractionLockMessage(
+                      profile !== null,
+                      profile?.reputationScore ?? null,
+                    ) ?? result.errorMsg ?? "Error occurred while posting existence vote")
+                  : "Error occurred while posting existence vote",
                 okLabel: "Ok",
                 positive: false,
               });
+              void refreshProfile();
               return;
             }
 
@@ -438,8 +613,15 @@ export function BathroomPage() {
             setDeletionWaitStartedTimestamp(
               result.val.deletion_wait_started_timestamp,
             );
+            interactionVersionRef.current += 1;
+            setOwnInteraction((current) => ({
+              voteForExists: side === "exists",
+              voteOnCooldown: true,
+              ratingStars: current?.ratingStars ?? null,
+            }));
             await applyBathroomViewportUpsert(result.val);
             setVotingSide(null);
+            void refreshProfile();
           })();
         }}
       />

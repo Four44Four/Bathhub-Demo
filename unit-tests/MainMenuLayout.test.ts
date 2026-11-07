@@ -135,5 +135,9 @@ describe("MainMenuLayout", () => {
       x: 107,
       y: 8,
     });
+    expect(swipeUpMainMenuButtonPositionPx(2, viewportWidthPx)).toEqual({
+      x: 204,
+      y: 8,
+    });
   });
 });

@@ -19,6 +19,7 @@ import {
   resolvePathUpdateRequestOutcome,
   shouldShowPathUpdateErrorBand,
 } from "../../pure/viewport2d/ResolvePathUpdateRequest";
+import { currentAccountAccessToken } from "../../accounts/accountAccessToken";
 import * as ServerPathfind from "@/app/_server/Pathfind";
 import { type LatLong } from "@/app/_shared/BathroomDataPrimary";
 import {
@@ -115,13 +116,16 @@ export function BathroomActiveNavigation({
 
     const result = await runAbortableTimeout(
       (_signal) =>
-        ServerPathfind.getPathBetweenPoints({
-          profile: "foot-walking",
-          startLatitude: startPos.latitude,
-          startLongitude: startPos.longitude,
-          endLatitude: navigation.targetLatitude,
-          endLongitude: navigation.targetLongitude,
-        }),
+        ServerPathfind.getPathBetweenPoints(
+          {
+            profile: "foot-walking",
+            startLatitude: startPos.latitude,
+            startLongitude: startPos.longitude,
+            endLatitude: navigation.targetLatitude,
+            endLongitude: navigation.targetLongitude,
+          },
+          currentAccountAccessToken(),
+        ),
       NearestBathroomConsts.BATHROOM_PATH_UPDATE_REQUEST_TIMEOUT_MS,
     );
     const serverErrorMsg =

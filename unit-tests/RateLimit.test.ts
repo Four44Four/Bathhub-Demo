@@ -5,6 +5,8 @@ import {
 import {
   buildRateLimitKey,
   checkRateLimits,
+  rateLimitSubjectId,
+  resolveRateLimitWindows,
   formatRateLimitExceededMessage,
   formatRateLimitScopeLabel,
   formatRateLimitWindowLabel,
@@ -112,6 +114,14 @@ describe("ClientIp", () => {
 });
 
 describe("RateLimit pure logic", () => {
+  test("rateLimitSubjectId uses the account id when the caller is logged in", () => {
+    expect(rateLimitSubjectId(null, "203.0.113.1")).toBe("203.0.113.1");
+    expect(rateLimitSubjectId("", "203.0.113.1")).toBe("203.0.113.1");
+    expect(
+      rateLimitSubjectId("11111111-1111-1111-1111-111111111111", "203.0.113.1"),
+    ).toBe("11111111-1111-1111-1111-111111111111");
+  });
+
   test("buildRateLimitKey namespaces scope, ip, and window", () => {
     expect(buildRateLimitKey("bathroom-create", "203.0.113.1", 60)).toBe(
       "rl:bathroom-create:203.0.113.1:60",
@@ -150,10 +160,15 @@ describe("RateLimit pure logic", () => {
     expect(formatRateLimitScopeLabel("user-settings-default-db")).toBe(
       "default user settings database download",
     );
+    expect(formatRateLimitScopeLabel("account-create")).toBe("account creation");
+    expect(formatRateLimitScopeLabel("account-login")).toBe("account login");
+    expect(formatRateLimitScopeLabel("account-profile")).toBe("account reading");
     expect(formatRateLimitScopeLabel("user-settings-migration")).toBe(
       "user settings migration scripts",
     );
     expect(formatRateLimitWindowLabel(30)).toBe("30 seconds");
+    expect(formatRateLimitWindowLabel(300)).toBe("5 minutes");
+    expect(formatRateLimitWindowLabel(43_200)).toBe("12 hours");
     expect(formatRateLimitWindowLabel(86_400)).toBe("day");
   });
 
@@ -166,12 +181,20 @@ describe("RateLimit pure logic", () => {
       maxRequests: 15,
       windowSeconds: 86_400,
     });
-    expect(SERVER_RATE_LIMITS.bathroomReadSync.per30Seconds).toEqual({
+    expect(SERVER_RATE_LIMITS.bathroomReadSync.loggedInPer30Seconds).toEqual({
       maxRequests: 100,
       windowSeconds: 30,
     });
-    expect(SERVER_RATE_LIMITS.bathroomReadById.per30Seconds).toEqual({
+    expect(SERVER_RATE_LIMITS.bathroomReadSync.loggedOutPer30Seconds).toEqual({
+      maxRequests: 70,
+      windowSeconds: 30,
+    });
+    expect(SERVER_RATE_LIMITS.bathroomReadById.loggedInPer30Seconds).toEqual({
       maxRequests: 100,
+      windowSeconds: 30,
+    });
+    expect(SERVER_RATE_LIMITS.bathroomReadById.loggedOutPer30Seconds).toEqual({
+      maxRequests: 70,
       windowSeconds: 30,
     });
     expect(SERVER_RATE_LIMITS.bathroomFindNearest.perMinute).toEqual({
@@ -209,6 +232,36 @@ describe("RateLimit pure logic", () => {
       maxRequests: 50,
       windowSeconds: 86_400,
     });
+    expect(SERVER_RATE_LIMITS.accountCreate.per12Hours).toEqual({
+      maxRequests: 1,
+      windowSeconds: 43_200,
+    });
+    expect(SERVER_RATE_LIMITS.accountLogin.per5Minutes).toEqual({
+      maxRequests: 10,
+      windowSeconds: 300,
+    });
+    expect(SERVER_RATE_LIMITS.accountProfile.perMinute).toEqual({
+      maxRequests: 30,
+      windowSeconds: 60,
+    });
+  });
+
+  test("resolveRateLimitWindows uses the logged-out cap when no account id is present", () => {
+    const windows = {
+      loggedIn: [{ maxRequests: 100, windowSeconds: 30 }],
+      loggedOut: [{ maxRequests: 70, windowSeconds: 30 }],
+    } as const;
+    const accountId = "11111111-1111-1111-1111-111111111111";
+
+    expect(resolveRateLimitWindows(windows, null)).toEqual(windows.loggedOut);
+    expect(resolveRateLimitWindows(windows, "")).toEqual(windows.loggedOut);
+    expect(resolveRateLimitWindows(windows, accountId)).toEqual(windows.loggedIn);
+    expect(
+      resolveRateLimitWindows(
+        [{ maxRequests: 5, windowSeconds: 60 }],
+        accountId,
+      ),
+    ).toEqual([{ maxRequests: 5, windowSeconds: 60 }]);
   });
 
   test("checkRateLimits allows requests until each configured window is exceeded", async () => {
@@ -238,6 +291,34 @@ describe("RateLimit pure logic", () => {
       windowSeconds: 60,
       maxRequests: 2,
     });
+  });
+
+  test("enforceRateLimit counts a logged-in account separately from its IP", async () => {
+    const counts = new Map<string, number>();
+    const incrementWithExpiry = async (key: string) => {
+      const next = (counts.get(key) ?? 0) + 1;
+      counts.set(key, next);
+      return next;
+    };
+    const accountId = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
+
+    await enforceRateLimit("bathroom-update", {
+      getClientIp: async () => "203.0.113.9",
+      getAccountId: async () => accountId,
+      incrementWithExpiry,
+    });
+    await enforceRateLimit("bathroom-update", {
+      getClientIp: async () => "203.0.113.9",
+      incrementWithExpiry,
+    });
+
+    expect(counts.size).toBe(2);
+    expect(
+      counts.get(buildRateLimitKey("bathroom-update", accountId, 60)),
+    ).toBe(1);
+    expect(
+      counts.get(buildRateLimitKey("bathroom-update", "203.0.113.9", 60)),
+    ).toBe(1);
   });
 
   test("enforceRateLimit throws RateLimitExceededError when a window is exceeded", async () => {
@@ -292,6 +373,87 @@ describe("RateLimit pure logic", () => {
     });
     expect(warnSpy).toHaveBeenCalledWith(
       "Rate limit violation: type=ors-path ip=203.0.113.9",
+    );
+    warnSpy.mockRestore();
+  });
+
+  test("bathroom reads allow 100 per 30 seconds when logged in and 70 when logged out", async () => {
+    const warnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
+    const loggedOut = {
+      getClientIp: async () => "203.0.113.9",
+      incrementWithExpiry: async () => 71,
+    };
+    const accountId = "11111111-1111-1111-1111-111111111111";
+
+    await expect(
+      enforceRateLimit("bathroom-read-sync", loggedOut),
+    ).rejects.toMatchObject({
+      message:
+        "Rate limit exceeded: bathroom reading and viewport sync is limited to 70 requests per 30 seconds.",
+    });
+    await expect(
+      enforceRateLimit("bathroom-read-by-id", loggedOut),
+    ).rejects.toMatchObject({
+      message:
+        "Rate limit exceeded: bathroom reading by id is limited to 70 requests per 30 seconds.",
+    });
+    await expect(
+      enforceRateLimit("bathroom-read-sync", {
+        getClientIp: async () => "203.0.113.9",
+        getAccountId: async () => accountId,
+        incrementWithExpiry: async () => 71,
+      }),
+    ).resolves.toBeUndefined();
+    await expect(
+      enforceRateLimit("bathroom-read-sync", {
+        getClientIp: async () => "203.0.113.9",
+        getAccountId: async () => accountId,
+        incrementWithExpiry: async () => 101,
+      }),
+    ).rejects.toMatchObject({
+      message:
+        "Rate limit exceeded: bathroom reading and viewport sync is limited to 100 requests per 30 seconds.",
+    });
+    await expect(
+      enforceRateLimit("bathroom-read-by-id", {
+        getClientIp: async () => "203.0.113.9",
+        getAccountId: async () => accountId,
+        incrementWithExpiry: async () => 101,
+      }),
+    ).rejects.toMatchObject({
+      message:
+        "Rate limit exceeded: bathroom reading by id is limited to 100 requests per 30 seconds.",
+    });
+    warnSpy.mockRestore();
+  });
+
+  test("account creation is 1 per 12 hours and login is 10 per 5 minutes on separate counters", async () => {
+    const counts = new Map<string, number>();
+    const deps = {
+      getClientIp: async () => "203.0.113.9",
+      incrementWithExpiry: async (key: string) => {
+        const next = (counts.get(key) ?? 0) + 1;
+        counts.set(key, next);
+        return next;
+      },
+    };
+    const warnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
+
+    await expect(enforceRateLimit("account-create", deps)).resolves.toBeUndefined();
+    await expect(enforceRateLimit("account-create", deps)).rejects.toMatchObject({
+      message:
+        "Rate limit exceeded: account creation is limited to 1 request per 12 hours.",
+    });
+
+    for (let i = 0; i < SERVER_RATE_LIMITS.accountLogin.per5Minutes.maxRequests; i++) {
+      await expect(enforceRateLimit("account-login", deps)).resolves.toBeUndefined();
+    }
+    await expect(enforceRateLimit("account-login", deps)).rejects.toMatchObject({
+      message:
+        "Rate limit exceeded: account login is limited to 10 requests per 5 minutes.",
+    });
+    expect(formatRateLimitExceededMessage("account-create", 43_200, 1)).toBe(
+      "Rate limit exceeded: account creation is limited to 1 request per 12 hours.",
     );
     warnSpy.mockRestore();
   });

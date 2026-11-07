@@ -3,6 +3,7 @@ import {
   type UserSettingsRow,
 } from "@/app/_shared/user-settings/UserSettingsSchema";
 import type { UserSettingsSchemaMigrationResult } from "@/app/_shared/user-settings/UserSettingsSchemaMigration";
+import { currentAccountAccessToken } from "@/app/_client/accounts/accountAccessToken";
 import { getUserSettingsSchemaMigration } from "@/app/_server/user-settings/UserSettingsSchemaMigration";
 import { reportUserSettingsSchemaUpdateError } from "@/app/_server/user-settings/reportUserSettingsSchemaUpdateError";
 import {
@@ -28,7 +29,8 @@ export type UserSettingsSchemaMigrationRunnerDeps = {
 
 export const defaultUserSettingsSchemaMigrationRunnerDeps: UserSettingsSchemaMigrationRunnerDeps =
   {
-    getMigration: getUserSettingsSchemaMigration,
+    getMigration: (fromVersion) =>
+      getUserSettingsSchemaMigration(fromVersion, currentAccountAccessToken()),
     reportError: reportUserSettingsSchemaUpdateError,
     preloadDefaults: preloadActiveUserSettings,
   };

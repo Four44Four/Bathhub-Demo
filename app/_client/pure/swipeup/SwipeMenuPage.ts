@@ -1,3 +1,4 @@
+import { AccountPage, LoginPage } from "../../ComponentConstants";
 import { bathroomPageContentMinHeightPx } from "./BathroomPageLayout";
 import { swipeUpMainMenuGridHeightPx } from "./MainMenuLayout";
 import {
@@ -5,7 +6,7 @@ import {
   type SwipeMenuSnapTarget,
 } from "./SwipeMenu";
 
-export type SwipeMenuPageId = "mainMenu" | "bathroom";
+export type SwipeMenuPageId = "mainMenu" | "bathroom" | "login" | "account";
 
 export const SWIPE_MENU_DEFAULT_PAGE_ID: SwipeMenuPageId = "mainMenu";
 
@@ -56,6 +57,10 @@ export function swipeMenuPageContentMinHeightPx(
       return swipeUpMainMenuGridHeightPx(viewportWidthPx);
     case "bathroom":
       return bathroomPageContentMinHeightPx(viewportWidthPx);
+    case "login":
+      return LoginPage.CONTENT_MIN_HEIGHT_PX;
+    case "account":
+      return AccountPage.CONTENT_MIN_HEIGHT_PX;
     default: {
       const _exhaustive: never = pageId;
       return _exhaustive;

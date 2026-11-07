@@ -1,0 +1,56 @@
+# Description
+ - User accounts can be created
+    - A user can use the app without an account or with one
+ - Users using the app without an account can only do read operations
+ - Users using the app with an account can create new data
+    - Only users with an account can:
+       - Rate bathrooms
+       - Vote on existence of a bathroom
+       - Mark a new bathroom
+    - Accounts cannot delete a bathroom row
+       - A bathroom is removed only when existence voting starts the deletion wait and the scheduled task in [bathroom existence voting](../bathroom_db_existence_voting.md) deletes it after the wait
+       - An account can undo or replace its own vote or rating
+          - That changes only that account's contribution
+ - User accounts do **not** have TOTP enabled yet
+ - User accounts have a reputation score
+    - At account creation: accounts have a reputation score of 0
+    - Every voting or rating action on a unique bathroom increases the reputation score by 1
+       - Uniqueness is the bathroom inside the current 2 minute window
+       - The first through fifth unique bathrooms in that window each add 1
+       - The sixth through tenth unique bathrooms in that window add 0
+       - Each unique bathroom after the tenth in that window subtracts 1
+       - A bathroom already counted in the window is not counted again
+          - Repeating or changing a vote or rating on it does not change reputation
+       - Undoing a vote or rating does not change reputation
+       - The account row is locked while the window is counted, so two actions at the same time cannot each miss the other's unique bathroom
+    - User accounts with a reputation score below -20 will be blocked from voting, rating, and undoing a vote or rating
+    - Every week, all accounts' reputation scores will move towards 0 by 1
+       - Positive reputation scores will decrease
+       - Negative reputation scores will increase
+       - The weekly task runs at 00:00 UTC every Sunday
+    - Bathroom existence voting weight starts at 1
+       - Every reputation score increment of 10 above 0 adds 1% (`floor(reputation / 10) * 0.01`)
+       - Every reputation score decrement of 5 below 0 subtracts 10% (`floor((-reputation) / 5) * 0.10`)
+       - Reputation from -1 through -4 stays at weight 1
+       - Reputation -5 is weight 0.90
+       - Reputation -20, the lowest score that can still vote, is weight 0.60
+       - The weight applies both for and against bathroom existence
+ - Each user account can have only one existence vote on a specific bathroom
+    - That vote can be changed at any time
+       - Changing removes the previous vote's weight and applies the new direction with the account's current vote weight
+       - Voting the same direction again does not add another weight
+    - After an account votes, that bathroom's vote controls are on cooldown for 1 calendar month
+       - During cooldown the two vote buttons are hidden and an edit control undoes the vote
+       - Undoing removes the weight that vote applied and ends the cooldown immediately, so the account can vote again
+       - After the month, cooldown ends
+          - The same direction still does not add weight
+          - The other direction is a change
+ - Each user account can have only 1 rating on a bathroom
+    - That rating can be changed at any time
+       - Changing moves 1 count from the previous star value to the new star value
+       - Submitting the same star value again does not add another count
+       - Undoing removes that 1 count
+       - While a rating is stored, the post control is hidden and an edit control undoes it
+ - Vote, rating, and undo calls are limited to 20 per minute per account inside the database, the same limit as [updating bathrooms](../server_rate_limits.md#updating-bathrooms)
+    - The app server's Redis limit still applies
+    - A signed-in token cannot skip the limit by calling the database directly

@@ -26,3 +26,4 @@
 # Description
  - Use PostGIS extension
  - Must be able to query all Bathroom entries efficiently given a rectangular area bounded by 2 latlong locations (opposing corners)
+ - Protected by defensive RLS policies to explicitly allow users to interact with data as specified in [accounts specification](./accounts/accounts.md)

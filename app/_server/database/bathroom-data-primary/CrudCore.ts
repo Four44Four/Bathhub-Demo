@@ -55,6 +55,17 @@ import {
   type IncrementBathroomExistenceVoteRpc,
 } from "../../pure/bathroom-data-primary/IncrementBathroomExistenceVote";
 import {
+  CLEAR_OWN_BATHROOM_EXISTENCE_VOTE_RPC_NAME,
+  CLEAR_OWN_BATHROOM_RATING_RPC_NAME,
+  GET_OWN_BATHROOM_INTERACTION_RPC_NAME,
+  clearOwnBathroomExistenceVote,
+  clearOwnBathroomRating,
+  readOwnBathroomInteraction,
+  type ClearOwnBathroomRpc,
+  type OwnBathroomInteraction,
+  type OwnBathroomInteractionRpc,
+} from "../../pure/bathroom-data-primary/OwnBathroomInteraction";
+import {
   DECAY_BATHROOM_EXISTENCE_VALUE_RPC_NAME,
   decayAllBathroomExistenceValues,
 } from "../../pure/bathroom-data-primary/DecayBathroomExistenceValue";
@@ -67,6 +78,10 @@ import {
   H3_BATHROOM_MAX_BOUNDS_CACHE_CELLS,
 } from "../../ServerConstants";
 import { getSupabaseKey, getSupabaseUrl } from "../../EnvironmentVariables";
+import {
+  parsePostgrestRpcErrorMessage,
+  parsePostgrestRpcRow,
+} from "../../pure/postgrest/PostgrestRpc";
 import { getReadCache, runReadCacheSideEffect } from "../../redis/ReadCache";
 import {
   bathroomLatLongToH3Cell,
@@ -91,6 +106,74 @@ export function getSupabaseClient(): SupabaseClient {
   return supabaseClient;
 }
 
+const SUPABASE_AUTH_OPTIONS = {
+  persistSession: false,
+  autoRefreshToken: false,
+  detectSessionInUrl: false,
+} as const;
+
+function serviceRoleSupabaseClient(): SupabaseClient | null {
+  const serviceRoleKey = process.env.SERVICE_ROLE_KEY;
+  if (serviceRoleKey == null || serviceRoleKey.length === 0) {
+    return null;
+  }
+  return createClient(getSupabaseUrl(), serviceRoleKey, {
+    auth: SUPABASE_AUTH_OPTIONS,
+  });
+}
+
+/**
+ * Test suites call mutation RPCs without a user session. Those calls use the
+ * service role when it is configured so existing fixtures keep working.
+ * Production requests without a user token stay on the anonymous key, which
+ * row level security and the account checks reject for writes.
+ */
+function mutationSupabaseClient(accessToken?: string | null): SupabaseClient | null {
+  if (accessToken != null && accessToken.length > 0) {
+    return null;
+  }
+  if (process.env.NODE_ENV === "test") {
+    return serviceRoleSupabaseClient() ?? getSupabaseClient();
+  }
+  return getSupabaseClient();
+}
+
+function maintenanceSupabaseClient(): SupabaseClient {
+  return serviceRoleSupabaseClient() ?? getSupabaseClient();
+}
+
+async function rpcAsAccessToken<T>(
+  accessToken: string,
+  functionName: string,
+  params: Record<string, unknown>,
+): Promise<{ data: T | null; error: { message: string } | null }> {
+  const response = await fetch(
+    `${getSupabaseUrl()}/rest/v1/rpc/${functionName}`,
+    {
+      method: "POST",
+      headers: {
+        apikey: getSupabaseKey(),
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify(params),
+    },
+  );
+
+  const rawBody: unknown = await response.json().catch(() => null);
+  if (!response.ok) {
+    return {
+      data: null,
+      error: {
+        message: parsePostgrestRpcErrorMessage(rawBody, response.statusText),
+      },
+    };
+  }
+
+  return { data: parsePostgrestRpcRow<T>(rawBody), error: null };
+}
+
 const READ_IN_BOUNDS_INVALID_BBOX_MESSAGE = "invalid bbox coordinates" as const;
 
 function assertFiniteViewportBounds(bounds: ViewportBounds): void {
@@ -113,10 +196,18 @@ function assertFiniteViewportBounds(bounds: ViewportBounds): void {
 export async function createAt(
   latitude: number,
   longitude: number,
+  accessToken?: string | null,
 ): Promise<BathroomDataPrimaryRow> {
-  const client = getSupabaseClient();
+  const client = mutationSupabaseClient(accessToken);
   const rpc: CreateBathroomRpc = async (params) => {
-    const { data, error } = await client
+    if (accessToken != null && accessToken.length > 0) {
+      return rpcAsAccessToken<BathroomDataPrimaryRow>(
+        accessToken,
+        CREATE_BATHROOM_RPC_NAME,
+        params,
+      );
+    }
+    const { data, error } = await client!
       .rpc(CREATE_BATHROOM_RPC_NAME, params)
       .single();
     return { data: data as BathroomDataPrimaryRow | null, error };
@@ -136,7 +227,7 @@ export async function createAt(
 }
 
 export async function decayAllExistenceValues(): Promise<number> {
-  const client = getSupabaseClient();
+  const client = maintenanceSupabaseClient();
   return decayAllBathroomExistenceValues(async () => {
     const { data, error } = await client.rpc(
       DECAY_BATHROOM_EXISTENCE_VALUE_RPC_NAME,
@@ -146,7 +237,7 @@ export async function decayAllExistenceValues(): Promise<number> {
 }
 
 export async function deleteExpiredPendingDeletionBathroomsFromDatabase(): Promise<number> {
-  const client = getSupabaseClient();
+  const client = maintenanceSupabaseClient();
   return deleteExpiredPendingDeletionBathrooms(async () => {
     const { data, error } = await client.rpc(
       DELETE_EXPIRED_PENDING_DELETION_BATHROOMS_RPC_NAME,
@@ -158,10 +249,18 @@ export async function deleteExpiredPendingDeletionBathroomsFromDatabase(): Promi
 export async function incrementExistenceVoteCount(
   id: number,
   side: BathroomExistenceVoteSide,
+  accessToken?: string | null,
 ): Promise<BathroomDataPrimaryFullRow> {
-  const client = getSupabaseClient();
+  const client = mutationSupabaseClient(accessToken);
   const rpc: IncrementBathroomExistenceVoteRpc = async (params) => {
-    const { data, error } = await client
+    if (accessToken != null && accessToken.length > 0) {
+      return rpcAsAccessToken<BathroomDataPrimaryFullRow>(
+        accessToken,
+        INCREMENT_BATHROOM_EXISTENCE_VOTE_RPC_NAME,
+        params,
+      );
+    }
+    const { data, error } = await client!
       .rpc(INCREMENT_BATHROOM_EXISTENCE_VOTE_RPC_NAME, params)
       .maybeSingle();
     return {
@@ -187,10 +286,18 @@ export async function incrementExistenceVoteCount(
 export async function incrementRatingCount(
   id: number,
   stars: number,
+  accessToken?: string | null,
 ): Promise<BathroomDataPrimaryFullRow> {
-  const client = getSupabaseClient();
+  const client = mutationSupabaseClient(accessToken);
   const rpc: IncrementBathroomRatingRpc = async (params) => {
-    const { data, error } = await client
+    if (accessToken != null && accessToken.length > 0) {
+      return rpcAsAccessToken<BathroomDataPrimaryFullRow>(
+        accessToken,
+        INCREMENT_BATHROOM_RATING_RPC_NAME,
+        params,
+      );
+    }
+    const { data, error } = await client!
       .rpc(INCREMENT_BATHROOM_RATING_RPC_NAME, params)
       .maybeSingle();
     return {
@@ -211,6 +318,55 @@ export async function incrementRatingCount(
     });
     return row;
   });
+}
+
+async function cacheMutatedBathroom(
+  id: number,
+  row: BathroomDataPrimaryFullRow,
+): Promise<BathroomDataPrimaryFullRow> {
+  await runReadCacheSideEffect(async () => {
+    const readCache = getReadCache();
+    await readCache.invalidateBathroom(id);
+    await readCache.cacheBathroomFullRow(row);
+    await readCache.invalidateBathroomH3Cell(
+      bathroomRowToH3Cell(row),
+      H3_BATHROOM_CELL_RESOLUTION,
+    );
+  });
+  return row;
+}
+
+export async function readOwnBathroomInteractionForAccount(
+  id: number,
+  accessToken: string,
+): Promise<OwnBathroomInteraction> {
+  const rpc: OwnBathroomInteractionRpc = async (params) =>
+    rpcAsAccessToken(accessToken, GET_OWN_BATHROOM_INTERACTION_RPC_NAME, params);
+  return readOwnBathroomInteraction(id, rpc);
+}
+
+export async function clearExistenceVote(
+  id: number,
+  accessToken: string,
+): Promise<BathroomDataPrimaryFullRow> {
+  const rpc: ClearOwnBathroomRpc = async (params) =>
+    rpcAsAccessToken(
+      accessToken,
+      CLEAR_OWN_BATHROOM_EXISTENCE_VOTE_RPC_NAME,
+      params,
+    );
+  return clearOwnBathroomExistenceVote(id, rpc).then((row) =>
+    cacheMutatedBathroom(id, row),
+  );
+}
+
+export async function clearRating(
+  id: number,
+  accessToken: string,
+): Promise<BathroomDataPrimaryFullRow> {
+  const rpc: ClearOwnBathroomRpc = async (params) =>
+    rpcAsAccessToken(accessToken, CLEAR_OWN_BATHROOM_RATING_RPC_NAME, params);
+  return clearOwnBathroomRating(id, rpc).then((row) => cacheMutatedBathroom(id, row));
 }
 
 export async function getInBounds(

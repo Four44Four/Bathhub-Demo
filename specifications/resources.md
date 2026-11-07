@@ -76,6 +76,18 @@
  - "public/bathhub_bathroom_pending_deletion.svg"
  - Is mono-colored
 
+# Account profile picture
+ - "public/account_pfp.svg"
+ - Is mono-colored
+
+# Visible icon
+ - "public/visible.svg"
+ - Is mono-colored
+
+# Nonvisible icon
+ - "public/nonvisible.svg"
+ - Is mono-colored
+
 # Regular font
  - "fonts/NotoSans-Regular.ttf"
 

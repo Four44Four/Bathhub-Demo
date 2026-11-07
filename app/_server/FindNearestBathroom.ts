@@ -13,9 +13,14 @@ export type FindNearestBathroomResult = NearestBathroomClientPayload;
 export async function findNearestBathroom(
   location: LatLong,
   constraints: FindNearestBathroomConstraints,
+  accessToken?: string | null,
 ): Promise<Errorable<FindNearestBathroomResult | null>> {
   try {
-    return { val: await bathroomDbFindNearest(location, constraints) };
+    const nearest =
+      accessToken != null && accessToken.length > 0
+        ? await bathroomDbFindNearest(location, constraints, accessToken)
+        : await bathroomDbFindNearest(location, constraints);
+    return { val: nearest };
   } catch (error: unknown) {
     return {
       val: null,

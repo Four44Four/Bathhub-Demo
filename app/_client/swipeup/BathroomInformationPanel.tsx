@@ -47,7 +47,11 @@ type BathroomInformationPanelProps = {
   widthPx: number;
   existenceValue: number;
   votingSide?: BathroomExistenceVoteSide | null;
+  voteOnCooldown?: boolean;
+  isClearingVote?: boolean;
   onVote?: (side: BathroomExistenceVoteSide) => void;
+  onClearVote?: () => void;
+  interactionLockMessage?: string | null;
 };
 
 function ExistenceVoteBar({
@@ -103,6 +107,7 @@ function ExistenceVoteBar({
 function ExistenceVoteButton({
   label,
   fillColor,
+  labelColor,
   isLoading,
   onClick,
   onHighlightChange,
@@ -110,6 +115,7 @@ function ExistenceVoteButton({
 }: {
   label: string;
   fillColor: string;
+  labelColor?: string;
   isLoading: boolean;
   onClick: (event: MouseEvent<HTMLButtonElement>) => void;
   onHighlightChange: (highlighted: boolean) => void;
@@ -129,10 +135,12 @@ function ExistenceVoteButton({
     Viewport2dButtonConsts.ANIMATION_DURATION_MS,
   );
 
-  const textColor = multiplyHexColorBrightness(
-    fillColor,
-    BathroomPageConsts.BATHROOM_EXISTENCE_VOTE_BUTTON_TEXT_COLOR_BRIGHTNESS_MULT_FACTOR,
-  );
+  const textColor =
+    labelColor ??
+    multiplyHexColorBrightness(
+      fillColor,
+      BathroomPageConsts.BATHROOM_EXISTENCE_VOTE_BUTTON_TEXT_COLOR_BRIGHTNESS_MULT_FACTOR,
+    );
 
   const { fillColor: resolvedFillColor, textColor: resolvedTextColor } =
     viewportButtonInteractColorsForBehavior(
@@ -216,7 +224,11 @@ export function BathroomInformationPanel({
   widthPx,
   existenceValue,
   votingSide = null,
+  voteOnCooldown = false,
+  isClearingVote = false,
   onVote,
+  onClearVote,
+  interactionLockMessage = null,
 }: BathroomInformationPanelProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
@@ -283,7 +295,7 @@ export function BathroomInformationPanel({
 
   useLayoutEffect(() => {
     measureExpandedContent();
-  }, [measureExpandedContent, existenceValue, widthPx]);
+  }, [measureExpandedContent, existenceValue, widthPx, voteOnCooldown, interactionLockMessage]);
 
   useEffect(() => {
     const node = expandedMeasureRef.current;
@@ -431,11 +443,29 @@ export function BathroomInformationPanel({
   const handleVoteClick = useCallback(
     (side: BathroomExistenceVoteSide) => (event: MouseEvent<HTMLButtonElement>) => {
       event.stopPropagation();
+      if (interactionLockMessage !== null) {
+        return;
+      }
       onVote?.(side);
     },
-    [onVote],
+    [interactionLockMessage, onVote],
   );
 
+  const editVoteHighlightChange = useCallback(
+    (highlighted: boolean) => setVoteButtonHighlighted("edit", highlighted),
+    [setVoteButtonHighlighted],
+  );
+
+  const handleClearVoteClick = useCallback(
+    (event: MouseEvent<HTMLButtonElement>) => {
+      event.stopPropagation();
+      if (interactionLockMessage !== null || isClearingVote) {
+        return;
+      }
+      onClearVote?.();
+    },
+    [interactionLockMessage, isClearingVote, onClearVote],
+  );
   const realVoteHighlightChange = useCallback(
     (highlighted: boolean) => setVoteButtonHighlighted("real", highlighted),
     [setVoteButtonHighlighted],
@@ -445,30 +475,55 @@ export function BathroomInformationPanel({
     [setVoteButtonHighlighted],
   );
 
+  const lockMessageStyle: CSSProperties = {
+    margin: 0,
+    color: BathroomPageConsts.TEXT_COLOR,
+    fontSize: 12,
+    lineHeight: 1.3,
+    textAlign: "center",
+  };
+
   const expandedContent = (
     <>
+      {interactionLockMessage !== null ? (
+        <p style={lockMessageStyle}>{interactionLockMessage}</p>
+      ) : null}
       <ExistenceVoteBar
         existenceValue={existenceValue}
         panelWidthPx={widthPx}
       />
-      <div style={buttonRowStyle}>
-        <ExistenceVoteButton
-          label="Real?"
-          fillColor={BathroomPageConsts.VERIFIED_COLOR}
-          isLoading={votingSide === "exists"}
-          onClick={handleVoteClick("exists")}
-          onHighlightChange={realVoteHighlightChange}
-          onPointerHoverSync={scheduleSyncPanelPointerHoverFromDom}
-        />
-        <ExistenceVoteButton
-          label="Gone?"
-          fillColor={BathroomPageConsts.NON_VERIFIED_COLOR}
-          isLoading={votingSide === "not_exists"}
-          onClick={handleVoteClick("not_exists")}
-          onHighlightChange={goneVoteHighlightChange}
-          onPointerHoverSync={scheduleSyncPanelPointerHoverFromDom}
-        />
-      </div>
+      {voteOnCooldown && interactionLockMessage === null ? (
+        <div style={buttonRowStyle}>
+          <ExistenceVoteButton
+            label="Edit vote"
+            fillColor={BathroomPageConsts.BUTTON_FILL_COLOR}
+            labelColor={BathroomPageConsts.TEXT_COLOR}
+            isLoading={isClearingVote}
+            onClick={handleClearVoteClick}
+            onHighlightChange={editVoteHighlightChange}
+            onPointerHoverSync={scheduleSyncPanelPointerHoverFromDom}
+          />
+        </div>
+      ) : (
+        <div style={buttonRowStyle}>
+          <ExistenceVoteButton
+            label="Real?"
+            fillColor={BathroomPageConsts.VERIFIED_COLOR}
+            isLoading={votingSide === "exists"}
+            onClick={handleVoteClick("exists")}
+            onHighlightChange={realVoteHighlightChange}
+            onPointerHoverSync={scheduleSyncPanelPointerHoverFromDom}
+          />
+          <ExistenceVoteButton
+            label="Gone?"
+            fillColor={BathroomPageConsts.NON_VERIFIED_COLOR}
+            isLoading={votingSide === "not_exists"}
+            onClick={handleVoteClick("not_exists")}
+            onHighlightChange={goneVoteHighlightChange}
+            onPointerHoverSync={scheduleSyncPanelPointerHoverFromDom}
+          />
+        </div>
+      )}
     </>
   );
 

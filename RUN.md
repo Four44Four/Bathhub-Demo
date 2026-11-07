@@ -13,6 +13,7 @@
  - Create a .env file with environment variables outlined [above](#environment-variables)
  - `npm install`
  - `npm run dev`
+    - If `SUPABASE_URL` and `REDIS_URL` are unreachable, try `./local-hosting/entrypoint.sh`
  - Go to http://localhost:3000
 
 # Production/Deployment server

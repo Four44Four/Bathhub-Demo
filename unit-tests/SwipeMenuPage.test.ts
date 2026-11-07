@@ -14,6 +14,10 @@ describe("SwipeMenuPage", () => {
     expect(swipeMenuPageContentMinHeightPx("bathroom", viewportWidthPx)).toBe(
       246,
     );
+    expect(swipeMenuPageContentMinHeightPx("login", viewportWidthPx)).toBe(280);
+    expect(swipeMenuPageContentMinHeightPx("account", viewportWidthPx)).toBe(
+      220,
+    );
   });
 
   test("swipeMenuShouldOpenMainMenuOnHandleDragMove opens when handle drag expands", () => {

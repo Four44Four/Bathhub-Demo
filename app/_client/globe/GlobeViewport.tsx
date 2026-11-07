@@ -33,6 +33,7 @@ import { installMapMarker } from "./MapMarker";
 import { installPath, type PathHandle } from "./Path";
 import { installOrbitCameraControls, type InstalledOrbitCameraControls } from "./Camera";
 import { globeLodVisualStateFromCameraHeightM } from "../pure/globe/GlobeLayerLod";
+import { cartoBasemapTileUrlWithApiKey } from "../pure/globe/CartoBasemapTileUrl";
 import { TwoToneTileProcessor } from "./TwoToneTileProcessor";
 import { dimensionCss } from "../pure/globe/GlobeViewportCss";
 import { shouldNotifyCameraMotionIdleOnSamplerSettled } from "../pure/globe/GlobeViewportCameraMotionIdle";
@@ -812,8 +813,12 @@ export function GlobeViewport({
 
       // High-zoom detail overlay (streets/buildings + names) that only fades in when close.
       // This is still 2D raster imagery (no 3D tiles/models).
+      // CARTO raster tiles require `?key=` or they return an "API KEY REQUIRED" watermark.
       const detailProvider = new SolidColorImageryProvider({
-        url: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
+        url: cartoBasemapTileUrlWithApiKey(
+          GlobeConsts.CARTO_LIGHT_ALL_TILE_URL_TEMPLATE,
+          process.env.CARTO_API_KEY ?? "",
+        ),
         subdomains: ["a", "b", "c", "d"],
         credit: "© OpenStreetMap contributors, © CARTO",
         minimumLevel: 0,

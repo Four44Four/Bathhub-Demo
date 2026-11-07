@@ -5,6 +5,7 @@ import { PathColorMode } from "./globe/Path";
 import { lerpHex } from "./pure/HexColor";
 import { SWIPE_MENU_DROP_SHADOW } from "./pure/Dropshadow";
 import { createMonoColorImage } from "./pure/Image";
+import { CARTO_LIGHT_ALL_TILE_URL_TEMPLATE } from "./pure/globe/CartoBasemapTileUrl";
 import {
   viewport2dButtonTextHeightPx,
   viewportCircularButtonOuterSidePx,
@@ -140,6 +141,12 @@ export const Globe = {
 
     WATER_COLOR: "#41457E",
     LAND_COLOR: "#323255",
+
+    /**
+     * Medium-zoom CARTO raster basemap template (key appended at runtime from
+     * {@link process.env.CARTO_API_KEY}).
+     */
+    CARTO_LIGHT_ALL_TILE_URL_TEMPLATE,
 
     ZOOM_SENS: 0.01,
     ROTATE_MIN: 0.00005,

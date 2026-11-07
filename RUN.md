@@ -4,6 +4,7 @@
  - SUPABASE_URL
  - SUPABASE_KEY
  - REDIS_URL
+ - CARTO_API_KEY
 
 # Run tests
  - `npm run unit-tests`

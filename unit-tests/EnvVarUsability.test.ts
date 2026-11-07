@@ -170,7 +170,7 @@ describe("collectServerEnvUsabilityIssues", () => {
       },
     );
 
-    expect(issues).toHaveLength(4);
+    expect(issues).toHaveLength(5);
     expect(checkOpenRouteServiceApiKey).not.toHaveBeenCalled();
     expect(checkSupabaseEndpoint).not.toHaveBeenCalled();
     expect(checkRedisEndpoint).not.toHaveBeenCalled();
@@ -191,6 +191,7 @@ describe("collectServerEnvUsabilityIssues", () => {
         SUPABASE_URL: "http://127.0.0.1:54331",
         SUPABASE_KEY: "supabase-key",
         REDIS_URL: "redis://127.0.0.1:6380",
+        CARTO_API_KEY: "carto-key",
       },
       {
         checkOpenRouteServiceApiKey,
@@ -221,6 +222,7 @@ describe("collectServerEnvUsabilityIssues", () => {
         SUPABASE_URL: "http://127.0.0.1:54331",
         SUPABASE_KEY: "supabase-key",
         REDIS_URL: "redis://127.0.0.1:6380",
+        CARTO_API_KEY: "carto-key",
       },
       stubCheckers,
     );
@@ -235,6 +237,7 @@ describe("assertServerEnvValid", () => {
     SUPABASE_URL: "http://127.0.0.1:54331",
     SUPABASE_KEY: "supabase-key",
     REDIS_URL: "redis://127.0.0.1:6380",
+    CARTO_API_KEY: "carto-key",
   };
 
   test("allows startup when only ORS is unreachable", async () => {

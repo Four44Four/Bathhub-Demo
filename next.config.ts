@@ -9,6 +9,10 @@ const crossOriginIsolationHeaders = [
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  // CARTO basemap keys are intended for browser tile URLs; inline for Cesium.
+  env: {
+    CARTO_API_KEY: process.env.CARTO_API_KEY ?? "",
+  },
   async headers() {
     return [
       {

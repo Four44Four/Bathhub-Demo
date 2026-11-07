@@ -16,11 +16,18 @@ export const SUPABASE_KEY_ENV = "SUPABASE_KEY" as const;
 /** Env var name for the Redis connection URL (see `getRedisUrl`). */
 export const REDIS_URL_ENV = "REDIS_URL" as const;
 
+/**
+ * Env var name for the CARTO basemaps API key (inlined into the client bundle
+ * via `next.config.ts` for Cesium tile URLs).
+ */
+export const CARTO_API_KEY_ENV = "CARTO_API_KEY" as const;
+
 export const REQUIRED_SERVER_ENV_VAR_NAMES = [
   OPEN_ROUTE_SERVICE_API_KEY_ENV,
   SUPABASE_URL_ENV,
   SUPABASE_KEY_ENV,
   REDIS_URL_ENV,
+  CARTO_API_KEY_ENV,
 ] as const;
 
 export function getMissingRequiredEnvVars(

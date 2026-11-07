@@ -1,4 +1,5 @@
 import {
+  CARTO_API_KEY_ENV,
   formatMissingRequiredEnvVarsMessage,
   getMissingRequiredEnvVars,
   OPEN_ROUTE_SERVICE_API_KEY_ENV,
@@ -15,6 +16,7 @@ describe("RequiredEnvVars", () => {
       SUPABASE_URL_ENV,
       SUPABASE_KEY_ENV,
       REDIS_URL_ENV,
+      CARTO_API_KEY_ENV,
     ]);
   });
 
@@ -25,6 +27,7 @@ describe("RequiredEnvVars", () => {
         [SUPABASE_URL_ENV]: "http://127.0.0.1:54331",
         [SUPABASE_KEY_ENV]: "supabase-key",
         [REDIS_URL_ENV]: "redis://127.0.0.1:6380",
+        [CARTO_API_KEY_ENV]: "carto-key",
       }),
     ).toEqual([]);
   });
@@ -36,6 +39,7 @@ describe("RequiredEnvVars", () => {
         [SUPABASE_URL_ENV]: "",
         [SUPABASE_KEY_ENV]: undefined,
         [REDIS_URL_ENV]: "redis://127.0.0.1:6380",
+        [CARTO_API_KEY_ENV]: "carto-key",
       }),
     ).toEqual([SUPABASE_URL_ENV, SUPABASE_KEY_ENV]);
   });

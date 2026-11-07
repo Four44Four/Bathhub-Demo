@@ -25,3 +25,24 @@ export function bathroomRatingControlMode(input: {
   }
   return "post";
 }
+
+/**
+ * The comment box is only for composing or actively editing.
+ * Idle rated state keeps Edit/Delete and hides the input.
+ */
+export function bathroomCommentInputVisible(ratingControl: "locked" | "edit" | "post"): boolean {
+  return ratingControl === "post";
+}
+
+/** Stored comment text for this account, or an empty string. */
+export function bathroomOwnCommentText(
+  comments: readonly { accountId: string; content: string }[],
+  accountId: string | null,
+): string {
+  if (accountId == null) {
+    return "";
+  }
+  return (
+    comments.find((comment) => comment.accountId === accountId)?.content ?? ""
+  );
+}

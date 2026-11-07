@@ -1,6 +1,11 @@
 import { type BathroomDataPrimaryFullRow } from "../../../_shared/BathroomDataPrimary";
 import { formatSupabaseError } from "../formatSupabaseError";
 import {
+  buildClearBathroomRatingRpcParams,
+  type ClearBathroomRatingChange,
+  type ClearBathroomRatingRpcParams,
+} from "./BathroomComments";
+import {
   bathroomReadByIdValidationError,
   parseBathroomDataPrimaryFullRow,
 } from "./ReadBathroomById";
@@ -39,6 +44,10 @@ export type OwnBathroomInteractionRpc = (
 ) => Promise<OwnBathroomInteractionRpcResult>;
 
 export type ClearOwnBathroomRpc = OwnBathroomInteractionRpc;
+
+export type ClearOwnBathroomRatingRpc = (
+  params: ClearBathroomRatingRpcParams,
+) => Promise<OwnBathroomInteractionRpcResult>;
 
 export function parseOwnBathroomInteraction(
   value: unknown,
@@ -142,7 +151,33 @@ export async function clearOwnBathroomExistenceVote(
 
 export async function clearOwnBathroomRating(
   id: number,
-  rpc: ClearOwnBathroomRpc,
+  rpc: ClearOwnBathroomRatingRpc,
+  change?: ClearBathroomRatingChange | null,
 ): Promise<BathroomDataPrimaryFullRow> {
-  return mutateOwnBathroom(id, CLEAR_BATHROOM_RATING_ERROR_CONTEXT, rpc);
+  const validationError = bathroomReadByIdValidationError(id);
+  if (validationError !== null) {
+    throw new Error(
+      formatSupabaseError(CLEAR_BATHROOM_RATING_ERROR_CONTEXT, validationError),
+    );
+  }
+
+  const { data, error } = await rpc(
+    buildClearBathroomRatingRpcParams(id, change),
+  );
+  if (error !== null) {
+    throw new Error(
+      formatSupabaseError(CLEAR_BATHROOM_RATING_ERROR_CONTEXT, error.message),
+    );
+  }
+
+  const parsed = parseBathroomDataPrimaryFullRow(data);
+  if (parsed === null) {
+    throw new Error(
+      formatSupabaseError(
+        CLEAR_BATHROOM_RATING_ERROR_CONTEXT,
+        "invalid bathroom row payload",
+      ),
+    );
+  }
+  return parsed;
 }

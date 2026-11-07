@@ -59,10 +59,12 @@ jest.mock("../app/_server/ors/ORSPathfind", () => ({
 import { POST as findNearestPost } from "../app/api/find-nearest-bathroom/route";
 import { GET as userSettingsDefaultDbGet } from "../app/api/user-settings/default-db/route";
 import {
+  bathroomDbClearRating,
   bathroomDbCreate,
   bathroomDbFindNearest,
   bathroomDbIncrementExistenceVote,
   bathroomDbIncrementRating,
+  bathroomDbListComments,
   bathroomDbReadById,
   bathroomDbReadInBounds,
   bathroomDbSyncInBounds,
@@ -203,6 +205,61 @@ describe("rate-limited server entrypoints", () => {
     });
     expect(mockTryEnforceServerRateLimit).toHaveBeenCalledWith("bathroom-update");
     expect(mockIncrementRatingCount).not.toHaveBeenCalled();
+  });
+
+  test("adding a comment with a rating still uses the bathroom-update limit", async () => {
+    const message =
+      "Rate limit exceeded: bathroom updates is limited to 20 requests per minute.";
+    mockTryEnforceServerRateLimit.mockResolvedValue({
+      allowed: false,
+      message,
+    });
+
+    await expect(
+      bathroomDbIncrementRating(1, 4, null, "left a note"),
+    ).resolves.toEqual({
+      val: null,
+      errorMsg: message,
+    });
+    expect(mockTryEnforceServerRateLimit).toHaveBeenCalledWith("bathroom-update");
+    expect(mockIncrementRatingCount).not.toHaveBeenCalled();
+  });
+
+  test("overwriting or deleting a comment still uses the bathroom-update limit", async () => {
+    const message =
+      "Rate limit exceeded: bathroom updates is limited to 20 requests per minute.";
+    mockTryEnforceServerRateLimit.mockResolvedValue({
+      allowed: false,
+      message,
+    });
+
+    await expect(
+      bathroomDbClearRating(1, null, {
+        comment: "edited",
+        deleteComment: false,
+      }),
+    ).resolves.toEqual({
+      val: null,
+      errorMsg: message,
+    });
+    expect(mockTryEnforceServerRateLimit).toHaveBeenCalledWith("bathroom-update");
+  });
+
+  test("listing comments uses the bathroom read-by-id limit", async () => {
+    const message =
+      "Rate limit exceeded: bathroom reading by id is limited to 70 requests per 30 seconds.";
+    mockTryEnforceServerRateLimit.mockResolvedValue({
+      allowed: false,
+      message,
+    });
+
+    await expect(bathroomDbListComments(1)).resolves.toEqual({
+      val: null,
+      errorMsg: message,
+    });
+    expect(mockTryEnforceServerRateLimit).toHaveBeenCalledWith(
+      "bathroom-read-by-id",
+    );
   });
 
   test("bathroom increment existence vote action enforces bathroom-update scope before DB work", async () => {

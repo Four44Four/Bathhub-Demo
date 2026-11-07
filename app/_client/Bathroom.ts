@@ -15,7 +15,15 @@ import {
 } from "../_shared/BathroomDataPrimary";
 import * as BathroomCrud from "../_server/database/bathroom-data-primary/Crud";
 import { type OwnBathroomInteraction } from "../_server/pure/bathroom-data-primary/OwnBathroomInteraction";
-import { currentAccountAccessToken } from "./accounts/accountAccessToken";
+import {
+  type BathroomComment,
+  type ClearBathroomRatingChange,
+  withOwnBathroomComment,
+} from "../_server/pure/bathroom-data-primary/BathroomComments";
+import {
+  currentAccountAccessToken,
+  currentAccountAccessTokenFresh,
+} from "./accounts/accountAccessToken";
 import { type GlobeViewportHandle } from "./globe/GlobeViewport";
 
 async function toErrorable<T>(run: () => Promise<T>): Promise<Errorable<T>> {
@@ -30,6 +38,8 @@ async function toErrorable<T>(run: () => Promise<T>): Promise<Errorable<T>> {
 }
 
 export type { OwnBathroomInteraction };
+export type { BathroomComment, ClearBathroomRatingChange };
+export { withOwnBathroomComment };
 
 export type BathroomViewportRenderHandler = (
   bathrooms: BathroomViewportEntry[],
@@ -126,18 +136,20 @@ export async function createBathroomAt(
   return BathroomCrud.bathroomDbCreate(
     latitude,
     longitude,
-    currentAccountAccessToken(),
+    await currentAccountAccessTokenFresh(),
   );
 }
 
 export async function incrementBathroomRating(
   id: number,
   stars: number,
+  comment?: string | null,
 ): Promise<Errorable<BathroomDataPrimaryFullRow>> {
   return BathroomCrud.bathroomDbIncrementRating(
     id,
     stars,
-    currentAccountAccessToken(),
+    await currentAccountAccessTokenFresh(),
+    comment,
   );
 }
 
@@ -148,7 +160,7 @@ export async function incrementBathroomExistenceVote(
   return BathroomCrud.bathroomDbIncrementExistenceVote(
     id,
     voteForExists,
-    currentAccountAccessToken(),
+    await currentAccountAccessTokenFresh(),
   );
 }
 
@@ -157,7 +169,7 @@ export async function readOwnBathroomInteraction(
 ): Promise<Errorable<OwnBathroomInteraction>> {
   return BathroomCrud.bathroomDbReadOwnInteraction(
     id,
-    currentAccountAccessToken(),
+    await currentAccountAccessTokenFresh(),
   );
 }
 
@@ -166,14 +178,29 @@ export async function clearBathroomExistenceVote(
 ): Promise<Errorable<BathroomDataPrimaryFullRow>> {
   return BathroomCrud.bathroomDbClearExistenceVote(
     id,
-    currentAccountAccessToken(),
+    await currentAccountAccessTokenFresh(),
   );
 }
 
 export async function clearBathroomRating(
   id: number,
+  change?: ClearBathroomRatingChange | null,
 ): Promise<Errorable<BathroomDataPrimaryFullRow>> {
-  return BathroomCrud.bathroomDbClearRating(id, currentAccountAccessToken());
+  return BathroomCrud.bathroomDbClearRating(
+    id,
+    await currentAccountAccessTokenFresh(),
+    change,
+  );
+}
+
+export async function listBathroomComments(
+  id: number,
+): Promise<Errorable<BathroomComment[]>> {
+  // Token is only used for per-account rate limiting; the RPC itself is public.
+  return BathroomCrud.bathroomDbListComments(
+    id,
+    await currentAccountAccessTokenFresh(),
+  );
 }
 
 export async function readBathroomsInBounds(

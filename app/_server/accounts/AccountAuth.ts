@@ -10,11 +10,18 @@ import {
   type AccountProfile,
 } from "../../_shared/accounts/AccountReputation";
 import { accountProfileFromOwnAccountRow } from "../../_shared/accounts/ProfileImageUpload";
+import { type PublicAccountProfile } from "../../_shared/accounts/PublicAccountProfile";
 import { type Errorable } from "../../_shared/Utils";
 import { registerAccountWithAuthClient } from "../pure/accounts/RegisterAccount";
+import {
+  GET_ACCOUNT_PROFILE_RPC_NAME,
+  readPublicAccountProfile as readPublicAccountProfileCore,
+  type GetAccountProfileRpc,
+} from "../pure/accounts/ReadPublicAccountProfile";
 import { uploadAccountProfilePicture } from "../pure/accounts/UploadProfilePicture";
 import { getSupabaseKey, getSupabaseUrl } from "../EnvironmentVariables";
 import { tryEnforceActorRateLimit } from "../rate-limit/enforceRateLimit";
+import { parsePostgrestRpcErrorMessage } from "../pure/postgrest/PostgrestRpc";
 
 const AUTH_OPTIONS = {
   persistSession: false,
@@ -41,10 +48,12 @@ function rpcErrorMessage(body: unknown, fallback: string): string {
 function profileFromRpcBody(
   accessToken: string,
   body: unknown,
+  refreshToken: string | null = null,
 ): AccountProfile | null {
   return accountProfileFromOwnAccountRow(
     accessToken,
     Array.isArray(body) ? body[0] : body,
+    refreshToken,
   );
 }
 
@@ -72,12 +81,13 @@ async function postAccountRpc(
 
 async function readOwnAccount(
   accessToken: string,
+  refreshToken: string | null = null,
 ): Promise<Errorable<AccountProfile>> {
   const response = await postAccountRpc(accessToken, "get_own_account", {});
   if (!response.ok) {
     return { val: null, errorMsg: ACCOUNT_REQUIRED_ERROR };
   }
-  const profile = profileFromRpcBody(accessToken, response.body);
+  const profile = profileFromRpcBody(accessToken, response.body, refreshToken);
   if (profile == null) {
     return { val: null, errorMsg: ACCOUNT_REQUIRED_ERROR };
   }
@@ -88,6 +98,7 @@ async function writeOwnProfilePicture(
   accessToken: string,
   mimeType: string,
   imageBase64: string,
+  refreshToken: string | null = null,
 ): Promise<Errorable<AccountProfile>> {
   const response = await postAccountRpc(accessToken, "set_own_profile_picture", {
     p_mime: mimeType,
@@ -99,7 +110,7 @@ async function writeOwnProfilePicture(
       errorMsg: rpcErrorMessage(response.body, "Image upload failed"),
     };
   }
-  const profile = profileFromRpcBody(accessToken, response.body);
+  const profile = profileFromRpcBody(accessToken, response.body, refreshToken);
   if (profile == null) {
     return { val: null, errorMsg: ACCOUNT_REQUIRED_ERROR };
   }
@@ -108,11 +119,12 @@ async function writeOwnProfilePicture(
 
 async function sessionProfile(
   accessToken: string | undefined,
+  refreshToken: string | null = null,
 ): Promise<Errorable<AccountProfile>> {
   if (accessToken == null || accessToken.length === 0) {
     return { val: null, errorMsg: ACCOUNT_REQUIRED_ERROR };
   }
-  return readOwnAccount(accessToken);
+  return readOwnAccount(accessToken, refreshToken);
 }
 
 export async function registerAccount(
@@ -146,6 +158,7 @@ export async function registerAccount(
         });
         return {
           accessToken: signedUp.data.session?.access_token ?? null,
+          refreshToken: signedUp.data.session?.refresh_token ?? null,
           errorMessage: signedUp.error?.message ?? null,
         };
       },
@@ -156,6 +169,7 @@ export async function registerAccount(
         });
         return {
           accessToken: signedIn.data.session?.access_token ?? null,
+          refreshToken: signedIn.data.session?.refresh_token ?? null,
           errorMessage: signedIn.error?.message ?? null,
         };
       },
@@ -194,35 +208,123 @@ export async function loginAccount(
     };
   }
 
-  return sessionProfile(signedIn.data.session.access_token);
+  return sessionProfile(
+    signedIn.data.session.access_token,
+    signedIn.data.session.refresh_token ?? null,
+  );
+}
+
+export async function refreshAccountSession(
+  refreshToken: string,
+): Promise<Errorable<AccountProfile>> {
+  if (refreshToken.trim().length === 0) {
+    return { val: null, errorMsg: ACCOUNT_REQUIRED_ERROR };
+  }
+
+  const rateLimit = await tryEnforceActorRateLimit("account-login");
+  if (!rateLimit.allowed) {
+    return { val: null, errorMsg: rateLimit.message };
+  }
+
+  const supabase = authClient();
+  const refreshed = await supabase.auth.refreshSession({
+    refresh_token: refreshToken,
+  });
+  if (refreshed.error !== null || refreshed.data.session == null) {
+    return {
+      val: null,
+      errorMsg: refreshed.error?.message ?? ACCOUNT_REQUIRED_ERROR,
+    };
+  }
+
+  return sessionProfile(
+    refreshed.data.session.access_token,
+    refreshed.data.session.refresh_token ?? refreshToken,
+  );
 }
 
 export async function readAccountProfile(
   accessToken: string,
+  refreshToken: string | null = null,
 ): Promise<Errorable<AccountProfile>> {
   const rateLimit = await tryEnforceActorRateLimit("account-profile", accessToken);
   if (!rateLimit.allowed) {
     return { val: null, errorMsg: rateLimit.message };
   }
-  return sessionProfile(accessToken);
+  return sessionProfile(accessToken, refreshToken);
+}
+
+export async function readPublicAccountProfile(
+  accountId: string,
+  accessToken?: string | null,
+): Promise<Errorable<PublicAccountProfile>> {
+  const rateLimit = await tryEnforceActorRateLimit(
+    "account-profile",
+    accessToken,
+  );
+  if (!rateLimit.allowed) {
+    return { val: null, errorMsg: rateLimit.message };
+  }
+
+  try {
+    const rpc: GetAccountProfileRpc = async (params) => {
+      const response = await fetch(
+        `${getSupabaseUrl()}/rest/v1/rpc/${GET_ACCOUNT_PROFILE_RPC_NAME}`,
+        {
+          method: "POST",
+          headers: {
+            apikey: getSupabaseKey(),
+            Authorization: `Bearer ${
+              accessToken != null && accessToken.length > 0
+                ? accessToken
+                : getSupabaseKey()
+            }`,
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify(params),
+        },
+      );
+      const rawBody: unknown = await response.json().catch(() => null);
+      if (!response.ok) {
+        return {
+          data: null,
+          error: {
+            message: parsePostgrestRpcErrorMessage(
+              rawBody,
+              response.statusText,
+            ),
+          },
+        };
+      }
+      return { data: rawBody, error: null };
+    };
+    return { val: await readPublicAccountProfileCore(accountId, rpc) };
+  } catch (error: unknown) {
+    return {
+      val: null,
+      errorMsg: error instanceof Error ? error.message : String(error),
+    };
+  }
 }
 
 export async function setAccountProfilePicture(
   accessToken: string,
   mimeType: string,
   imageBase64: string,
+  refreshToken: string | null = null,
 ): Promise<Errorable<AccountProfile>> {
   return uploadAccountProfilePicture(
     { accessToken, mimeType, imageBase64 },
     {
       readLoggedInAccount: async (token) => {
-        const profile = await sessionProfile(token);
+        const profile = await sessionProfile(token, refreshToken);
         return profile.val;
       },
       enforceRateLimit: async () =>
         tryEnforceActorRateLimit("account-image-upload", accessToken),
       storeProfilePicture: (_profile, mime, encoded) =>
-        writeOwnProfilePicture(accessToken, mime, encoded),
+        writeOwnProfilePicture(accessToken, mime, encoded, refreshToken),
     },
   );
 }

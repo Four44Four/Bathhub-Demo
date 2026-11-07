@@ -17,6 +17,7 @@ import { useAlertSystem } from "../viewport2d/AlertSystem";
 import { useUserSettings } from "../user-settings/UserSettingsContext";
 import { SwipeUpMainMenuButton } from "./SwipeUpMainMenuButton";
 import { useSwipeMenuPage } from "./SwipeMenuPageContext";
+import { useViewedAccount } from "./ViewedAccountContext";
 import { useSwipeMenuViewport } from "./SwipeMenuShell";
 
 const EDIT_SETTINGS_ICON = createMonoColorImage(
@@ -39,6 +40,7 @@ export function MainMenuPage() {
   const { enterAddBathroomMode } = useAddBathroomMode();
   const { profile } = useAccountSession();
   const { navigateToPage } = useSwipeMenuPage();
+  const { openOwnAccountProfile } = useViewedAccount();
   const { showImportantAlert } = useAlertSystem();
   const accountLabel = profile === null ? "Login" : "Account";
   const rowItems = SWIPE_UP_MAIN_MENU_DEFAULT_ROW_ITEMS.map((item, index) =>
@@ -93,7 +95,11 @@ export function MainMenuPage() {
         text={accountLabel}
         image={ACCOUNT_ICON}
         onClick={() => {
-          navigateToPage(profile === null ? "login" : "account");
+          if (profile === null) {
+            navigateToPage("login");
+            return;
+          }
+          openOwnAccountProfile();
         }}
       />
     </>

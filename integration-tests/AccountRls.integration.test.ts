@@ -163,6 +163,7 @@ describe("account data interaction policies", () => {
           }
           return {
             accessToken: signedUp.data.session?.access_token ?? null,
+            refreshToken: signedUp.data.session?.refresh_token ?? null,
             errorMessage: signedUp.error?.message ?? null,
           };
         },
@@ -173,11 +174,12 @@ describe("account data interaction policies", () => {
           });
           return {
             accessToken: signedIn.data.session?.access_token ?? null,
+            refreshToken: signedIn.data.session?.refresh_token ?? null,
             errorMessage: signedIn.error?.message ?? null,
           };
         },
       },
-      async (accessToken): Promise<Errorable<AccountProfile>> => {
+      async (accessToken, refreshToken): Promise<Errorable<AccountProfile>> => {
         const profile = await userRpc(accessToken, "get_own_account", {});
         if (!profile.ok) {
           return { val: null, errorMsg: errorMessage(profile.body) };
@@ -185,6 +187,7 @@ describe("account data interaction policies", () => {
         const parsed = accountProfileFromOwnAccountRow(
           accessToken,
           Array.isArray(profile.body) ? profile.body[0] : profile.body,
+          refreshToken,
         );
         if (parsed == null) {
           return { val: null, errorMsg: "missing account profile" };
@@ -651,6 +654,158 @@ describe("account data interaction policies", () => {
     expect(await reputationOf(account.userId)).toBe(1);
   });
 
+  test("rating comments use the bathroom update limit and cannot be written directly", async () => {
+    const account = await createAccount("comment");
+    const other = await createAccount("commentb");
+    const bathroom = await createBathroom();
+    const blank = await userRpc(
+      account.accessToken,
+      "increment_bathroom_data_primary_rating_count",
+      { p_id: bathroom.id, p_stars: 3, p_comment: "   " },
+    );
+    expect(blank.ok).toBe(true);
+    const blankList = await anonRpc("list_bathroom_data_comments", {
+      p_id: bathroom.id,
+    });
+    expect(blankList.ok).toBe(true);
+    expect(blankList.body).toEqual([]);
+
+    const posted = await userRpc(
+      account.accessToken,
+      "increment_bathroom_data_primary_rating_count",
+      { p_id: bathroom.id, p_stars: 4, p_comment: "  clean and open  " },
+    );
+    expect(posted.ok).toBe(true);
+    const listed = await anonRpc("list_bathroom_data_comments", {
+      p_id: bathroom.id,
+    });
+    expect(listed.body).toEqual([
+      {
+        account_id: account.userId,
+        content: "clean and open",
+        rating_stars: 4,
+        profile_picture_mime: null,
+        profile_picture_base64: null,
+      },
+    ]);
+    const profileLookup = await anonRpc("get_account_profile", {
+      p_id: account.userId,
+    });
+    expect(profileLookup.ok).toBe(true);
+    const profileRow = (
+      Array.isArray(profileLookup.body) ? profileLookup.body[0] : profileLookup.body
+    ) as { id: string; username: string };
+    expect(profileRow.id).toBe(account.userId);
+    expect(profileRow.username).toBe(account.username);
+
+    const { url, key } = requireLocalSupabaseEnv();
+    const direct = await fetch(`${url}/rest/v1/bathroom_data_comments`, {
+      method: "POST",
+      headers: {
+        apikey: key,
+        Authorization: `Bearer ${account.accessToken}`,
+        "Content-Type": "application/json",
+        Prefer: "return=minimal",
+      },
+      body: JSON.stringify({
+        bathroom_id: bathroom.id,
+        account_id: account.userId,
+        content: "bypass",
+      }),
+    });
+    expect(direct.ok).toBe(false);
+    const directWriter = await userRpc(
+      account.accessToken,
+      "write_bathroom_data_comment",
+      {
+        p_bathroom_id: bathroom.id,
+        p_account_id: account.userId,
+        p_comment: "bypass",
+        p_delete_comment: false,
+      },
+    );
+    expect(directWriter.ok).toBe(false);
+
+    const edited = await userRpc(account.accessToken, "clear_own_bathroom_rating", {
+      p_id: bathroom.id,
+      p_comment: "updated note",
+    });
+    expect(edited.ok).toBe(true);
+    const afterEditCounts = await adminClient()
+      .from("bathroom_data_primary")
+      .select("rating_4_count")
+      .eq("id", bathroom.id)
+      .single();
+    expect(afterEditCounts.data).toEqual({ rating_4_count: 0 });
+    const afterEdit = await anonRpc("list_bathroom_data_comments", {
+      p_id: bathroom.id,
+    });
+    expect(afterEdit.body).toEqual([
+      {
+        account_id: account.userId,
+        content: "updated note",
+        rating_stars: null,
+        profile_picture_mime: null,
+        profile_picture_base64: null,
+      },
+    ]);
+
+    const otherPost = await userRpc(
+      other.accessToken,
+      "increment_bathroom_data_primary_rating_count",
+      { p_id: bathroom.id, p_stars: 2, p_comment: "second" },
+    );
+    expect(otherPost.ok).toBe(true);
+    const deleted = await userRpc(account.accessToken, "clear_own_bathroom_rating", {
+      p_id: bathroom.id,
+      p_delete_comment: true,
+    });
+    expect(deleted.ok).toBe(true);
+    const remaining = await anonRpc("list_bathroom_data_comments", {
+      p_id: bathroom.id,
+    });
+    const remainingRows = remaining.body as Array<{ account_id: string; content: string }>;
+    expect(remainingRows).toEqual([
+      {
+        account_id: other.userId,
+        content: "second",
+        rating_stars: 2,
+        profile_picture_mime: null,
+        profile_picture_base64: null,
+      },
+    ]);
+
+    const limited = await createAccount("commentlimit");
+    const limit = SERVER_RATE_LIMITS.bathroomUpdate.perMinute;
+    const seeded = await adminClient()
+      .from("account_bathroom_update_events")
+      .insert(
+        Array.from({ length: limit.maxRequests }, () => ({
+          account_id: limited.userId,
+        })),
+      );
+    expect(seeded.error).toBeNull();
+    const blockedBathroom = await createBathroom();
+    const blocked = await userRpc(
+      limited.accessToken,
+      "increment_bathroom_data_primary_rating_count",
+      { p_id: blockedBathroom.id, p_stars: 5, p_comment: "should not save" },
+    );
+    expect(blocked.ok).toBe(false);
+    expect(errorMessage(blocked.body)).toContain(
+      formatRateLimitExceededMessage(
+        "bathroom-update",
+        limit.windowSeconds,
+        limit.maxRequests,
+      ),
+    );
+    const blockedComments = await adminClient()
+      .from("bathroom_data_comments")
+      .select("content")
+      .eq("bathroom_id", blockedBathroom.id);
+    expect(blockedComments.data).toEqual([]);
+  });
+
   test("an expired vote cooldown still does not stack the same direction", async () => {
     const account = await createAccount("cooldown");
     const bathroom = await createBathroom();
@@ -772,6 +927,7 @@ describe("account data interaction policies", () => {
       "account_bathroom_existence_votes",
       "account_bathroom_ratings",
       "account_bathroom_update_events",
+      "bathroom_data_comments",
     ];
     for (const table of privateTables) {
       for (const token of [key, account.accessToken]) {

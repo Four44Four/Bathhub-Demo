@@ -32,6 +32,8 @@ export type AccountProfile = {
   username: string;
   reputationScore: number;
   accessToken: string;
+  /** Refresh token for renewing {@link accessToken}; null for legacy stored sessions. */
+  refreshToken: string | null;
   /** Data URL of the stored profile picture, or null when the default icon is used. */
   profilePictureDataUrl: string | null;
 };

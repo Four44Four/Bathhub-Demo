@@ -1,4 +1,5 @@
 import { type BathroomDataPrimaryFullRow } from "../../../_shared/BathroomDataPrimary";
+import { normalizeBathroomCommentContent } from "../../../_shared/bathroom/BathroomCommentContent";
 import { formatSupabaseError } from "../formatSupabaseError";
 import { parseBathroomDataPrimaryFullRow } from "./ReadBathroomById";
 
@@ -17,6 +18,7 @@ export const INCREMENT_BATHROOM_INVALID_STARS_MESSAGE =
 export type IncrementBathroomRatingRpcParams = {
   p_id: number;
   p_stars: number;
+  p_comment?: string;
 };
 
 export type IncrementBathroomRatingRpcResult = {
@@ -44,17 +46,25 @@ export function incrementBathroomRatingValidationError(
 export function buildIncrementBathroomRatingRpcParams(
   id: number,
   stars: number,
+  comment?: string | null,
 ): IncrementBathroomRatingRpcParams {
-  return {
+  const params: IncrementBathroomRatingRpcParams = {
     p_id: id,
     p_stars: stars,
   };
+  const storedComment =
+    comment == null ? null : normalizeBathroomCommentContent(comment);
+  if (storedComment !== null) {
+    params.p_comment = storedComment;
+  }
+  return params;
 }
 
 export async function incrementBathroomRating(
   id: number,
   stars: number,
   rpc: IncrementBathroomRatingRpc,
+  comment?: string | null,
 ): Promise<BathroomDataPrimaryFullRow> {
   const validationError = incrementBathroomRatingValidationError(id, stars);
   if (validationError !== null) {
@@ -63,7 +73,9 @@ export async function incrementBathroomRating(
     );
   }
 
-  const { data, error } = await rpc(buildIncrementBathroomRatingRpcParams(id, stars));
+  const { data, error } = await rpc(
+    buildIncrementBathroomRatingRpcParams(id, stars, comment),
+  );
 
   if (error !== null) {
     throw new Error(

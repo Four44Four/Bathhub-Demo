@@ -32,6 +32,7 @@ function profile(): AccountProfile {
     username: "ada_user",
     reputationScore: 0,
     accessToken: "token",
+    refreshToken: "refresh",
     profilePictureDataUrl: null,
   };
 }
@@ -145,6 +146,7 @@ describe("profile image upload checks", () => {
     });
     expect(parsed).toEqual({
       ...profile(),
+      refreshToken: null,
       reputationScore: 4,
       profilePictureDataUrl: "data:image/png;base64,YQ==",
     });

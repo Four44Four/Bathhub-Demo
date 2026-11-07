@@ -88,6 +88,7 @@ export function accountPageShowsChangeImageButton(
 export function accountProfileFromOwnAccountRow(
   accessToken: string,
   row: unknown,
+  refreshToken: string | null = null,
 ): AccountProfile | null {
   if (typeof row !== "object" || row === null) {
     return null;
@@ -116,6 +117,7 @@ export function accountProfileFromOwnAccountRow(
       : null;
   return {
     accessToken,
+    refreshToken,
     accountId: record.id,
     username: record.username,
     reputationScore: record.reputation_score,

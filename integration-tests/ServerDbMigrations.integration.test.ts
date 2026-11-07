@@ -14,9 +14,9 @@ const NON_RERUNNABLE_MIGRATION_FILENAMES = new Set([
   "20260717000000_bathroom_data_primary_existence_votes.sql",
   "20260718000000_bathroom_data_primary_increment_existence_vote_rpc.sql",
 ]);
-const EXPECTED_LATEST_SCHEMA_VERSION = 26;
+const EXPECTED_LATEST_SCHEMA_VERSION = 28;
 const EXPECTED_RATING_COLUMNS = 5;
-const EXPECTED_RPC_COUNT = 13;
+const EXPECTED_RPC_COUNT = 15;
 
 type ServerSchemaState = {
   schemaVersionRows: number;
@@ -42,6 +42,17 @@ type ServerSchemaState = {
   profilePictureColumnCount: number;
   anonCanSetProfilePicture: boolean;
   authenticatedCanSetProfilePicture: boolean;
+  commentTableCount: number;
+  anonCanInsertComments: boolean;
+  authenticatedCanInsertComments: boolean;
+  anonCanSelectComments: boolean;
+  authenticatedCanSelectComments: boolean;
+  anonCanListComments: boolean;
+  authenticatedCanListComments: boolean;
+  anonCanWriteCommentDirectly: boolean;
+  authenticatedCanWriteCommentDirectly: boolean;
+  anonCanGetAccountProfile: boolean;
+  authenticatedCanGetAccountProfile: boolean;
 };
 
 function requireLocalPostgresUrl(): string {
@@ -152,7 +163,9 @@ function readServerSchemaState(databaseUrl: string): ServerSchemaState {
               'delete_expired_pending_deletion_bathrooms',
               'clear_own_bathroom_existence_vote',
               'clear_own_bathroom_rating',
-              'get_own_bathroom_interaction'
+              'get_own_bathroom_interaction',
+              'list_bathroom_data_comments',
+              'get_account_profile'
             )
         ),
       'authenticatedCanDeleteBathrooms',
@@ -204,7 +217,46 @@ function readServerSchemaState(databaseUrl: string): ServerSchemaState {
       'anonCanSetProfilePicture',
         has_function_privilege('anon', 'public.set_own_profile_picture(text, text)', 'EXECUTE'),
       'authenticatedCanSetProfilePicture',
-        has_function_privilege('authenticated', 'public.set_own_profile_picture(text, text)', 'EXECUTE')
+        has_function_privilege('authenticated', 'public.set_own_profile_picture(text, text)', 'EXECUTE'),
+      'commentTableCount',
+        (
+          SELECT COUNT(*)
+          FROM information_schema.tables
+          WHERE table_schema = 'public'
+            AND table_name = 'bathroom_data_comments'
+        ),
+      'anonCanInsertComments',
+        has_table_privilege('anon', 'public.bathroom_data_comments', 'INSERT'),
+      'authenticatedCanInsertComments',
+        has_table_privilege('authenticated', 'public.bathroom_data_comments', 'INSERT'),
+      'anonCanSelectComments',
+        has_table_privilege('anon', 'public.bathroom_data_comments', 'SELECT'),
+      'authenticatedCanSelectComments',
+        has_table_privilege('authenticated', 'public.bathroom_data_comments', 'SELECT'),
+      'anonCanListComments',
+        has_function_privilege('anon', 'public.list_bathroom_data_comments(bigint)', 'EXECUTE'),
+      'authenticatedCanListComments',
+        has_function_privilege('authenticated', 'public.list_bathroom_data_comments(bigint)', 'EXECUTE'),
+      'anonCanWriteCommentDirectly',
+        has_function_privilege(
+          'anon',
+          'public.write_bathroom_data_comment(bigint, uuid, text, boolean)',
+          'EXECUTE'
+        ),
+      'authenticatedCanWriteCommentDirectly',
+        has_function_privilege(
+          'authenticated',
+          'public.write_bathroom_data_comment(bigint, uuid, text, boolean)',
+          'EXECUTE'
+        ),
+      'anonCanGetAccountProfile',
+        has_function_privilege('anon', 'public.get_account_profile(uuid)', 'EXECUTE'),
+      'authenticatedCanGetAccountProfile',
+        has_function_privilege(
+          'authenticated',
+          'public.get_account_profile(uuid)',
+          'EXECUTE'
+        )
     )::text;
   `;
   const raw = runPsql(databaseUrl, [
@@ -244,6 +296,8 @@ describe("server PostgreSQL migration reruns", () => {
       "20260801000000_account_rls_and_reputation.sql",
       "20260802000000_account_vote_rating_rules.sql",
       "20260803000000_account_profile_picture.sql",
+      "20260804000000_bathroom_data_comments.sql",
+      "20260805000000_bathroom_comment_profile_pictures.sql",
     ]);
 
     const before = readServerSchemaState(databaseUrl);
@@ -271,6 +325,17 @@ describe("server PostgreSQL migration reruns", () => {
       profilePictureColumnCount: 2,
       anonCanSetProfilePicture: false,
       authenticatedCanSetProfilePicture: true,
+      commentTableCount: 1,
+      anonCanInsertComments: false,
+      authenticatedCanInsertComments: false,
+      anonCanSelectComments: false,
+      authenticatedCanSelectComments: false,
+      anonCanListComments: true,
+      authenticatedCanListComments: true,
+      anonCanWriteCommentDirectly: false,
+      authenticatedCanWriteCommentDirectly: false,
+      anonCanGetAccountProfile: true,
+      authenticatedCanGetAccountProfile: true,
     });
 
     rerunMigrations(databaseUrl, migrationPaths);

@@ -47,6 +47,18 @@ describe("IncrementBathroomRating pure logic", () => {
       p_stars: 4,
     });
   });
+
+  test("buildIncrementBathroomRatingRpcParams keeps a trimmed comment and drops a blank one", () => {
+    expect(buildIncrementBathroomRatingRpcParams(42, 4, "  hello  ")).toEqual({
+      p_id: 42,
+      p_stars: 4,
+      p_comment: "hello",
+    });
+    expect(buildIncrementBathroomRatingRpcParams(42, 4, "   ")).toEqual({
+      p_id: 42,
+      p_stars: 4,
+    });
+  });
 });
 
 describe("incrementBathroomRating", () => {

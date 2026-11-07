@@ -1,5 +1,7 @@
 import {
+  bathroomCommentInputVisible,
   bathroomExistenceVoteControlMode,
+  bathroomOwnCommentText,
   bathroomRatingControlMode,
 } from "../app/_client/pure/bathroom/BathroomAccountControls";
 
@@ -44,5 +46,26 @@ describe("bathroom account controls", () => {
         hasRating: false,
       }),
     ).toBe("post");
+  });
+
+  test("the comment box stays hidden until the user is composing or editing", () => {
+    expect(bathroomCommentInputVisible("edit")).toBe(false);
+    expect(bathroomCommentInputVisible("locked")).toBe(false);
+    expect(bathroomCommentInputVisible("post")).toBe(true);
+  });
+
+  test("reads this account's stored comment text", () => {
+    expect(
+      bathroomOwnCommentText(
+        [
+          { accountId: "a", content: "first" },
+          { accountId: "b", content: "second" },
+        ],
+        "b",
+      ),
+    ).toBe("second");
+    expect(bathroomOwnCommentText([{ accountId: "a", content: "first" }], null)).toBe(
+      "",
+    );
   });
 });

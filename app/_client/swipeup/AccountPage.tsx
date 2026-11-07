@@ -3,8 +3,11 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 
 import { accountPageShowsChangeImageButton } from "../../_shared/accounts/ProfileImageUpload";
+import { type PublicAccountProfile } from "../../_shared/accounts/PublicAccountProfile";
 import { AccountPage as AccountPageConsts } from "../ComponentConstants";
 import { useAccountSession } from "../accounts/AccountSessionContext";
+import { currentAccountAccessToken } from "../accounts/accountAccessToken";
+import { readPublicAccountProfile } from "../../_server/accounts/AccountAuth";
 import {
   accountProfilePictureImage,
   bytesToBase64,
@@ -18,20 +21,84 @@ import { reputationBarBlendT } from "../../_shared/accounts/AccountReputation";
 import { TextWeight } from "../Utils";
 import { useAlertSystem } from "../viewport2d/AlertSystem";
 import { Button } from "../viewport2d/Button";
+import { useViewedAccount } from "./ViewedAccountContext";
 
 /** Account data page (see specifications/swipe_up_menu/account_page.md). */
 export function AccountPage() {
   const { profile, refreshProfile, setProfilePicture } = useAccountSession();
+  const { viewedAccountId } = useViewedAccount();
   const reportRateLimitViolation = useReportRateLimitViolation();
   const { showImportantAlert } = useAlertSystem();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [viewedProfile, setViewedProfile] = useState<PublicAccountProfile | null>(
+    null,
+  );
+
+  const resolvedAccountId = viewedAccountId ?? profile?.accountId ?? null;
+  const viewingOwnAccount = accountPageShowsChangeImageButton(
+    resolvedAccountId,
+    profile?.accountId ?? null,
+  );
 
   useEffect(() => {
-    void refreshProfile();
-  }, [refreshProfile]);
+    if (viewingOwnAccount) {
+      void refreshProfile();
+      setViewedProfile(null);
+      return;
+    }
+    if (resolvedAccountId == null) {
+      setViewedProfile(null);
+      return;
+    }
 
-  const reputationScore = profile?.reputationScore ?? 0;
+    let cancelled = false;
+    void (async () => {
+      const result = await readPublicAccountProfile(
+        resolvedAccountId,
+        currentAccountAccessToken(),
+      );
+      if (cancelled) {
+        return;
+      }
+      if (reportRateLimitViolation(result.errorMsg)) {
+        return;
+      }
+      if (result.val == null) {
+        showImportantAlert({
+          message: "Error occurred while looking up account",
+          okLabel: "Ok",
+          positive: false,
+        });
+        setViewedProfile(null);
+        return;
+      }
+      setViewedProfile(result.val);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    refreshProfile,
+    reportRateLimitViolation,
+    resolvedAccountId,
+    showImportantAlert,
+    viewingOwnAccount,
+  ]);
+
+  const displayProfile: PublicAccountProfile | null = viewingOwnAccount
+    ? profile == null
+      ? null
+      : {
+          accountId: profile.accountId,
+          username: profile.username,
+          reputationScore: profile.reputationScore,
+          profilePictureDataUrl: profile.profilePictureDataUrl,
+        }
+    : viewedProfile;
+
+  const reputationScore = displayProfile?.reputationScore ?? 0;
   const barColor = lerpHex(
     AccountPageConsts.LOWEST_REPUTATION_COLOR,
     AccountPageConsts.HIGHEST_REPUTATION_COLOR,
@@ -42,14 +109,11 @@ export function AccountPage() {
     ),
   );
   const picture = accountProfilePictureImage(
-    profile?.profilePictureDataUrl ?? null,
+    displayProfile?.profilePictureDataUrl ?? null,
     AccountPageConsts.PROFILE_PICTURE,
   );
   const pictureMonoColor = resolveImageMonoColor(picture);
-  const showChangeImage = accountPageShowsChangeImageButton(
-    profile?.accountId ?? null,
-    profile?.accountId ?? null,
-  );
+  const showChangeImage = viewingOwnAccount;
 
   async function uploadSelectedFile(file: File) {
     setIsUploading(true);
@@ -110,7 +174,7 @@ export function AccountPage() {
                 : blackMonoIconCssFilter(pictureMonoColor),
           }}
         />
-        <div className={TextWeight.BOLD}>{profile?.username ?? ""}</div>
+        <div className={TextWeight.BOLD}>{displayProfile?.username ?? ""}</div>
         {showChangeImage ? (
           <div
             style={{

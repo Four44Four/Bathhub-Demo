@@ -49,6 +49,13 @@ import {
   type IncrementBathroomRatingRpc,
 } from "../../pure/bathroom-data-primary/IncrementBathroomRating";
 import {
+  LIST_BATHROOM_COMMENTS_RPC_NAME,
+  listBathroomComments,
+  type BathroomComment,
+  type ClearBathroomRatingChange,
+  type ListBathroomCommentsRpc,
+} from "../../pure/bathroom-data-primary/BathroomComments";
+import {
   INCREMENT_BATHROOM_EXISTENCE_VOTE_RPC_NAME,
   incrementBathroomExistenceVote,
   type BathroomExistenceVoteSide,
@@ -61,6 +68,7 @@ import {
   clearOwnBathroomExistenceVote,
   clearOwnBathroomRating,
   readOwnBathroomInteraction,
+  type ClearOwnBathroomRatingRpc,
   type ClearOwnBathroomRpc,
   type OwnBathroomInteraction,
   type OwnBathroomInteractionRpc,
@@ -287,6 +295,7 @@ export async function incrementRatingCount(
   id: number,
   stars: number,
   accessToken?: string | null,
+  comment?: string | null,
 ): Promise<BathroomDataPrimaryFullRow> {
   const client = mutationSupabaseClient(accessToken);
   const rpc: IncrementBathroomRatingRpc = async (params) => {
@@ -306,7 +315,7 @@ export async function incrementRatingCount(
     };
   };
 
-  return incrementBathroomRating(id, stars, rpc).then(async (row) => {
+  return incrementBathroomRating(id, stars, rpc, comment).then(async (row) => {
     await runReadCacheSideEffect(async () => {
       const readCache = getReadCache();
       await readCache.invalidateBathroom(id);
@@ -363,10 +372,30 @@ export async function clearExistenceVote(
 export async function clearRating(
   id: number,
   accessToken: string,
+  change?: ClearBathroomRatingChange | null,
 ): Promise<BathroomDataPrimaryFullRow> {
-  const rpc: ClearOwnBathroomRpc = async (params) =>
+  const rpc: ClearOwnBathroomRatingRpc = async (params) =>
     rpcAsAccessToken(accessToken, CLEAR_OWN_BATHROOM_RATING_RPC_NAME, params);
-  return clearOwnBathroomRating(id, rpc).then((row) => cacheMutatedBathroom(id, row));
+  return clearOwnBathroomRating(id, rpc, change).then((row) =>
+    cacheMutatedBathroom(id, row),
+  );
+}
+
+export async function listComments(
+  id: number,
+  _accessToken?: string | null,
+): Promise<BathroomComment[]> {
+  // Public RPC (anon + authenticated). Always use the anonymous app key so a
+  // stale signed-in access token cannot break comment reads.
+  const rpc: ListBathroomCommentsRpc = async (params) => {
+    const { data, error } = await getSupabaseClient().rpc(
+      LIST_BATHROOM_COMMENTS_RPC_NAME,
+      params,
+    );
+    return { data, error };
+  };
+
+  return listBathroomComments(id, rpc);
 }
 
 export async function getInBounds(

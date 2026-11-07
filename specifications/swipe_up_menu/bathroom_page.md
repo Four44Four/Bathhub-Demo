@@ -213,6 +213,16 @@
        - A [star rating graphic](#star-rating-graphic) with the [property `rating`](#rating-star-rating-graphic) as 0.0 and the [property `interactive`](#interactive-star-rating-graphic) as `true`
           - When the [swipe-up menu](./swipe_up_menu.md) is [collapsed](./swipe_up_menu.md#collapsed-mode):
              - Clear the value stored in the interactive [star rating graphic](#star-rating-graphic)
+       - If the user has not posted a rating yet:
+          - Display a text input box with slightly rounded corners
+          - Border of thickness 1px and [this color](#text-color)
+          - Typed text is [this color](#text-color)
+          - Fill color of [this color](#button-fill-color)
+          - Width is the same as the width of the button row underneath it
+          - Height is 2x the font height
+             - Height expands as user types more until the height is maximum of 5x the font height
+             - Once at the maximum height:
+                - The input field will become scrollable (ensure jumping to input position when input occurs)
        - A [button](../components/viewport2d_button.md) that has:
           - [Text](../components/viewport2d_button.md#text) is a [text discriptor](../text.md) with the following properties:
              - [Content](../text.md#content) is "Post"
@@ -224,7 +234,7 @@
           - [Outline thickness](../components/viewport2d_button.md#outline-thickness) is 0 (no outline)
           - [Click callback](../components/viewport2d_button.md#on-click-callback) is the following:
              - If the interactive [star rating graphic](#star-rating-graphic) has a cleared/no value:
-                - Do nothing
+                - Show alert indicating that the user needs to input a star rating
              - Else:
                 - Depending on the filled star value of the [interactive](#interactive-star-rating-graphic) [star rating graphic](#star-rating-graphic):
                    - Update **one** of the [bathroom_data_primary `rating_1_count`, `rating_2_count`, `rating_3_count`, `rating_4_count`, or `rating_5_count` columns for this bathroom](../bathroom_db.md#table-schema)
@@ -239,21 +249,52 @@
                 - Update the average star rating number to the newly calculated average
                 - Update the [star rating graphic](#star-rating-graphic) representing the average star rating number
                 - Clear the rating on the [interactive star rating graphic](#star-rating-graphic)
+                - Hide the comment text input box
+                - If the rating text input field is not empty:
+                   - Add the comment to this bathroom by adding it to the [bathroom comment data table](../bathroom_db.md#comment-table)
+                   - Update the comment section to show the rating with the comment
+                   - Clear the rating text input field and reset its height
        - When a user's account has rated this bathroom before:
           - Hide the rating posting button
-          - Show a horizontally centered [button](../components/viewport2d_button.md) in their place that has:
+          - If this user has submitted a comment with their rating previously:
+             - Show the text input box prefilled with the user's previous comment on this bathroom with the height being adjusted to fit the text, respecting the maximum height for this input field
+          - Else:
+             - Show the text input box as an empty text input box with the default height
+          - Show a horizontally centered (right side)[button](../components/viewport2d_button.md) on the same row as the below button that has:
             - [Text](../components/viewport2d_button.md#text) is a [text discriptor](../text.md) with the following properties:
-               - [Content](../text.md#content) is "Edit post"
-               - [Color](../text.md#color) is [this color](#text-color)
+               - [Content](../text.md#content) is "Delete"
+               - [Color](../text.md#color) is [this color](#button-fill-color)
                - [Weight](../text.md#weight) is [TextWeight.BOLD](../text_weight.md)
-            - [Fill color](../components/viewport2d_button.md#fill-color) of [this color](#button-fill-color)
+            - [Fill color](../components/viewport2d_button.md#fill-color) of [this color](#text-color)
+            - [Anchor element](../components/viewport2d_button.md#anchor-element) is the [swipe-up menu](./swipe_up_menu.md)
+            - [Drop shadow](../components/viewport2d_button.md#drop-shadow) is [this drop shadow descriptor](./dropshadow_descriptor.md)
+            - [Outline thickness](../components/viewport2d_button.md#outline-thickness) is 0 (no outline)
+            - [Click callback](../components/viewport2d_button.md#on-click-callback) is the following:
+               - Show an confirmation popup asking if the user is sure they want to delete their rating (and comment if there is one)
+               - If the user confirms:
+                  - Delete both the rating and comment (if there is a comment)
+                  - The user can now post a rating and comment again
+               - If the user rejects:
+                  - Close the popup
+                  - Do nothing else
+          - Show a horizontally centered (left side)[button](../components/viewport2d_button.md) in their place on the same row as the above button that has:
+            - [Text](../components/viewport2d_button.md#text) is a [text discriptor](../text.md) with the following properties:
+               - [Content](../text.md#content) is "Edit"
+               - [Color](../text.md#color) is [this color](#button-fill-color)
+               - [Weight](../text.md#weight) is [TextWeight.BOLD](../text_weight.md)
+            - [Fill color](../components/viewport2d_button.md#fill-color) of [this color](#text-color)
             - [Anchor element](../components/viewport2d_button.md#anchor-element) is the [swipe-up menu](./swipe_up_menu.md)
             - [Drop shadow](../components/viewport2d_button.md#drop-shadow) is [this drop shadow descriptor](./dropshadow_descriptor.md)
             - [Outline thickness](../components/viewport2d_button.md#outline-thickness) is 0 (no outline)
             - [Click callback](../components/viewport2d_button.md#on-click-callback) is the following:
               - Undo the previous rating made by this user's account on this bathroom
+              - Overwrite their current rating comment with the current text content in their text input box
               - Hide this button
+              - Hide the interactive star rating
+              - Hide the comment text input box 
               - Redisplay the rating post in this button's place
+       - Rows of comments extending down with profile picture on the left side, star rating on the top (right of profile picture), and comment on the bottom (right of profile picture)
+          - Clicking on the profile picture will open the target user's account profile page
 
 # Star rating graphic
 ## Properties (star rating graphic)

@@ -23,6 +23,7 @@ import { SwipeMenuTopShadow } from "./_client/swipeup/SwipeMenuTopShadow";
 import { SwipeMenuExpansionProvider } from "./_client/swipeup/SwipeMenuExpansion";
 import { SwipeMenuPageProvider, useSwipeMenuPage } from "./_client/swipeup/SwipeMenuPageContext";
 import { SelectedBathroomProvider, useSelectedBathroom } from "./_client/swipeup/SelectedBathroomContext";
+import { ViewedAccountProvider } from "./_client/swipeup/ViewedAccountContext";
 import { SwipeMenuPageContent } from "./_client/swipeup/SwipeMenuPageContent";
 import {
   SwipeMenuInteractionContext,
@@ -413,9 +414,11 @@ export default function Home() {
               <UserSettingsBootstrapGate>
               <SwipeMenuExpansionProvider>
               <SwipeMenuPageProvider>
+              <ViewedAccountProvider>
               <SelectedBathroomProvider>
                 <HomeContent phoneFrameRef={phoneFrameRef} />
               </SelectedBathroomProvider>
+              </ViewedAccountProvider>
               </SwipeMenuPageProvider>
               </SwipeMenuExpansionProvider>
               </UserSettingsBootstrapGate>

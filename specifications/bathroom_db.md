@@ -27,3 +27,12 @@
  - Use PostGIS extension
  - Must be able to query all Bathroom entries efficiently given a rectangular area bounded by 2 latlong locations (opposing corners)
  - Protected by defensive RLS policies to explicitly allow users to interact with data as specified in [accounts specification](./accounts/accounts.md)
+ - Bathroom entries should only be deletable by [account voting](./accounts/accounts.md)
+
+# Comment table
+## Name (comment table)
+ - bathroom_data_comments
+## Schema (comment table)
+ - `bathroom_id` as type `BIGSERIAL` referencing the `bathroom_data_primary.id` field as a foreign key
+ - `account_id` as type `UUID` referencing the Supabase `public.accounts.id` field as a foreign key
+ - `content` as type `TEXT`

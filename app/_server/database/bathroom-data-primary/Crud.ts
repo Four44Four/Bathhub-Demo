@@ -12,6 +12,10 @@ import { unwrapRateLimitExceededMessage } from "../../../_shared/rate-limit/Rate
 import { type Errorable } from "../../../_shared/Utils";
 import { type OwnBathroomInteraction } from "../../pure/bathroom-data-primary/OwnBathroomInteraction";
 import {
+  type BathroomComment,
+  type ClearBathroomRatingChange,
+} from "../../pure/bathroom-data-primary/BathroomComments";
+import {
   type FindNearestBathroomConstraints,
   type NearestBathroomClientPayload,
   toNearestBathroomClientPayload,
@@ -72,6 +76,7 @@ export async function bathroomDbIncrementRating(
   id: number,
   stars: number,
   accessToken?: string | null,
+  comment?: string | null,
 ): Promise<Errorable<BathroomDataPrimaryFullRow>> {
   const rateLimit = await enforceActorRateLimit("bathroom-update", accessToken);
   if (!rateLimit.allowed) {
@@ -82,7 +87,9 @@ export async function bathroomDbIncrementRating(
   }
 
   try {
-    return { val: await Core.incrementRatingCount(id, stars, accessToken) };
+    return {
+      val: await Core.incrementRatingCount(id, stars, accessToken, comment),
+    };
   } catch (error: unknown) {
     return {
       val: null,
@@ -169,6 +176,7 @@ export async function bathroomDbClearExistenceVote(
 export async function bathroomDbClearRating(
   id: number,
   accessToken?: string | null,
+  change?: ClearBathroomRatingChange | null,
 ): Promise<Errorable<BathroomDataPrimaryFullRow>> {
   const rateLimit = await enforceActorRateLimit("bathroom-update", accessToken);
   if (!rateLimit.allowed) {
@@ -179,7 +187,26 @@ export async function bathroomDbClearRating(
   }
 
   try {
-    return { val: await Core.clearRating(id, accessToken) };
+    return { val: await Core.clearRating(id, accessToken, change) };
+  } catch (error: unknown) {
+    return {
+      val: null,
+      errorMsg: mutationErrorMessage(error),
+    };
+  }
+}
+
+export async function bathroomDbListComments(
+  id: number,
+  accessToken?: string | null,
+): Promise<Errorable<BathroomComment[]>> {
+  const rateLimit = await enforceActorRateLimit("bathroom-read-by-id", accessToken);
+  if (!rateLimit.allowed) {
+    return { val: null, errorMsg: rateLimit.message };
+  }
+
+  try {
+    return { val: await Core.listComments(id, accessToken) };
   } catch (error: unknown) {
     return {
       val: null,

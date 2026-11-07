@@ -10,6 +10,7 @@ import { type Errorable } from "../../../_shared/Utils";
 
 export type AccountAuthAttempt = {
   accessToken: string | null;
+  refreshToken: string | null;
   errorMessage: string | null;
 };
 
@@ -34,7 +35,10 @@ export async function registerAccountWithAuthClient(
   username: string,
   password: string,
   authClient: AccountAuthClient,
-  readProfile: (accessToken: string) => Promise<Errorable<AccountProfile>>,
+  readProfile: (
+    accessToken: string,
+    refreshToken: string | null,
+  ) => Promise<Errorable<AccountProfile>>,
 ): Promise<Errorable<AccountProfile>> {
   const usernameError = accountUsernameValidationError(username);
   if (usernameError !== null) {
@@ -57,6 +61,7 @@ export async function registerAccountWithAuthClient(
   }
 
   let accessToken = signedUp.accessToken;
+  let refreshToken = signedUp.refreshToken;
   if (accessToken == null) {
     const signedIn = await authClient.signIn({ email, password });
     if (signedIn.errorMessage !== null || signedIn.accessToken == null) {
@@ -66,7 +71,8 @@ export async function registerAccountWithAuthClient(
       };
     }
     accessToken = signedIn.accessToken;
+    refreshToken = signedIn.refreshToken;
   }
 
-  return readProfile(accessToken);
+  return readProfile(accessToken, refreshToken);
 }

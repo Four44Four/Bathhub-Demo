@@ -20,6 +20,8 @@
  - 10 per 5 minutes
 ### Reading (account)
  - 30 per minute
+### Image uploading (account)
+ - 10 per 10 minutes
 
 ## Bathrooms
 ### Creation (bathrooms)

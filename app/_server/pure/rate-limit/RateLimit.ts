@@ -11,7 +11,8 @@ export type RateLimitScope =
   | "user-settings-migration"
   | "account-create"
   | "account-login"
-  | "account-profile";
+  | "account-profile"
+  | "account-image-upload";
 
 export type RateLimitWindowConfig = {
   readonly maxRequests: number;
@@ -105,6 +106,9 @@ export function formatRateLimitWindowLabel(windowSeconds: number): string {
   if (windowSeconds === 300) {
     return "5 minutes";
   }
+  if (windowSeconds === 600) {
+    return "10 minutes";
+  }
   if (windowSeconds === 43_200) {
     return "12 hours";
   }
@@ -138,6 +142,8 @@ export function formatRateLimitScopeLabel(scope: RateLimitScope): string {
       return "account login";
     case "account-profile":
       return "account reading";
+    case "account-image-upload":
+      return "image uploading";
   }
 }
 

@@ -102,6 +102,19 @@ describe("component constants match their specifications", () => {
       REPUTATION_BAR_MIN: -20,
       REPUTATION_BAR_MAX: 20,
       REPUTATION_LABEL: "Reputation",
+      SECONDARY_COLOR: "#FFFFFF",
+      CHANGE_IMAGE_LABEL: "Change image",
+      CHANGE_IMAGE_FILE_ACCEPT: "image/*",
+      CHANGE_IMAGE_BUTTON_OUTLINE_THICKNESS_PX: 0,
+      CHANGE_IMAGE_BUTTON_CIRCULAR: false,
+      CHANGE_IMAGE_BUTTON_HOVER_INTERACT_BEHAVIOR: "darken",
+      CHANGE_IMAGE_BUTTON_PADDING_PX: 10,
+      CHANGE_IMAGE_BUTTON_SLOT_HEIGHT_PX: 37,
+      PROFILE_PICTURE: {
+        path: "/account_pfp.svg",
+        type: "mono-color",
+        monoColor: "#B5B5C4",
+      },
     });
   });
 

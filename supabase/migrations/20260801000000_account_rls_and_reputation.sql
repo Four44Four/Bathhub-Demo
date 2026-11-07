@@ -215,6 +215,8 @@ BEGIN
 END;
 $$;
 
+DROP FUNCTION IF EXISTS public.get_own_account();
+
 CREATE OR REPLACE FUNCTION public.get_own_account()
 RETURNS TABLE (
     id uuid,

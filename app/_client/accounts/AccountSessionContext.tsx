@@ -11,12 +11,14 @@ import {
 } from "react";
 
 import {
+  ACCOUNT_REQUIRED_ERROR,
   type AccountProfile,
 } from "../../_shared/accounts/AccountReputation";
 import {
   loginAccount,
   readAccountProfile,
   registerAccount,
+  setAccountProfilePicture,
 } from "../../_server/accounts/AccountAuth";
 import { registerAccountAccessTokenReader } from "./accountAccessToken";
 
@@ -27,6 +29,7 @@ export type AccountSessionApi = {
   login: (username: string, password: string) => Promise<string | null>;
   register: (username: string, password: string) => Promise<string | null>;
   refreshProfile: () => Promise<void>;
+  setProfilePicture: (mimeType: string, imageBase64: string) => Promise<string | null>;
 };
 
 const AccountSessionContext = createContext<AccountSessionApi | null>(null);
@@ -54,6 +57,10 @@ function readStoredProfile(): AccountProfile | null {
       accountId: parsed.accountId,
       username: parsed.username,
       reputationScore: parsed.reputationScore,
+      profilePictureDataUrl:
+        typeof parsed.profilePictureDataUrl === "string"
+          ? parsed.profilePictureDataUrl
+          : null,
     };
   } catch {
     return null;
@@ -122,14 +129,35 @@ export function AccountSessionProvider({ children }: { children: ReactNode }) {
     }
   }, [applyProfile, profile?.accessToken]);
 
+  const setProfilePicture = useCallback(
+    async (mimeType: string, imageBase64: string) => {
+      const accessToken = profile?.accessToken;
+      if (accessToken == null) {
+        return ACCOUNT_REQUIRED_ERROR;
+      }
+      const result = await setAccountProfilePicture(
+        accessToken,
+        mimeType,
+        imageBase64,
+      );
+      if (result.val == null) {
+        return result.errorMsg ?? "Image upload failed";
+      }
+      applyProfile(result.val);
+      return null;
+    },
+    [applyProfile, profile?.accessToken],
+  );
+
   const value = useMemo(
     () => ({
       profile,
       login,
       register,
       refreshProfile,
+      setProfilePicture,
     }),
-    [login, profile, refreshProfile, register],
+    [login, profile, refreshProfile, register, setProfilePicture],
   );
 
   return (

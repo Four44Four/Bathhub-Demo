@@ -9,8 +9,10 @@ import {
   accountUsernameValidationError,
   type AccountProfile,
 } from "../../_shared/accounts/AccountReputation";
+import { accountProfileFromOwnAccountRow } from "../../_shared/accounts/ProfileImageUpload";
 import { type Errorable } from "../../_shared/Utils";
 import { registerAccountWithAuthClient } from "../pure/accounts/RegisterAccount";
+import { uploadAccountProfilePicture } from "../pure/accounts/UploadProfilePicture";
 import { getSupabaseKey, getSupabaseUrl } from "../EnvironmentVariables";
 import { tryEnforceActorRateLimit } from "../rate-limit/enforceRateLimit";
 
@@ -26,55 +28,82 @@ function authClient() {
   });
 }
 
-function profileFromSession(
+function rpcErrorMessage(body: unknown, fallback: string): string {
+  if (typeof body === "object" && body !== null && "message" in body) {
+    const message = (body as { message?: unknown }).message;
+    if (typeof message === "string" && message.length > 0) {
+      return message;
+    }
+  }
+  return fallback;
+}
+
+function profileFromRpcBody(
   accessToken: string,
-  accountId: string,
-  username: string,
-  reputationScore: number,
-): AccountProfile {
-  return { accessToken, accountId, username, reputationScore };
+  body: unknown,
+): AccountProfile | null {
+  return accountProfileFromOwnAccountRow(
+    accessToken,
+    Array.isArray(body) ? body[0] : body,
+  );
+}
+
+async function postAccountRpc(
+  accessToken: string,
+  functionName: string,
+  params: Record<string, unknown>,
+): Promise<{ ok: boolean; body: unknown }> {
+  const response = await fetch(
+    `${getSupabaseUrl()}/rest/v1/rpc/${functionName}`,
+    {
+      method: "POST",
+      headers: {
+        apikey: getSupabaseKey(),
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify(params),
+    },
+  );
+  const body: unknown = await response.json().catch(() => null);
+  return { ok: response.ok, body };
 }
 
 async function readOwnAccount(
   accessToken: string,
 ): Promise<Errorable<AccountProfile>> {
-  const response = await fetch(`${getSupabaseUrl()}/rest/v1/rpc/get_own_account`, {
-    method: "POST",
-    headers: {
-      apikey: getSupabaseKey(),
-      Authorization: `Bearer ${accessToken}`,
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    },
-    body: "{}",
-  });
-  const body: unknown = await response.json().catch(() => null);
+  const response = await postAccountRpc(accessToken, "get_own_account", {});
   if (!response.ok) {
     return { val: null, errorMsg: ACCOUNT_REQUIRED_ERROR };
   }
-  const row = Array.isArray(body) ? body[0] : body;
-  if (
-    typeof row !== "object" ||
-    row === null ||
-    typeof (row as { id?: unknown }).id !== "string" ||
-    typeof (row as { username?: unknown }).username !== "string" ||
-    typeof (row as { reputation_score?: unknown }).reputation_score !== "number"
-  ) {
+  const profile = profileFromRpcBody(accessToken, response.body);
+  if (profile == null) {
     return { val: null, errorMsg: ACCOUNT_REQUIRED_ERROR };
   }
-  const record = row as {
-    id: string;
-    username: string;
-    reputation_score: number;
-  };
-  return {
-    val: profileFromSession(
-      accessToken,
-      record.id,
-      record.username,
-      record.reputation_score,
-    ),
-  };
+  return { val: profile };
+}
+
+async function writeOwnProfilePicture(
+  accessToken: string,
+  mimeType: string,
+  imageBase64: string,
+): Promise<Errorable<AccountProfile>> {
+  const response = await postAccountRpc(accessToken, "set_own_profile_picture", {
+    p_mime: mimeType,
+    p_image_base64: imageBase64,
+  });
+  if (!response.ok) {
+    return {
+      val: null,
+      errorMsg: rpcErrorMessage(response.body, "Image upload failed"),
+    };
+  }
+  const profile = profileFromRpcBody(accessToken, response.body);
+  if (profile == null) {
+    return { val: null, errorMsg: ACCOUNT_REQUIRED_ERROR };
+  }
+  return { val: profile };
 }
 
 async function sessionProfile(
@@ -176,4 +205,24 @@ export async function readAccountProfile(
     return { val: null, errorMsg: rateLimit.message };
   }
   return sessionProfile(accessToken);
+}
+
+export async function setAccountProfilePicture(
+  accessToken: string,
+  mimeType: string,
+  imageBase64: string,
+): Promise<Errorable<AccountProfile>> {
+  return uploadAccountProfilePicture(
+    { accessToken, mimeType, imageBase64 },
+    {
+      readLoggedInAccount: async (token) => {
+        const profile = await sessionProfile(token);
+        return profile.val;
+      },
+      enforceRateLimit: async () =>
+        tryEnforceActorRateLimit("account-image-upload", accessToken),
+      storeProfilePicture: (_profile, mime, encoded) =>
+        writeOwnProfilePicture(accessToken, mime, encoded),
+    },
+  );
 }

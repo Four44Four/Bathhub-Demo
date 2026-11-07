@@ -516,4 +516,26 @@ describe("Redis-backed server rate limits", () => {
       });
     });
   });
+
+  describe("account-image-upload", () => {
+    test("allows up to 10 requests per 10 minutes per account", async () => {
+      const accountId = "ffffffff-ffff-ffff-ffff-ffffffffffff";
+      const deps = redisRateLimitDeps("203.0.113.71", accountId);
+      const { maxRequests } = SERVER_RATE_LIMITS.accountImageUpload.per10Minutes;
+
+      for (let i = 0; i < maxRequests; i++) {
+        await expect(
+          enforceRateLimit("account-image-upload", deps),
+        ).resolves.toBeUndefined();
+      }
+
+      await expect(
+        enforceRateLimit("account-image-upload", deps),
+      ).rejects.toMatchObject({
+        name: "RateLimitExceededError",
+        message:
+          "Rate limit exceeded: image uploading is limited to 10 requests per 10 minutes.",
+      });
+    });
+  });
 });

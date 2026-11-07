@@ -37,6 +37,9 @@ describe("RateLimitBandAlert", () => {
     expect(formatRateLimitViolationBandMessage("account-profile")).toBe(
       "Violated rate limit for account reading",
     );
+    expect(formatRateLimitViolationBandMessage("account-image-upload")).toBe(
+      "Violated rate limit for image uploading",
+    );
   });
 
   test("isRateLimitExceededMessage recognizes server denial payloads", () => {
@@ -122,6 +125,11 @@ describe("RateLimitBandAlert", () => {
         "Rate limit exceeded: account reading is limited to 30 requests per minute.",
       ),
     ).toBe("Violated rate limit for account reading");
+    expect(
+      resolveRateLimitViolationBandMessage(
+        "Rate limit exceeded: image uploading is limited to 10 requests per 10 minutes.",
+      ),
+    ).toBe("Violated rate limit for image uploading");
     expect(resolveRateLimitViolationBandMessage("network error")).toBeNull();
   });
 });

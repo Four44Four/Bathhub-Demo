@@ -9,7 +9,9 @@ import {
   loginAccount,
   readAccountProfile,
   registerAccount,
+  setAccountProfilePicture,
 } from "../app/_server/accounts/AccountAuth";
+import { ACCOUNT_REQUIRED_ERROR } from "../app/_shared/accounts/AccountReputation";
 
 describe("account auth rate limit scopes", () => {
   beforeEach(() => {
@@ -76,5 +78,63 @@ describe("account auth rate limit scopes", () => {
       "account-profile",
       "token",
     );
+  });
+
+  test("setAccountProfilePicture checks the account before the image upload limit", async () => {
+    const previousUrl = process.env.SUPABASE_URL;
+    const previousKey = process.env.SUPABASE_KEY;
+    const previousFetch = global.fetch;
+    process.env.SUPABASE_URL = "http://127.0.0.1:54323";
+    process.env.SUPABASE_KEY = "anon-key";
+    const fetchMock = jest.fn(async () => ({
+      ok: false,
+      json: async () => ({ message: "JWT expired" }),
+    }));
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    try {
+      await expect(
+        setAccountProfilePicture("token", "text/plain", "YQ=="),
+      ).resolves.toEqual({ val: null, errorMsg: ACCOUNT_REQUIRED_ERROR });
+      expect(mockTryEnforceActorRateLimit).not.toHaveBeenCalled();
+
+      fetchMock.mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          id: "11111111-1111-1111-1111-111111111111",
+          username: "ada_user",
+          reputation_score: 0,
+          profile_picture_mime: null,
+          profile_picture_base64: null,
+        }),
+      });
+      const message =
+        "Rate limit exceeded: image uploading is limited to 10 requests per 10 minutes.";
+      mockTryEnforceActorRateLimit.mockResolvedValue({
+        allowed: false,
+        message,
+      });
+
+      await expect(
+        setAccountProfilePicture("token", "image/png", "YQ=="),
+      ).resolves.toEqual({ val: null, errorMsg: message });
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      expect(mockTryEnforceActorRateLimit).toHaveBeenCalledWith(
+        "account-image-upload",
+        "token",
+      );
+    } finally {
+      if (previousUrl === undefined) {
+        delete process.env.SUPABASE_URL;
+      } else {
+        process.env.SUPABASE_URL = previousUrl;
+      }
+      if (previousKey === undefined) {
+        delete process.env.SUPABASE_KEY;
+      } else {
+        process.env.SUPABASE_KEY = previousKey;
+      }
+      global.fetch = previousFetch;
+    }
   });
 });

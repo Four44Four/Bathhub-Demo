@@ -8,6 +8,20 @@ import {
   reputationDeltaForActionIndex,
   type AccountProfile,
 } from "../app/_shared/accounts/AccountReputation";
+import {
+  jpegImageBytes,
+  pngImageBytes,
+  pngImageBytesWithLength,
+  svgImageBytes,
+} from "../app/_shared/accounts/ProfileImageBytes";
+import {
+  accountProfileFromOwnAccountRow,
+  PROFILE_IMAGE_DIMENSIONS_ERROR,
+  PROFILE_IMAGE_FILE_SIZE_ERROR,
+  PROFILE_IMAGE_MAX_FILE_BYTES,
+  PROFILE_IMAGE_MIME_ERROR,
+} from "../app/_shared/accounts/ProfileImageUpload";
+import { uploadAccountProfilePicture } from "../app/_server/pure/accounts/UploadProfilePicture";
 import { type Errorable } from "../app/_shared/Utils";
 import { registerAccountWithAuthClient } from "../app/_server/pure/accounts/RegisterAccount";
 import { formatRateLimitExceededMessage } from "../app/_server/pure/rate-limit/RateLimit";
@@ -168,26 +182,14 @@ describe("account data interaction policies", () => {
         if (!profile.ok) {
           return { val: null, errorMsg: errorMessage(profile.body) };
         }
-        const row = (Array.isArray(profile.body) ? profile.body[0] : profile.body) as {
-          id?: unknown;
-          username?: unknown;
-          reputation_score?: unknown;
-        };
-        if (
-          typeof row?.id !== "string" ||
-          typeof row.username !== "string" ||
-          typeof row.reputation_score !== "number"
-        ) {
+        const parsed = accountProfileFromOwnAccountRow(
+          accessToken,
+          Array.isArray(profile.body) ? profile.body[0] : profile.body,
+        );
+        if (parsed == null) {
           return { val: null, errorMsg: "missing account profile" };
         }
-        return {
-          val: {
-            accountId: row.id,
-            username: row.username,
-            reputationScore: row.reputation_score,
-            accessToken,
-          },
-        };
+        return { val: parsed };
       },
     );
     if (registered.val == null) {
@@ -802,5 +804,122 @@ describe("account data interaction policies", () => {
       schedule: "0 0 * * 0",
       command: "SELECT public.drift_account_reputation_toward_zero();",
     });
+  });
+
+  test("a signed-in account can store one profile picture that passes the image rules", async () => {
+    const account = await createAccount("pic");
+    const other = await createAccount("picb");
+    const accepted = pngImageBytes(511, 40);
+    const acceptedBase64 = Buffer.from(accepted).toString("base64");
+
+    const anonymous = await anonRpc("set_own_profile_picture", {
+      p_mime: "image/png",
+      p_image_base64: acceptedBase64,
+    });
+    expect(anonymous.ok).toBe(false);
+
+    const notAnImage = await userRpc(account.accessToken, "set_own_profile_picture", {
+      p_mime: "text/plain",
+      p_image_base64: acceptedBase64,
+    });
+    expect(notAnImage.ok).toBe(false);
+    expect(errorMessage(notAnImage.body)).toContain(PROFILE_IMAGE_MIME_ERROR);
+
+    const tooWide = await userRpc(account.accessToken, "set_own_profile_picture", {
+      p_mime: "image/png",
+      p_image_base64: Buffer.from(pngImageBytes(512, 10)).toString("base64"),
+    });
+    expect(tooWide.ok).toBe(false);
+    expect(errorMessage(tooWide.body)).toContain(PROFILE_IMAGE_DIMENSIONS_ERROR);
+
+    const tooLarge = await userRpc(account.accessToken, "set_own_profile_picture", {
+      p_mime: "image/png",
+      p_image_base64: Buffer.from(
+        pngImageBytesWithLength(20, 20, PROFILE_IMAGE_MAX_FILE_BYTES),
+      ).toString("base64"),
+    });
+    expect(tooLarge.ok).toBe(false);
+    expect(errorMessage(tooLarge.body)).toContain(PROFILE_IMAGE_FILE_SIZE_ERROR);
+
+    const stored = await uploadAccountProfilePicture(
+      {
+        accessToken: account.accessToken,
+        mimeType: "image/png",
+        imageBase64: acceptedBase64,
+      },
+      {
+        readLoggedInAccount: async (token) => {
+          const profile = await userRpc(token, "get_own_account", {});
+          return accountProfileFromOwnAccountRow(
+            token,
+            Array.isArray(profile.body) ? profile.body[0] : profile.body,
+          );
+        },
+        enforceRateLimit: async () => ({ allowed: true }),
+        storeProfilePicture: async (_profile, mimeType, imageBase64) => {
+          const written = await userRpc(account.accessToken, "set_own_profile_picture", {
+            p_mime: mimeType,
+            p_image_base64: imageBase64,
+          });
+          if (!written.ok) {
+            return { val: null, errorMsg: errorMessage(written.body) };
+          }
+          return {
+            val: accountProfileFromOwnAccountRow(
+              account.accessToken,
+              Array.isArray(written.body) ? written.body[0] : written.body,
+            ),
+          };
+        },
+      },
+    );
+    expect(stored.val?.profilePictureDataUrl).toBe(
+      `data:image/png;base64,${acceptedBase64}`,
+    );
+
+    for (const sample of [
+      { mime: "image/jpeg", bytes: jpegImageBytes(30, 40) },
+      { mime: "image/svg+xml", bytes: svgImageBytes(64, 64) },
+    ]) {
+      const replaced = await userRpc(account.accessToken, "set_own_profile_picture", {
+        p_mime: sample.mime,
+        p_image_base64: Buffer.from(sample.bytes).toString("base64"),
+      });
+      expect(replaced.ok).toBe(true);
+      const row = (Array.isArray(replaced.body) ? replaced.body[0] : replaced.body) as {
+        profile_picture_mime?: unknown;
+      };
+      expect(row.profile_picture_mime).toBe(sample.mime);
+    }
+
+    const own = await userRpc(account.accessToken, "get_own_account", {});
+    const otherProfile = await userRpc(other.accessToken, "get_own_account", {});
+    expect(own.ok).toBe(true);
+    const ownRow = (Array.isArray(own.body) ? own.body[0] : own.body) as {
+      profile_picture_mime?: unknown;
+    };
+    const otherRow = (
+      Array.isArray(otherProfile.body) ? otherProfile.body[0] : otherProfile.body
+    ) as { profile_picture_mime?: unknown };
+    expect(ownRow.profile_picture_mime).toBe("image/svg+xml");
+    expect(otherRow.profile_picture_mime).toBeNull();
+
+    const { url, key } = requireLocalSupabaseEnv();
+    const patched = await fetch(`${url}/rest/v1/accounts?id=eq.${account.userId}`, {
+      method: "PATCH",
+      headers: {
+        apikey: key,
+        Authorization: `Bearer ${account.accessToken}`,
+        "Content-Type": "application/json",
+        Prefer: "return=minimal",
+      },
+      body: JSON.stringify({ profile_picture_mime: "text/plain" }),
+    });
+    expect(patched.ok).toBe(false);
+    const afterPatch = await userRpc(account.accessToken, "get_own_account", {});
+    const afterRow = (
+      Array.isArray(afterPatch.body) ? afterPatch.body[0] : afterPatch.body
+    ) as { profile_picture_mime?: unknown };
+    expect(afterRow.profile_picture_mime).toBe("image/svg+xml");
   });
 });

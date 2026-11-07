@@ -54,3 +54,4 @@
  - Vote, rating, and undo calls are limited to 20 per minute per account inside the database, the same limit as [updating bathrooms](../server_rate_limits.md#updating-bathrooms)
     - The app server's Redis limit still applies
     - A signed-in token cannot skip the limit by calling the database directly
+ - Only those with accounts can upload images

@@ -163,11 +163,15 @@ describe("RateLimit pure logic", () => {
     expect(formatRateLimitScopeLabel("account-create")).toBe("account creation");
     expect(formatRateLimitScopeLabel("account-login")).toBe("account login");
     expect(formatRateLimitScopeLabel("account-profile")).toBe("account reading");
+    expect(formatRateLimitScopeLabel("account-image-upload")).toBe(
+      "image uploading",
+    );
     expect(formatRateLimitScopeLabel("user-settings-migration")).toBe(
       "user settings migration scripts",
     );
     expect(formatRateLimitWindowLabel(30)).toBe("30 seconds");
     expect(formatRateLimitWindowLabel(300)).toBe("5 minutes");
+    expect(formatRateLimitWindowLabel(600)).toBe("10 minutes");
     expect(formatRateLimitWindowLabel(43_200)).toBe("12 hours");
     expect(formatRateLimitWindowLabel(86_400)).toBe("day");
   });
@@ -243,6 +247,10 @@ describe("RateLimit pure logic", () => {
     expect(SERVER_RATE_LIMITS.accountProfile.perMinute).toEqual({
       maxRequests: 30,
       windowSeconds: 60,
+    });
+    expect(SERVER_RATE_LIMITS.accountImageUpload.per10Minutes).toEqual({
+      maxRequests: 10,
+      windowSeconds: 600,
     });
   });
 

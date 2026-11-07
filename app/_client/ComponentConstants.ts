@@ -5,7 +5,10 @@ import { PathColorMode } from "./globe/Path";
 import { lerpHex } from "./pure/HexColor";
 import { SWIPE_MENU_DROP_SHADOW } from "./pure/Dropshadow";
 import { createMonoColorImage } from "./pure/Image";
-import { viewportCircularButtonOuterSidePx } from "./pure/viewport2d/ButtonLayout";
+import {
+  viewport2dButtonTextHeightPx,
+  viewportCircularButtonOuterSidePx,
+} from "./pure/viewport2d/ButtonLayout";
 import { VIEWPORT2D_TOP_LAYER_Z_INDEX } from "./pure/viewport2d/PositionalAlertAnchor";
 
 export const Shared = {
@@ -265,7 +268,21 @@ export const AccountPage = {
     REPUTATION_BAR_MIN: -20,
     REPUTATION_BAR_MAX: 20,
     REPUTATION_LABEL: "Reputation",
+    SECONDARY_COLOR: "#FFFFFF",
     PROFILE_PICTURE_PATH: "/account_pfp.svg",
+    PROFILE_PICTURE: createMonoColorImage("/account_pfp.svg", "#B5B5C4"),
+    CHANGE_IMAGE_LABEL: "Change image",
+    CHANGE_IMAGE_FILE_ACCEPT: "image/*",
+    CHANGE_IMAGE_BUTTON_OUTLINE_THICKNESS_PX: 0,
+    CHANGE_IMAGE_BUTTON_CIRCULAR: false,
+    CHANGE_IMAGE_BUTTON_HOVER_INTERACT_BEHAVIOR: "darken",
+    CHANGE_IMAGE_BUTTON_DROP_SHADOW: SWIPE_MENU_DROP_SHADOW,
+    /** Matches swipe-menu rectangular button padding (10px on every side). */
+    CHANGE_IMAGE_BUTTON_PADDING_PX: SwipeUpMainMenuButton.PADDING_VERTICAL_PX,
+    CHANGE_IMAGE_BUTTON_SLOT_HEIGHT_PX: Math.ceil(
+      viewport2dButtonTextHeightPx() +
+        2 * SwipeUpMainMenuButton.PADDING_VERTICAL_PX,
+    ),
     CONTENT_MIN_HEIGHT_PX: 220,
     PADDING_PX: 16,
     PROFILE_PICTURE_SIZE_PX: 72,

@@ -14,7 +14,7 @@ const NON_RERUNNABLE_MIGRATION_FILENAMES = new Set([
   "20260717000000_bathroom_data_primary_existence_votes.sql",
   "20260718000000_bathroom_data_primary_increment_existence_vote_rpc.sql",
 ]);
-const EXPECTED_LATEST_SCHEMA_VERSION = 25;
+const EXPECTED_LATEST_SCHEMA_VERSION = 26;
 const EXPECTED_RATING_COLUMNS = 5;
 const EXPECTED_RPC_COUNT = 13;
 
@@ -39,6 +39,9 @@ type ServerSchemaState = {
   anonCanSelectSchemaVersion: boolean;
   authenticatedCanSelectSchemaVersion: boolean;
   driftCronSchedule: string;
+  profilePictureColumnCount: number;
+  anonCanSetProfilePicture: boolean;
+  authenticatedCanSetProfilePicture: boolean;
 };
 
 function requireLocalPostgresUrl(): string {
@@ -189,7 +192,19 @@ function readServerSchemaState(databaseUrl: string): ServerSchemaState {
           SELECT job.schedule
           FROM cron.job AS job
           WHERE job.jobname = 'drift_account_reputation_weekly'
-        )
+        ),
+      'profilePictureColumnCount',
+        (
+          SELECT COUNT(*)
+          FROM information_schema.columns
+          WHERE table_schema = 'public'
+            AND table_name = 'accounts'
+            AND column_name IN ('profile_picture', 'profile_picture_mime')
+        ),
+      'anonCanSetProfilePicture',
+        has_function_privilege('anon', 'public.set_own_profile_picture(text, text)', 'EXECUTE'),
+      'authenticatedCanSetProfilePicture',
+        has_function_privilege('authenticated', 'public.set_own_profile_picture(text, text)', 'EXECUTE')
     )::text;
   `;
   const raw = runPsql(databaseUrl, [
@@ -228,6 +243,7 @@ describe("server PostgreSQL migration reruns", () => {
       "20260731000000_bathroom_nearest_rpc_factor_filters.sql",
       "20260801000000_account_rls_and_reputation.sql",
       "20260802000000_account_vote_rating_rules.sql",
+      "20260803000000_account_profile_picture.sql",
     ]);
 
     const before = readServerSchemaState(databaseUrl);
@@ -252,6 +268,9 @@ describe("server PostgreSQL migration reruns", () => {
       anonCanSelectSchemaVersion: false,
       authenticatedCanSelectSchemaVersion: false,
       driftCronSchedule: "0 0 * * 0",
+      profilePictureColumnCount: 2,
+      anonCanSetProfilePicture: false,
+      authenticatedCanSetProfilePicture: true,
     });
 
     rerunMigrations(databaseUrl, migrationPaths);

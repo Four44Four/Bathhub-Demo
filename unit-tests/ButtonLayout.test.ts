@@ -2,6 +2,7 @@ import {
   VIEWPORT2D_BUTTON_TEXT_FONT_SIZE_PX,
   VIEWPORT2D_BUTTON_TEXT_LINE_HEIGHT,
   viewport2dButtonCircularContentSizePx,
+  viewport2dButtonHorizontalPositionCss,
   viewport2dButtonTextHeightPx,
   viewportCircularButtonOuterSidePx,
 } from "../app/_client/pure/viewport2d/ButtonLayout";
@@ -30,6 +31,25 @@ describe("viewport2dButtonCircularContentSizePx", () => {
 
   test("returns 0 when there is no content", () => {
     expect(viewport2dButtonCircularContentSizePx(false, 24, false)).toBe(0);
+  });
+});
+
+describe("viewport2dButtonHorizontalPositionCss", () => {
+  test("pins the left edge when the button is not centered", () => {
+    expect(viewport2dButtonHorizontalPositionCss(12, false)).toEqual({
+      left: "12px",
+    });
+  });
+
+  test("centers in the containing block and keeps x as an offset", () => {
+    expect(viewport2dButtonHorizontalPositionCss(0, true)).toEqual({
+      left: "calc(50% + 0px)",
+      transform: "translateX(-50%)",
+    });
+    expect(viewport2dButtonHorizontalPositionCss(4, true)).toEqual({
+      left: "calc(50% + 4px)",
+      transform: "translateX(-50%)",
+    });
   });
 });
 

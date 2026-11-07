@@ -12,6 +12,7 @@ export const RATE_LIMIT_BAND_TASK_NAMES = {
   "account-create": "account creation",
   "account-login": "account login",
   "account-profile": "account reading",
+  "account-image-upload": "image uploading",
 } as const;
 
 export type RateLimitBandScope = keyof typeof RATE_LIMIT_BAND_TASK_NAMES;
@@ -33,6 +34,7 @@ const RATE_LIMIT_SCOPE_LABEL_TO_BAND_TASK: Readonly<Record<string, string>> = {
   "account creation": RATE_LIMIT_BAND_TASK_NAMES["account-create"],
   "account login": RATE_LIMIT_BAND_TASK_NAMES["account-login"],
   "account reading": RATE_LIMIT_BAND_TASK_NAMES["account-profile"],
+  "image uploading": RATE_LIMIT_BAND_TASK_NAMES["account-image-upload"],
 };
 
 export function formatRateLimitViolationBandMessage(

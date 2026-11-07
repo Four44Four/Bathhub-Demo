@@ -59,6 +59,7 @@ const RATE_LIMIT_WINDOWS_BY_SCOPE: Record<RateLimitScope, RateLimitWindowSet> =
     "account-create": [SERVER_RATE_LIMITS.accountCreate.per12Hours],
     "account-login": [SERVER_RATE_LIMITS.accountLogin.per5Minutes],
     "account-profile": [SERVER_RATE_LIMITS.accountProfile.perMinute],
+    "account-image-upload": [SERVER_RATE_LIMITS.accountImageUpload.per10Minutes],
   };
 
 export type EnforceRateLimitDependencies = {

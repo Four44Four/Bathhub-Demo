@@ -8,6 +8,7 @@ describe("registerAccountWithAuthClient", () => {
     username: "ada_user",
     reputationScore: 0,
     accessToken: "token",
+    profilePictureDataUrl: null,
   };
 
   test("signs up through the public client and reads the new profile", async () => {

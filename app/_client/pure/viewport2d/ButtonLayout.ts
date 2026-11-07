@@ -45,3 +45,20 @@ export function viewportRectangularButtonOuterSidePx(
 ): number {
   return contentSizePx + 2 * paddingPx + 2 * outlineThicknessPx;
 }
+
+/**
+ * Horizontal placement for an absolutely positioned viewport2d button.
+ * `xPx` is the left edge, or an extra offset from the containing block's center.
+ */
+export function viewport2dButtonHorizontalPositionCss(
+  xPx: number,
+  centerHorizontally: boolean,
+): { left: string; transform?: string } {
+  if (!centerHorizontally) {
+    return { left: `${xPx}px` };
+  }
+  return {
+    left: `calc(50% + ${xPx}px)`,
+    transform: "translateX(-50%)",
+  };
+}

@@ -70,6 +70,9 @@ export const SERVER_RATE_LIMITS = {
   accountProfile: {
     perMinute: { maxRequests: 30, windowSeconds: 60 },
   },
+  accountImageUpload: {
+    per10Minutes: { maxRequests: 10, windowSeconds: 600 },
+  },
 } as const satisfies Record<
   string,
   Record<string, RateLimitWindowConfig>

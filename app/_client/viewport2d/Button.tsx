@@ -33,6 +33,7 @@ import {
   VIEWPORT2D_BUTTON_TEXT_FONT_SIZE_PX,
   VIEWPORT2D_BUTTON_TEXT_LINE_HEIGHT,
   viewport2dButtonCircularContentSizePx,
+  viewport2dButtonHorizontalPositionCss,
   viewport2dButtonTextHeightPx,
   viewportCircularButtonOuterSidePx,
 } from "../pure/viewport2d/ButtonLayout";
@@ -81,6 +82,11 @@ export type ButtonProps = {
   circular?: boolean;
   /** Internal padding from the border on every side (CSS px). */
   padding?: number;
+  /**
+   * Places the button on the horizontal center of its containing block.
+   * `x` is then an extra offset from that center.
+   */
+  centerHorizontally?: boolean;
   /** Hover / press visual feedback mode (see viewport2d_button.md). */
   hoverInteractBehavior?: Viewport2dButtonHoverInteractBehavior;
   /** Optional drop shadow descriptor (see specifications/dropshadow.md). */
@@ -329,6 +335,7 @@ export function Button({
   imageSize = Viewport2dButtonConsts.IMAGE_SIZE,
   circular = Viewport2dButtonConsts.CIRCULAR,
   padding = Viewport2dButtonConsts.PADDING,
+  centerHorizontally = false,
   hoverInteractBehavior = Viewport2dButtonConsts.HOVER_INTERACT_BEHAVIOR,
   dropShadow = Viewport2dButtonConsts.DROP_SHADOW,
   ignoreViewportInteractionGuards = false,
@@ -485,7 +492,7 @@ export function Button({
 
   const baseStyle: CSSProperties = {
     position: "absolute",
-    left: `${x}px`,
+    ...viewport2dButtonHorizontalPositionCss(x, centerHorizontally),
     top: `${y}px`,
     zIndex: resolvedZIndex,
     margin: 0,

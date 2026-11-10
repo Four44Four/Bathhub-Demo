@@ -4,7 +4,7 @@
  - SUPABASE_URL
  - SUPABASE_KEY
  - REDIS_URL
- - CARTO_API_KEY
+ - NEXT_PUBLIC_CARTO_API_KEY
 
 # Run tests
  - `npm run unit-tests`
@@ -23,7 +23,7 @@
        - Copy `./local-hosting/` directory onto that machine
        - Copy `./supabase/migrations` directory onto that machine
        - Refer to local-hosting [README](./local-hosting/README.md) for how to start, stop, and clear locally hosted DBs
-       - Env vars: `SUPABASE_URL=http://127.0.0.1:54331`, `REDIS_URL=redis://127.0.0.1:6380`, `SUPABASE_KEY=<result-of-"npx supabase --workdir ./local-hosting status">`
+       - Env vars: `SUPABASE_URL=http://127.0.0.1:54321`, `REDIS_URL=redis://127.0.0.1:6380`, `SUPABASE_KEY=<result-of-"npx supabase --workdir ./local-hosting status">`
     - The source file must be named .env.production.vault to ensure the correct env vars are generated
     - `npx dotenvx encrypt -f .env.production.vault`
     - Store the produced .env.keys file/the decryption key produced by it somewhere secure

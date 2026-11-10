@@ -188,10 +188,10 @@ describe("collectServerEnvUsabilityIssues", () => {
     const issues = await collectServerEnvUsabilityIssues(
       {
         OPEN_ROUTE_SERVICE_API_KEY: "ors-key",
-        SUPABASE_URL: "http://127.0.0.1:54331",
+        SUPABASE_URL: "http://127.0.0.1:54321",
         SUPABASE_KEY: "supabase-key",
         REDIS_URL: "redis://127.0.0.1:6380",
-        CARTO_API_KEY: "carto-key",
+        NEXT_PUBLIC_CARTO_API_KEY: "carto-key",
       },
       {
         checkOpenRouteServiceApiKey,
@@ -202,7 +202,7 @@ describe("collectServerEnvUsabilityIssues", () => {
 
     expect(checkOpenRouteServiceApiKey).toHaveBeenCalledWith("ors-key");
     expect(checkSupabaseEndpoint).toHaveBeenCalledWith(
-      "http://127.0.0.1:54331",
+      "http://127.0.0.1:54321",
       "supabase-key",
     );
     expect(checkRedisEndpoint).toHaveBeenCalledWith("redis://127.0.0.1:6380");
@@ -219,10 +219,10 @@ describe("collectServerEnvUsabilityIssues", () => {
     const issues = await collectServerEnvUsabilityIssues(
       {
         OPEN_ROUTE_SERVICE_API_KEY: "ors-key",
-        SUPABASE_URL: "http://127.0.0.1:54331",
+        SUPABASE_URL: "http://127.0.0.1:54321",
         SUPABASE_KEY: "supabase-key",
         REDIS_URL: "redis://127.0.0.1:6380",
-        CARTO_API_KEY: "carto-key",
+        NEXT_PUBLIC_CARTO_API_KEY: "carto-key",
       },
       stubCheckers,
     );
@@ -234,10 +234,10 @@ describe("collectServerEnvUsabilityIssues", () => {
 describe("assertServerEnvValid", () => {
   const validEnv = {
     OPEN_ROUTE_SERVICE_API_KEY: "ors-key",
-    SUPABASE_URL: "http://127.0.0.1:54331",
+    SUPABASE_URL: "http://127.0.0.1:54321",
     SUPABASE_KEY: "supabase-key",
     REDIS_URL: "redis://127.0.0.1:6380",
-    CARTO_API_KEY: "carto-key",
+    NEXT_PUBLIC_CARTO_API_KEY: "carto-key",
   };
 
   test("allows startup when only ORS is unreachable", async () => {

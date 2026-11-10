@@ -16,7 +16,7 @@ const nextConfig: NextConfig = {
   },
   // CARTO basemap keys are intended for browser tile URLs; inline for Cesium.
   env: {
-    CARTO_API_KEY: process.env.CARTO_API_KEY ?? "",
+    NEXT_PUBLIC_CARTO_API_KEY: process.env.NEXT_PUBLIC_CARTO_API_KEY ?? "",
   },
   async headers() {
     return [

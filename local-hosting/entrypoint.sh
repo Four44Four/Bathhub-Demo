@@ -2,7 +2,7 @@
 # Start local development Supabase and Redis for bathhub.
 #
 # Connection URLs (after this script succeeds):
-#   SUPABASE_URL=http://127.0.0.1:54331
+#   SUPABASE_URL=http://127.0.0.1:54321
 #   REDIS_URL=redis://127.0.0.1:6380
 #   Database (direct): postgresql://postgres:postgres@127.0.0.1:54332/postgres
 #

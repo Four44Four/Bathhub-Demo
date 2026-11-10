@@ -144,7 +144,7 @@ export const Globe = {
 
     /**
      * Medium-zoom CARTO raster basemap template (key appended at runtime from
-     * {@link process.env.CARTO_API_KEY}).
+     * {@link process.env.NEXT_PUBLIC_CARTO_API_KEY}).
      */
     CARTO_LIGHT_ALL_TILE_URL_TEMPLATE,
 

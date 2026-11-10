@@ -18,9 +18,12 @@ FROM base AS build
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY ./ ./
-RUN npm run build \
+# Run with dotenvx decryption to resolve any encrypted frontend env vars
+RUN npx dotenvx run --strict -f .env.production.vault -- npm run build \
+  && rm .env.keys \
   && mkdir -p public/cesium \
   && cp -r node_modules/cesium/Build/Cesium/. public/cesium/
+
 
 FROM base AS run
 WORKDIR /app

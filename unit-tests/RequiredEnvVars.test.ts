@@ -24,7 +24,7 @@ describe("RequiredEnvVars", () => {
     expect(
       getMissingRequiredEnvVars({
         [OPEN_ROUTE_SERVICE_API_KEY_ENV]: "ors-key",
-        [SUPABASE_URL_ENV]: "http://127.0.0.1:54331",
+        [SUPABASE_URL_ENV]: "http://127.0.0.1:54321",
         [SUPABASE_KEY_ENV]: "supabase-key",
         [REDIS_URL_ENV]: "redis://127.0.0.1:6380",
         [CARTO_API_KEY_ENV]: "carto-key",

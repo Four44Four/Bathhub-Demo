@@ -20,7 +20,7 @@ export const REDIS_URL_ENV = "REDIS_URL" as const;
  * Env var name for the CARTO basemaps API key (inlined into the client bundle
  * via `next.config.ts` for Cesium tile URLs).
  */
-export const CARTO_API_KEY_ENV = "CARTO_API_KEY" as const;
+export const CARTO_API_KEY_ENV = "NEXT_PUBLIC_CARTO_API_KEY" as const;
 
 export const REQUIRED_SERVER_ENV_VAR_NAMES = [
   OPEN_ROUTE_SERVICE_API_KEY_ENV,

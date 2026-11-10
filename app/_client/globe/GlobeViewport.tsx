@@ -817,7 +817,7 @@ export function GlobeViewport({
       const detailProvider = new SolidColorImageryProvider({
         url: cartoBasemapTileUrlWithApiKey(
           GlobeConsts.CARTO_LIGHT_ALL_TILE_URL_TEMPLATE,
-          process.env.CARTO_API_KEY ?? "",
+          process.env.NEXT_PUBLIC_CARTO_API_KEY ?? "",
         ),
         subdomains: ["a", "b", "c", "d"],
         credit: "© OpenStreetMap contributors, © CARTO",

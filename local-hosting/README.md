@@ -12,7 +12,7 @@ These scripts start and manage local Supabase and Redis services for bathhub dev
 
 After `entrypoint.sh` succeeds, use these local service URLs:
 
-- Supabase API: `http://127.0.0.1:54331`
+- Supabase API: `http://127.0.0.1:54321`
 - Redis: `redis://127.0.0.1:6380`
 - Supabase direct database URL: `postgresql://postgres:postgres@127.0.0.1:54332/postgres`
 

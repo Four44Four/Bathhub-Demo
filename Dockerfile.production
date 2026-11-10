@@ -3,7 +3,11 @@
 # Decrypt with docker run --env-file pointing at .env.keys
 # (DOTENV_PRIVATE_KEY_PRODUCTION_VAULT for .env.production.vault).
 
-FROM node:26.5.1-alpine AS base
+# Alpine >=3.24.4 includes the OpenSSH mitigation for musl crypt()
+# (CVE-2026-123158 / *sshole). Pin alpine3.24 and apk upgrade so rebuilds
+# pick up current security patches.
+FROM node:26.13.0-alpine3.24 AS base
+RUN apk upgrade --no-cache
 FROM base AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app

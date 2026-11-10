@@ -9,6 +9,11 @@ const crossOriginIsolationHeaders = [
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  // Next 16.4+ typechecks via `tsc` against the full tsconfig by default.
+  // Keep IDE checking on tsconfig.json; production builds skip test trees.
+  typescript: {
+    tsconfigPath: "tsconfig.build.json",
+  },
   // CARTO basemap keys are intended for browser tile URLs; inline for Cesium.
   env: {
     CARTO_API_KEY: process.env.CARTO_API_KEY ?? "",

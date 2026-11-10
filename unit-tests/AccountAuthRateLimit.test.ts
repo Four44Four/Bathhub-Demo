@@ -86,10 +86,11 @@ describe("account auth rate limit scopes", () => {
     const previousFetch = global.fetch;
     process.env.SUPABASE_URL = "http://127.0.0.1:54323";
     process.env.SUPABASE_KEY = "anon-key";
-    const fetchMock = jest.fn(async () => ({
+    const fetchMock = jest.fn();
+    fetchMock.mockResolvedValue({
       ok: false,
       json: async () => ({ message: "JWT expired" }),
-    }));
+    });
     global.fetch = fetchMock as unknown as typeof fetch;
 
     try {

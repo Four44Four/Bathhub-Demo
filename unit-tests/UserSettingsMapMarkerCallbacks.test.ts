@@ -3,7 +3,10 @@ import {
   isBathroomMapVisibilitySettingColumn,
   pickBathroomMapVisibilitySettings,
 } from "../app/_shared/user-settings/UserSettingsMapMarkerCallbacks";
-import { USER_SETTINGS_DEFAULTS } from "../app/_shared/user-settings/UserSettingsSchema";
+import {
+  USER_SETTINGS_DEFAULTS,
+  type UserSettingsRow,
+} from "../app/_shared/user-settings/UserSettingsSchema";
 
 describe("bathroomMapVisibilitySettingsChanged", () => {
   test("returns false when map visibility settings are unchanged", () => {
@@ -34,11 +37,15 @@ describe("bathroomMapVisibilitySettingsChanged", () => {
   });
 
   test("returns false when unrelated settings change", () => {
+    const nextSettings: UserSettingsRow = {
+      ...USER_SETTINGS_DEFAULTS,
+      camera_init_surface_offset_m: 2500,
+    };
     expect(
-      bathroomMapVisibilitySettingsChanged(USER_SETTINGS_DEFAULTS, {
-        ...USER_SETTINGS_DEFAULTS,
-        camera_init_surface_offset_m: 2500,
-      }),
+      bathroomMapVisibilitySettingsChanged(
+        USER_SETTINGS_DEFAULTS,
+        nextSettings,
+      ),
     ).toBe(false);
   });
 });
